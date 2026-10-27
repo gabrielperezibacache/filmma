@@ -33,8 +33,10 @@ export function audioGainAt(elapsedSeconds: number, durationSeconds: number, set
   if (!Number.isFinite(elapsedSeconds) || !Number.isFinite(durationSeconds) || durationSeconds <= 0 || elapsedSeconds < 0 || elapsedSeconds >= durationSeconds || settings.muted) return 0;
   const finite = (value: number | undefined, fallback: number) => value == null ? fallback : Number.isFinite(value) ? value : 0;
   const volume = Math.max(0, Math.min(1, finite(settings.volume, 1)));
-  const fadeIn = Math.max(0, Math.min(durationSeconds, finite(settings.fadeIn, 0))), fadeOut = Math.max(0, Math.min(durationSeconds, finite(settings.fadeOut, 0)));
-  return volume * (fadeIn ? Math.min(1, elapsedSeconds / fadeIn) : 1) * (fadeOut ? Math.min(1, (durationSeconds - elapsedSeconds) / fadeOut) : 1);
+  const duration=settings.envelope?.duration??durationSeconds,time=elapsedSeconds+(settings.envelope?.offset??0);
+  if(time<0||time>=duration)return 0;
+  const fadeIn = Math.max(0, Math.min(duration, finite(settings.fadeIn, 0))), fadeOut = Math.max(0, Math.min(duration, finite(settings.fadeOut, 0)));
+  return volume * (fadeIn ? Math.min(1, time / fadeIn) : 1) * (fadeOut ? Math.min(1, (duration - time) / fadeOut) : 1);
 }
 
 /** Call alongside deleting a scene; media files and the scene array are untouched. */
@@ -72,6 +74,6 @@ export function duplicateSceneAttachments(project: Project, sourceSceneId: strin
   return { ...project,
     dialogueLines: project.dialogueLines ? [...project.dialogueLines,...sourceLines.map(line=>({...line,id:lineMap.get(line.id)!,sceneId:newSceneId}))] : undefined,
     tracks: project.tracks?.map((track) => ({ ...track, clips: [...track.clips, ...track.clips.filter((clip) => clip.sceneId === sourceSceneId).map((clip) => ({ ...clip, id: attachmentId(clip.id, newSceneId, used), sceneId: newSceneId, dialogueLineId: clip.dialogueLineId ? lineMap.get(clip.dialogueLineId)??clip.dialogueLineId : undefined }))] })),
-    subtitleCues: project.subtitleCues ? [...project.subtitleCues, ...project.subtitleCues.filter((cue) => cue.sceneId === sourceSceneId).map((cue) => ({ ...cue, id: cue.id.startsWith('dialogue-') && lineMap.has(cue.id.slice(9)) ? `dialogue-${lineMap.get(cue.id.slice(9))}` : attachmentId(cue.id, newSceneId, used), sceneId: newSceneId }))] : undefined,
+    subtitleCues: project.subtitleCues ? [...project.subtitleCues, ...project.subtitleCues.filter((cue) => cue.sceneId === sourceSceneId).map((cue) => ({ ...cue, id: cue.id.startsWith('dialogue-') && lineMap.has(cue.id.slice(9)) ? `dialogue-${lineMap.get(cue.id.slice(9))}` : attachmentId(cue.id, newSceneId, used), sceneId: newSceneId,dialogueLineId:cue.dialogueLineId?lineMap.get(cue.dialogueLineId)??cue.dialogueLineId:undefined }))] : undefined,
   };
 }

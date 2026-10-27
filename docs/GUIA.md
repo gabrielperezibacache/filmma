@@ -100,6 +100,8 @@ El interruptor de subtítulos controla su presencia en el visor y en el MP4. El 
 
 ## 5. Guarda y entrega
 
+El montaje dispone ahora de una mesa de **Mezcla**, bloqueo de pistas, división y copia de clips en el cabezal, y una línea de tiempo para los subtítulos. **Importar SRT** muestra una propuesta antes de añadir textos; **Voz y guion de este texto** conserva la intervención de referencia y permite usar sus tiempos sin reemplazar las palabras editadas. Consulta la [segunda entrega](SECOND-DELIVERY.md) para el flujo completo y sus límites.
+
 Espera a ver **Guardado en tu Mac** antes de cerrar. **Mis películas** permite volver a tus proyectos.
 
 En **Exportar**, elige:

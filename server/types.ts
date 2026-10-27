@@ -63,14 +63,14 @@ export const assetSchema = z.object({
   }).superRefine((value,ctx)=>validateAiProcessing({processingProfile:value.profile,strength:value.strength},ctx)).optional(),
 });
 const seconds = z.number().min(0).max(86400);
-export const clipAudioSchema = z.object({ volume: z.number().min(0).max(1).optional(), muted: z.boolean().optional(), fadeIn: seconds.optional(), fadeOut: seconds.optional() });
+export const clipAudioSchema = z.object({ volume: z.number().min(0).max(1).optional(), muted: z.boolean().optional(), fadeIn: seconds.optional(), fadeOut: seconds.optional(), envelope:z.object({offset:z.number().min(-86400).max(86400),duration:seconds.positive()}).strict().optional() });
 export const colorSchema = z.object({exposure:z.number().min(-2).max(2).optional(),contrast:z.number().min(.5).max(1.5).optional(),saturation:z.number().min(0).max(2).optional(),temperature:z.number().min(-1).max(1).optional()});
 export const transformSchema = z.object({x:z.number().min(-100).max(100),y:z.number().min(-100).max(100),scale:z.number().min(.25).max(3),opacity:z.number().min(0).max(1)});
 export const keyframeSchema = transformSchema.extend({id,time:z.number().min(-86400).max(86400),easing:z.enum(['linear','ease-in-out','hold'])});
 const speedSchema = z.number().min(.25).max(4);
 export const timelineClipSchema = clipAudioSchema.extend({ id, assetId: id, dialogueLineId:id.optional(), preserveAsset:z.boolean().optional(), sceneId: id, offset: seconds, duration: seconds.positive(), trimStart: seconds, opacity: z.number().min(0).max(1).optional(),color:colorSchema.optional(),speed:speedSchema.optional(),transform:transformSchema.partial().optional(),keyframes:z.array(keyframeSchema).max(100).optional() });
-export const editorTrackSchema = z.object({ id, name: text(250), type: z.enum(['video', 'audio']), muted: z.boolean(), volume: z.number().min(0).max(1), clips: z.array(timelineClipSchema).max(500) });
-export const subtitleCueSchema = z.object({ id, sceneId: id, start: seconds, end: seconds, text: text(2000), characterId: id.optional(), sourceDialogue: text().optional() }).refine((cue) => cue.end > cue.start, 'El subtítulo debe terminar después de empezar.');
+export const editorTrackSchema = z.object({ id, name: text(250), type: z.enum(['video', 'audio']), muted: z.boolean(), volume: z.number().min(0).max(1), locked:z.boolean().optional(), clips: z.array(timelineClipSchema).max(500) });
+export const subtitleCueSchema = z.object({ id, sceneId: id, dialogueLineId:id.optional(), start: seconds, end: seconds, text: text(2000), characterId: id.optional(), sourceDialogue: text().optional() }).refine((cue) => cue.end > cue.start, 'El subtítulo debe terminar después de empezar.');
 export const sceneSchema = z.object({
   id, title: text(250), description: text(), dialogue: text(), prompt: text(),
   negativePrompt: text(), duration: z.number().min(1).max(120),
@@ -90,7 +90,7 @@ export const projectSchema = z.object({
   fps: z.union([z.literal(24), z.literal(25), z.literal(30), z.literal(48), z.literal(50), z.literal(60)]).default(DEFAULT_PROJECT_FPS),
   aiFinishing: z.object({enabled:z.boolean(),strength:z.number().min(.15).max(.85).optional(),processingProfile:aiProcessingProfileSchema.optional()}).superRefine(validateAiProcessing).transform(value=>({...value,strength:value.strength??(value.processingProfile==='temporal'?.65:value.processingProfile==='restore'?.75:.35)})).optional(),
   scenes: z.array(sceneSchema).max(100), characters: z.array(characterSchema).max(100),
-  assets: z.array(assetSchema).max(2000), audioAssetId: id.optional(), audioVolume: z.number().min(0).max(2).optional(), updatedAt: z.string().max(100),
+  assets: z.array(assetSchema).max(2000), audioAssetId: id.optional(), audioVolume: z.number().min(0).max(2).optional(), audioMuted:z.boolean().optional(), updatedAt: z.string().max(100),
   tracks: z.array(editorTrackSchema).max(8).optional(), dialogueLines:z.array(dialogueLineSchema).max(1000).optional(), subtitleCues: z.array(subtitleCueSchema).max(1000).optional(), subtitlesEnabled: z.boolean().optional(),
 }).superRefine((project, ctx) => {
   const clips = (project.tracks ?? []).flatMap((track) => track.clips);
@@ -135,6 +135,7 @@ export function validateEditingReferences(project: Project) {
   for (const cue of cues) {
     if (!scenes.has(cue.sceneId)) fail('Un subtítulo hace referencia a un plano inexistente.');
     if (cue.characterId && !characters.has(cue.characterId)) fail('Un subtítulo hace referencia a un personaje inexistente.');
+    if(cue.dialogueLineId&&!project.dialogueLines?.some(l=>l.id===cue.dialogueLineId))fail('Un subtítulo hace referencia a una intervención inexistente.');
   }
 }
 export type Job = {

@@ -70,6 +70,12 @@ function transformExpression(clip: TimelineClip, field: keyof LayerTransform, cl
 export function audioFilters(settings: ClipAudio | undefined, duration: number, trackGain = 1, fps = 24) {
   const audio = settings ?? {}, gain = audio.muted ? 0 : clamp(audio.volume ?? 1) * trackGain;
   const filters = ['aresample=48000', 'aformat=sample_fmts=flt:sample_rates=48000:channel_layouts=stereo', `volume=${number(gain)}`];
+  if(audio.envelope){
+    const d=audio.envelope.duration,t=`(t+${number(audio.envelope.offset)})`;
+    const fi=Math.min(d,Math.max(0,Math.round((audio.fadeIn??0)*fps)/fps)),fo=Math.min(d,Math.max(0,Math.round((audio.fadeOut??0)*fps)/fps));
+    const shape=`between(${t},0,${number(d)})${fi?`*min(1,max(0,${t}/${number(fi)}))`:''}${fo?`*min(1,max(0,(${number(d)}-${t})/${number(fo)}))`:''}`;
+    filters.push(`aeval=exprs='val(0)*(${shape})|val(1)*(${shape})'`);return filters;
+  }
   for (const [kind, raw] of [['in', audio.fadeIn], ['out', audio.fadeOut]] as const) {
     const fade = Math.min(duration, Math.max(0, Math.round((raw ?? 0) * fps) / fps));
     if (fade) filters.push(`afade=t=${kind}:st=${number(kind === 'in' ? 0 : duration - fade)}:d=${number(fade)}:curve=tri`);
@@ -245,7 +251,7 @@ export async function renderProject(project: Project, options: RenderOptions) {
     } else if (audible) audio.push({ path: await audioClip(asset, durationFrames, sourceStartFrame, logicalDuration, clip, gain, clip.speed), startFrame });
   }
   const soundtrack = project.audioAssetId && assets.get(project.audioAssetId);
-  if (soundtrack && (project.audioVolume ?? .5) > 0) audio.push({ path: await audioClip(soundtrack, layout.totalFrames, 0, total, undefined, clamp(project.audioVolume ?? .5, 2)), startFrame: 0 });
+  if (soundtrack && !project.audioMuted && (project.audioVolume ?? .5) > 0) audio.push({ path: await audioClip(soundtrack, layout.totalFrames, 0, total, undefined, clamp(project.audioVolume ?? .5, 2)), startFrame: 0 });
 
   // Process a bounded number of streams at once, including projects with hundreds
   // of clips. Float PCM intermediates retain headroom until the final limiter.

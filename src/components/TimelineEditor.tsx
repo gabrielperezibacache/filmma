@@ -264,7 +264,7 @@ export default function TimelineEditor({ project, selectedSceneId, playhead, pla
             {!layout.segments.length && <div className="tl-empty"><Film size={18} /><span>Añade un plano para empezar el montaje.</span>{onAddScene && <button type="button" onClick={onAddScene} disabled={disabled}><Plus size={14} />Añadir plano</button>}</div>}
           </div>
           <div className="tl-audio-lane">
-            {audio ? <div className="tl-audio-clip" style={{ width: Math.max(1, layout.totalFrames ? layout.totalSeconds * pixelsPerSecond : viewport.width - 22) }}><AudioWaveform asset={audio} trimStart={0} duration={layout.totalSeconds} audio={{volume:Math.min(1,project.audioVolume??.5)}} fps={layout.fps} compact/><AudioLines size={14} /><span>{audio.name}</span><small>Banda sonora</small></div> : <button className="tl-audio-empty" type="button" disabled={disabled || !onManageAudio} onClick={onManageAudio}><Plus size={13} /><span>Añadir banda sonora</span></button>}
+            {audio ? <div className="tl-audio-clip" style={{ width: Math.max(1, layout.totalFrames ? layout.totalSeconds * pixelsPerSecond : viewport.width - 22) }}><AudioWaveform asset={audio} trimStart={0} duration={layout.totalSeconds} audio={{volume:Math.min(1,project.audioVolume??.5),muted:project.audioMuted}} fps={layout.fps} compact/><AudioLines size={14} /><span>{audio.name}</span><small>Banda sonora</small></div> : <button className="tl-audio-empty" type="button" disabled={disabled || !onManageAudio} onClick={onManageAudio}><Plus size={13} /><span>Añadir banda sonora</span></button>}
           </div>
           {!!layout.totalFrames && <div className="tl-playhead" aria-hidden="true" style={{ left: frame / layout.fps * pixelsPerSecond }}><span /></div>}
         </div>

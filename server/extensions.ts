@@ -187,7 +187,7 @@ export async function importProjectArchive(archivePath: string, context: Omit<Ex
       characters: rawProject.data.characters.map((character) => ({ ...character, id: characterIds.get(character.id)!, assetId: remap(character.assetId),voice:remapVoice(character.voice) })), audioAssetId: remap(rawProject.data.audioAssetId),
       dialogueLines:rawProject.data.dialogueLines?.map(line=>({...line,id:dialogueIds.get(line.id)!,sceneId:sceneIds.get(line.sceneId)!,characterId:line.characterId?characterIds.get(line.characterId):undefined,audioAssetId:remap(line.audioAssetId),voice:remapVoice(line.voice)})),
       tracks: rawProject.data.tracks?.map((track) => ({ ...track, id: randomUUID(), clips: track.clips.map((clip) => ({ ...clip, id: randomUUID(), assetId: remap(clip.assetId)!, sceneId: sceneIds.get(clip.sceneId)!,dialogueLineId:clip.dialogueLineId?dialogueIds.get(clip.dialogueLineId):undefined })) })),
-      subtitleCues: rawProject.data.subtitleCues?.map((cue) => ({ ...cue, id: randomUUID(), sceneId: sceneIds.get(cue.sceneId)!, characterId: cue.characterId ? characterIds.get(cue.characterId) : undefined })),
+      subtitleCues: rawProject.data.subtitleCues?.map((cue) => ({ ...cue, id: randomUUID(), dialogueLineId:dialogueIds.get(cue.dialogueLineId??(cue.id.startsWith('dialogue-')?cue.id.slice(9):'')), sceneId: sceneIds.get(cue.sceneId)!, characterId: cue.characterId ? characterIds.get(cue.characterId) : undefined })),
     };
     // The prompt remains an exact historical record. Association IDs follow the
     // imported project so each retained take stays discoverable in its new scene.

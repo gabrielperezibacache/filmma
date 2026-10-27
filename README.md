@@ -23,6 +23,8 @@ Consulta la [guía de uso](docs/GUIA.md) para recorrer todas las etapas.
 
 La [primera entrega de recuperación y calidad nativa](docs/FIRST-DELIVERY.md) añade historial verificable de proyectos, un recorrido según el estado de la película, recomendaciones por objetivo y una comparación local de resoluciones sin sustituir los originales.
 
+La [segunda entrega de montaje, mezcla y subtítulos](docs/SECOND-DELIVERY.md) amplía la línea de tiempo, añade bloqueo y división de clips con fundidos conservados, mesa de mezcla, escucha aislada e importación SRT revisable. Guion, personaje e intervención vocal siguen asociados al guardar y reabrir el proyecto.
+
 ## Del guion a la película
 
 1. **Guion**: escribe la premisa y las escenas, diálogos y duraciones. Codex propone una secuencia que puedes revisar antes de incorporarla. Exporta el texto del guion.

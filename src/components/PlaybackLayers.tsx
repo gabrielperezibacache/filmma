@@ -1,5 +1,6 @@
 import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import type {Project} from '../types';
+import{audibleInSolo,type AudioSolo}from'../audio-mixer';
 import {audioGainAt,resolveTimelineClips} from '../multitrack';
 import {resolveSubtitleCues} from '../subtitles';
 import {audioOnFrameGrid,syncMediaClock} from '../playback';
@@ -10,9 +11,9 @@ import {layerMediaLayout,layerRectStyle} from '../layer-layout';
 import {projectAspectRatio} from '../export-resolution';
 
 type ResolvedClip = ReturnType<typeof resolveTimelineClips>[number];
-type Props = {project:Project;playhead:number;playing:boolean;onBlocked:()=>void};
+type Props = {project:Project;playhead:number;playing:boolean;onBlocked:()=>void;solo?:AudioSolo};
 
-function MediaLayer({item,playhead,playing,fps,aspect,onBlocked}:{item:ResolvedClip;playhead:number;playing:boolean;fps:number;aspect:number;onBlocked:()=>void}) {
+function MediaLayer({item,playhead,playing,fps,aspect,onBlocked,audible=true}:{item:ResolvedClip;playhead:number;playing:boolean;fps:number;aspect:number;onBlocked:()=>void;audible?:boolean}) {
   const ref=useRef<HTMLVideoElement & HTMLAudioElement>(null);
   const colorId=`layer-color-${useId().replace(/[^a-zA-Z0-9_-]/g,'')}`;
   useEffect(()=>{const media=ref.current;return()=>media?.pause()},[]);
@@ -27,7 +28,7 @@ function MediaLayer({item,playhead,playing,fps,aspect,onBlocked}:{item:ResolvedC
   const pose=evaluateLayerTransform(item.clip,local,fps);
   const style={opacity:pose.opacity,transform:`translate(${pose.x}%,${pose.y}%) scale(${pose.scale})`};
   const mediaStyle={filter:item.clip.color?`url(#${colorId})`:undefined};
-  const gain=(item.track.muted?0:item.track.volume)*audioGainAt(local,Math.round(item.clip.duration*fps)/fps,audioOnFrameGrid(item.clip,fps));
+  const gain=(!audible||item.track.muted?0:item.track.volume)*audioGainAt(local,Math.round(item.clip.duration*fps)/fps,audioOnFrameGrid(item.clip,fps));
   const current=useRef({time:Math.max(0,local)*rate+item.clip.trimStart,playing,volume:gain,fps,rate});
   current.current={time:Math.max(0,local)*rate+item.clip.trimStart,playing,volume:gain,fps,rate};
   const sync=()=>{if(ref.current)syncMediaClock(ref.current,current.current,onBlocked)};
@@ -38,14 +39,14 @@ function MediaLayer({item,playhead,playing,fps,aspect,onBlocked}:{item:ResolvedC
 }
 
 /** Same frame intervals and order as the export. The last visual track is on top. */
-export default function PlaybackLayers({project,playhead,playing,onBlocked}:Props) {
+export default function PlaybackLayers({project,playhead,playing,onBlocked,solo=null}:Props) {
   const clips=useMemo(()=>resolveTimelineClips(project),[project]);
   const cues=useMemo(()=>resolveSubtitleCues(project),[project]);
   const frame=Math.floor(Math.max(0,playhead)*project.fps+1e-6);
   const active=clips.filter(item=>frame>=item.startFrame&&frame<item.endFrame);
   const subtitles=cues.filter(item=>frame>=item.startFrame&&frame<item.endFrame);
   return <>
-    {active.map(item=><MediaLayer key={`${project.id}:${item.track.id}:${item.clip.id}`} item={item} playhead={playhead} playing={playing} fps={project.fps} aspect={projectAspectRatio(project.format)} onBlocked={onBlocked}/>)}
+    {active.map(item=><MediaLayer key={`${project.id}:${item.track.id}:${item.clip.id}`} item={item} playhead={playhead} playing={playing} fps={project.fps} aspect={projectAspectRatio(project.format)} audible={audibleInSolo(solo,`track:${item.track.id}`)} onBlocked={onBlocked}/>)}
     {!!subtitles.length&&<div className="viewer-subtitles" aria-label="Subtítulos en el visor">{subtitles.map(({cue})=><span key={cue.id}>{cue.text}</span>)}</div>}
   </>;
 }

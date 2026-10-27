@@ -53,7 +53,7 @@ export function removeDialogueLine(project:Project,lineId:string):Project {
   const next=structuredClone(project);
   next.dialogueLines=next.dialogueLines?.filter(line=>line.id!==lineId);
   next.tracks=next.tracks?.map(track=>({...track,clips:track.clips.filter(clip=>clip.dialogueLineId!==lineId)}));
-  next.subtitleCues=next.subtitleCues?.filter(cue=>cue.id!==`dialogue-${lineId}`);
+  next.subtitleCues=next.subtitleCues?.filter(cue=>cue.id!==`dialogue-${lineId}`).map(cue=>cue.dialogueLineId===lineId?{...cue,dialogueLineId:undefined}:cue);
   next.scenes=next.scenes.map(scene=>{
     const restored=restores.get(scene.id);
     return restored?{...scene,videoAssetId:restored.assetId,trimStart:restored.trimStart,speed:restored.speed,clearVideoAsset:false,

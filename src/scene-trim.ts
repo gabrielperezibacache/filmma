@@ -36,7 +36,7 @@ function shiftSceneAttachments(project:Project,sceneId:string,delta:number):Proj
     if(cut>=frames)return [];
     const media=assets.get(clip.assetId),trimStart=media?.type==='image'?clip.trimStart:clip.trimStart+cut/fps*playbackSpeed(clip.speed);
     if(trimStart>86400||Math.max(0,offset)/fps>86400)throw new Error('El recorte excede el rango de una pista vinculada. Recorta primero ese clip.');
-    return [{...clip,offset:Math.max(0,offset)/fps,duration:(frames-cut)/fps,trimStart,keyframes:rebaseLayerKeyframes(clip,cut/fps)}];
+    return [{...clip,offset:Math.max(0,offset)/fps,duration:(frames-cut)/fps,trimStart,keyframes:rebaseLayerKeyframes(clip,cut/fps),...(clip.envelope?{envelope:{...clip.envelope,offset:clip.envelope.offset+cut/fps}}:{})}];
   })}));
   const subtitleCues=project.subtitleCues?.flatMap(cue=>{
     if(cue.sceneId!==sceneId)return [cue];

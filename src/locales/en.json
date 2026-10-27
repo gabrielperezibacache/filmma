@@ -1364,5 +1364,17 @@
   "Versión recuperada. El estado anterior y los originales se conservan.": "Version recovered. The previous state and originals are preserved.",
   "Filmma recuperó una copia verificable del proyecto. El archivo anterior se conservó.": "Filmma recovered a verifiable project copy. The previous file was preserved.",
   "Ver recuperación": "View recovery",
-  "Cerrar aviso de recuperación": "Dismiss recovery notice"
+  "Cerrar aviso de recuperación": "Dismiss recovery notice",
+  "Mezcla": "Mixer",
+  "Escucha y niveles": "Listening and levels",
+  "Escucha aislada en el visor. La exportación usa la mezcla completa.": "Isolated listening in the viewer. Export uses the full mix.",
+  "Escuchar todo": "Listen to all",
+  "SRT añadido. Tus textos anteriores y el guion se conservan.": "SRT added. Your previous text and script are preserved.",
+  "Volver al montaje": "Back to editing",
+  "Volver a herramientas": "Back to tools",
+  "Reproducir montaje": "Play edit",
+  "Pausar montaje": "Pause edit",
+  "Tiempo del montaje": "Edit time",
+  "Cabezal del montaje": "Edit playhead",
+  "Ver visor": "View preview"
 }

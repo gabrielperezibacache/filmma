@@ -113,7 +113,7 @@ export function applyDialogueSubtitle(project:Project,lineId:string,assetId:stri
   if(!line||!asset||!speechIsCurrent(project,line,asset))throw new Error('Genera primero una voz vigente para usar su duración en el subtítulo.');
   const scene=project.scenes.find(s=>s.id===line.sceneId)!;
   if(line.offset+asset.speech!.duration>scene.duration+.001)throw new Error('El diálogo supera el final del plano. Amplíalo antes de crear el subtítulo.');
-  const next=structuredClone(project),cue={id:`dialogue-${lineId}`,sceneId:line.sceneId,start:line.offset,end:line.offset+asset.speech!.duration,text:line.text,characterId:line.characterId,sourceDialogue:dialogueSourceSignature(scene.dialogue)};
+  const next=structuredClone(project),cue={id:`dialogue-${lineId}`,dialogueLineId:lineId,sceneId:line.sceneId,start:line.offset,end:line.offset+asset.speech!.duration,text:line.text,characterId:line.characterId,sourceDialogue:dialogueSourceSignature(scene.dialogue)};
   const existing=(next.subtitleCues??[]).filter(c=>c.id!==cue.id);if(existing.length>=1000)throw new Error('La película alcanzó 1.000 subtítulos. Libera uno antes de añadir esta intervención.');
   next.subtitleCues=[...existing,cue];next.subtitlesEnabled=true;return next;
 }
