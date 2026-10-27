@@ -1,3 +1,4 @@
+import type { Project } from '../src/types';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSeedProject } from '../server/seed';
@@ -7,7 +8,7 @@ import { buildGenerationInstructions, instructionReferenceIds } from '../src/gen
 import { buildStoryboard, storyboardFrameTasks, storyboardFrameEntries, collectStoryboardFrames, storyboardSampleTime, storyboardHtml, storyboardCsv } from '../src/storyboard';
 
 test('shot planning and alternatives are independent snapshots; reviewed application preserves story, cast, voices, source and editing', () => {
-  let p=createSeedProject(), shot=p.scenes[0]!, id=shot.id;
+  let p:Project=createSeedProject(), shot=p.scenes[0]!, id=shot.id;
   p=updateShotPlanning(p,id,{opening:'Elena sostiene la llave.',closing:'La llave queda sobre la mesa.',notes:'Rodar el sonido de la llave por separado.'});
   p.scenes[0]!.cinematography={framing:'close-up',movement:'locked'};
   p=saveDirectionAlternative(p,id,'Cercanía','close');
@@ -27,7 +28,7 @@ test('shot planning and alternatives are independent snapshots; reviewed applica
 });
 
 test('planning limits and schema reject overlong text, duplicate IDs and a seventh alternative',()=>{
-  let p=createSeedProject(),id=p.scenes[0]!.id;
+  let p:Project=createSeedProject(),id=p.scenes[0]!.id;
   assert.throws(()=>updateShotPlanning(p,id,{opening:'x'.repeat(1201)}),/límite/);
   assert.throws(()=>updateShotPlanning(p,id,{notes:'x'.repeat(4001)}),/límite/);
   assert.throws(()=>saveDirectionAlternative(p,id,' '),/nombre/);
@@ -40,7 +41,7 @@ test('planning limits and schema reject overlong text, duplicate IDs and a seven
 });
 
 test('final instructions include explicit opening and ending, effective cinema, story and cast, but exclude production notes',()=>{
-  let p=createSeedProject(),id=p.scenes[0]!.id;
+  let p:Project=createSeedProject(),id=p.scenes[0]!.id;
   p=updateShotPlanning(p,id,{opening:'Inicio QA inequívoco',closing:'Final QA inequívoco',notes:'NOTAS PRIVADAS QA NO PROMPT'});
   const s=p.scenes[0]!;s.cinematography={framing:'close-up',movement:'locked'};
   const text=buildGenerationInstructions(p,s);
@@ -71,7 +72,7 @@ test('bookend decoding is serial, handles a missing source explicitly and never 
 });
 
 test('standalone storyboard exports planning and two source times safely without pretending references are generated frames',()=>{
- let p=createSeedProject();p.scenes=p.scenes.slice(0,1);const id=p.scenes[0]!.id;
+ let p:Project=createSeedProject();p.scenes=p.scenes.slice(0,1);const id=p.scenes[0]!.id;
  p=updateShotPlanning(p,id,{opening:'<script>opening</script>',closing:'=end',notes:'<img src=x onerror=alert(1)>'});p=saveDirectionAlternative(p,id,'<b>alternativa</b>','alt');p.scenes[0]!.videoAssetId='take';p.assets.push({id:'take',name:'Original QA',type:'video',mime:'video/mp4',url:'/api/media/take.mp4',size:1});
  const thumbs={ [`${id}:opening`]:{status:'ready' as const,dataUrl:'data:image/jpeg;base64,AAAA',sourceTime:.5},[`${id}:closing`]:{status:'ready' as const,dataUrl:'data:image/jpeg;base64,BBBB',sourceTime:2.25}};
  const html=storyboardHtml(p,thumbs);assert.match(html,/Inicio editado/);assert.match(html,/Último instante editado/);assert.match(html,/fuente 0.5000 s/);assert.match(html,/fuente 2.2500 s/);assert.match(html,/&lt;script&gt;opening/);assert.doesNotMatch(html,/<script>|<img src=x/);assert.match(html,/&lt;b&gt;alternativa/);
