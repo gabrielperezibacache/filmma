@@ -1,3 +1,4 @@
+import{storyContextText}from'./story-structure';
 import type { Asset, Project, Scene } from './types';
 import { buildTimeline, frameToTimecode } from './timeline';
 import { continuityFields, continuityLabels, resolveSceneContinuity } from './continuity';
@@ -7,7 +8,7 @@ import { CINEMA_FIELDS, cinemaFieldIsActive, historicalDirectionLabel } from './
 export type StoryboardShot = {
   scene: Scene; index: number; start: string; end: string; duration: number; fps: number;
   source?: Asset; sourceId?: string; sourceLabel: string;
-  characters: string[]; continuity: string[];
+  characters: string[]; continuity: string[];storyContext:string;
 };
 export type StoryboardThumbnail = { status: 'ready' | 'failed' | 'cancelled'; dataUrl?: string; sourceTime?: number; message?: string };
 export type StoryboardThumbnails = Record<string, StoryboardThumbnail>;
@@ -36,7 +37,7 @@ export function buildStoryboard(project: Project): StoryboardShot[] {
     const appearances = resolveSceneContinuity(project, scene.id);
     const known = new Map(appearances.map(({ character }) => [character.id, character.name]));
     return {
-      scene, index, start: frameToTimecode(startFrame, layout.fps), end: frameToTimecode(endFrame, layout.fps),
+      scene, index, storyContext:storyContextText(project,scene.id),start: frameToTimecode(startFrame, layout.fps), end: frameToTimecode(endFrame, layout.fps),
       duration: durationFrames / layout.fps, fps: layout.fps, source, sourceId: scene.videoAssetId || scene.assetId,
       sourceLabel: !source ? scene.videoAssetId || scene.assetId ? 'Fuente seleccionada no disponible' : 'Sin imagen ni toma asignada'
         : source.type === 'image' ? 'Imagen de referencia en montaje'
@@ -81,10 +82,10 @@ export function storyboardDirection(scene: Scene) {
 }
 
 export function storyboardCsv(project: Project, thumbnails: StoryboardThumbnails = {}) {
-  const headings = ['Plano', 'Título', 'Entrada', 'Salida', 'Duración (s)', 'FPS', 'Fuente', 'Archivo seleccionado', 'Instante de fuente (s)', 'Miniatura', 'Dirección libre vigente', 'Cinematografía', 'Acción', 'Diálogo / voz', 'Personajes y objetos', 'Continuidad', 'Intención del plano'];
+  const headings = ['Plano', 'Título', 'Entrada', 'Salida', 'Duración (s)', 'FPS', 'Fuente', 'Archivo seleccionado', 'Instante de fuente (s)', 'Miniatura', 'Dirección libre vigente', 'Cinematografía', 'Acción', 'Diálogo / voz', 'Personajes y objetos', 'Continuidad', 'Intención del plano','Escena y secuencia'];
   const rows = buildStoryboard(project).map(shot => {
     const thumbnail = thumbnails[shot.scene.id];
-    return [shot.index + 1, shot.scene.title, shot.start, shot.end, Number(shot.duration.toFixed(6)), shot.fps, shot.sourceLabel, shot.source?.name ?? '', thumbnail?.sourceTime?.toFixed(3) ?? '', thumbnail?.status === 'ready' ? 'Disponible' : thumbnail?.message ?? 'No calculada', !shot.scene.cinematography?.framing && !shot.scene.cinematography?.movement ? shot.scene.camera : '', storyboardCinematography(shot.scene).join('\n'), shot.scene.description, shot.scene.dialogue, shot.characters.join('; '), shot.continuity.join('\n\n'), shot.scene.prompt];
+    return [shot.index + 1, shot.scene.title, shot.start, shot.end, Number(shot.duration.toFixed(6)), shot.fps, shot.sourceLabel, shot.source?.name ?? '', thumbnail?.sourceTime?.toFixed(3) ?? '', thumbnail?.status === 'ready' ? 'Disponible' : thumbnail?.message ?? 'No calculada', !shot.scene.cinematography?.framing && !shot.scene.cinematography?.movement ? shot.scene.camera : '', storyboardCinematography(shot.scene).join('\n'), shot.scene.description, shot.scene.dialogue, shot.characters.join('; '), shot.continuity.join('\n\n'), shot.scene.prompt,shot.storyContext];
   });
   return '\uFEFF' + [headings, ...rows].map(row => row.map(storyboardCsvCell).join(',')).join('\r\n') + '\r\n';
 }
@@ -101,7 +102,7 @@ export function storyboardHtml(project: Project, thumbnails: StoryboardThumbnail
     const source = `${shot.sourceLabel}${shot.source?.name ? ` · ${shot.source.name}` : ''}${thumbnail?.sourceTime !== undefined ? ` · fuente ${thumbnail.sourceTime.toFixed(3)} s` : ''}`;
     return `<article><header><span>Plano ${String(shot.index + 1).padStart(2, '0')}</span><span>${e(shot.start)} — ${e(shot.end)} · ${shot.duration.toFixed(2)} s</span></header><h2>${e(shot.scene.title || 'Plano sin título')}</h2>
       <figure>${data ? `<svg width="0" height="0" aria-hidden="true"><defs><filter id="${filterId}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${colorMatrix(shot.scene.color).join(' ')}"/></filter></defs></svg><img src="${data}" alt="${e(`Muestra de ${shot.scene.title}`)}" style="filter:${storyboardLook(shot.scene)}url(#${filterId})">` : `<div class="missing">${e(thumbnail?.message || 'Sin miniatura disponible')}</div>`}<figcaption>${e(source)}</figcaption></figure>
-      ${paragraph('Dirección', storyboardDirection(shot.scene).join('\n'))}
+      ${paragraph('Escena y secuencia',shot.storyContext)}${paragraph('Dirección', storyboardDirection(shot.scene).join('\n'))}
       ${paragraph('Acción', shot.scene.description)}${paragraph('Diálogo / voz', shot.scene.dialogue)}${paragraph('Personajes y objetos', shot.characters.join(' · '))}
       ${paragraph('Continuidad prevista', shot.continuity.join('\n\n'))}${paragraph('Intención del plano', shot.scene.prompt)}</article>`;
   }).join('\n');

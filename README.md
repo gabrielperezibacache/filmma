@@ -89,3 +89,5 @@ python3 -m unittest discover -s runtime/tests
 Las pruebas comprueban exportación MP4 real, audio, originales, respaldos, cancelación, exclusión de orígenes remotos y las herramientas MCP. Las pruebas de inferencia son independientes y sus resultados sólo se acreditan con un archivo de video validado.
 
 El acabado **Restauración estable** está disponible por toma y para toda la película, con un inicio al65%, compensación de movimiento del detalle y conservación de originales. [Preparación, límites y evidencia](docs/STABLE_RESTORATION.md).
+
+Tercera entrega: [guion estructurado y estados narrativos](docs/THIRD-DELIVERY.md). [Plan de desarrollo y pendientes](docs/DEVELOPMENT-PLAN.md).

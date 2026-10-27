@@ -267,3 +267,5 @@ En **Personajes**, selecciona la ficha, abre **Voz del personaje**, elige Qwen y
 El perfil muestra su nombre, duración y audio de referencia. Si cambias de voz, las grabaciones anteriores se conservan, pero dejan de ser actuales para la selección nueva. Una referencia constante ayuda a mantener el timbre; no garantiza una interpretación idéntica ni una semejanza medida.
 
 **Proyecto completo** incluye el audio original y la referencia preparada, junto con sus vínculos al personaje y a las grabaciones. Al importarlo se recuperan esas relaciones; la instalación de Hermes, sus modelos y las claves de servicios no viajan en el paquete. Puedes consultar los formatos, comprobaciones de integridad y límites en [Voces propias por personaje](VOICE-PROFILES.md).
+
+La [tercera entrega](THIRD-DELIVERY.md) incorpora secuencias y escenas en Guion, plantillas de estado y referencias en Personajes, y revisión del efecto sobre la continuidad antes de mover bloques o aplicar estados.

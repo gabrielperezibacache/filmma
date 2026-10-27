@@ -33,7 +33,7 @@ export const cinematographySchema = z.object({
 export const continuityValuesSchema = z.object({
   costume: text(1200).optional(), appearance: text(1200).optional(), props: text(1200).optional(), notes: text(2000).optional(),
 });
-export const continuityOverrideSchema = continuityValuesSchema.extend({ intentionalChange: z.boolean().optional(), changeReason: text(1200).optional() });
+export const continuityOverrideSchema = continuityValuesSchema.extend({ stateLabel:text(120).optional(), intentionalChange: z.boolean().optional(), changeReason: text(1200).optional() });
 export const generationProvenanceSchema = z.object({
   projectId:id,sceneId:id,model:z.enum(['minimax-h3','ltx-2b']),seed:z.number().int().min(0).max(2147483647),prompt:text(64000),negativePrompt:text(),createdAt:text(100),
   width:z.number().int().positive().max(16384),height:z.number().int().positive().max(16384),numFrames:z.number().int().positive().max(360),fps:z.number().positive().max(240),steps:z.number().int().min(1).max(100),
@@ -71,7 +71,9 @@ const speedSchema = z.number().min(.25).max(4);
 export const timelineClipSchema = clipAudioSchema.extend({ id, assetId: id, dialogueLineId:id.optional(), preserveAsset:z.boolean().optional(), sceneId: id, offset: seconds, duration: seconds.positive(), trimStart: seconds, opacity: z.number().min(0).max(1).optional(),color:colorSchema.optional(),speed:speedSchema.optional(),transform:transformSchema.partial().optional(),keyframes:z.array(keyframeSchema).max(100).optional() });
 export const editorTrackSchema = z.object({ id, name: text(250), type: z.enum(['video', 'audio']), muted: z.boolean(), volume: z.number().min(0).max(1), locked:z.boolean().optional(), clips: z.array(timelineClipSchema).max(500) });
 export const subtitleCueSchema = z.object({ id, sceneId: id, dialogueLineId:id.optional(), start: seconds, end: seconds, text: text(2000), characterId: id.optional(), sourceDialogue: text().optional() }).refine((cue) => cue.end > cue.start, 'El subtítulo debe terminar después de empezar.');
+export const storyStructureSchema=z.object({sequences:z.array(z.object({id,title:text(250)})).max(100),scenes:z.array(z.object({id,sequenceId:id,title:text(250),setting:text(500),notes:text(2000)})).max(100)});
 export const sceneSchema = z.object({
+  storySceneId:id.optional(),
   id, title: text(250), description: text(), dialogue: text(), prompt: text(),
   negativePrompt: text(), duration: z.number().min(1).max(120),
   seed: z.number().int().min(0).max(2147483647), camera: text(250), cinematography: cinematographySchema.optional(),
@@ -83,9 +85,11 @@ export const sceneSchema = z.object({
   characterIds: z.array(id).max(30), assetId: id.optional(), endAssetId: id.optional(), videoAssetId: id.optional(), takeAssetIds:z.array(id).max(2000).optional(), clearVideoAsset: z.boolean().optional(), preserveVideoAsset: z.boolean().optional(),
 });
 export const characterSchema = z.object({
+  referenceAssetIds:z.array(id).max(12).optional(),states:z.array(z.object({id,name:text(120),values:continuityValuesSchema})).max(20).optional(),
   id, name: text(250), role: text(250), description: text(), locked: z.boolean(), voice:characterVoiceSchema.optional(), assetId: id.optional(), continuity: continuityValuesSchema.optional(),
 });
 export const projectSchema = z.object({
+  story:storyStructureSchema.optional(),
   id, name: text(250), logline: text(), format: z.enum(PROJECT_FORMATS).default(DEFAULT_PROJECT_FORMAT),
   fps: z.union([z.literal(24), z.literal(25), z.literal(30), z.literal(48), z.literal(50), z.literal(60)]).default(DEFAULT_PROJECT_FPS),
   aiFinishing: z.object({enabled:z.boolean(),strength:z.number().min(.15).max(.85).optional(),processingProfile:aiProcessingProfileSchema.optional()}).superRefine(validateAiProcessing).transform(value=>({...value,strength:value.strength??(value.processingProfile==='temporal'?.65:value.processingProfile==='restore'?.75:.35)})).optional(),
@@ -113,6 +117,15 @@ export function validateEditingReferences(project: Project) {
   for (const group of [tracks, clips, cues, project.dialogueLines??[]]) if (new Set(group.map((item) => item.id)).size !== group.length) fail('Los identificadores de pistas, clips y subtítulos deben ser únicos en su grupo.');
   const scenes = new Set(project.scenes.map((scene) => scene.id)), characters = new Set(project.characters.map((character) => character.id));
   const assets = new Map(project.assets.map((asset) => [asset.id, asset]));
+  const sequences=project.story?.sequences??[],storyScenes=project.story?.scenes??[];
+  for(const group of [sequences,storyScenes])if(new Set(group.map(x=>x.id)).size!==group.length)fail('La estructura narrativa contiene identificadores repetidos.');
+  for(const scene of storyScenes)if(!sequences.some(s=>s.id===scene.sequenceId))fail('Una escena narrativa pertenece a una secuencia inexistente.');
+  for(const shot of project.scenes)if(shot.storySceneId&&!storyScenes.some(s=>s.id===shot.storySceneId))fail('Un plano pertenece a una escena narrativa inexistente.');
+  for(const character of project.characters){
+    const refs=character.referenceAssetIds??[],states=character.states??[];
+    if(new Set(refs).size!==refs.length||refs.some(id=>assets.get(id)?.type!=='image'))fail('Las referencias de apoyo deben ser imágenes únicas de la biblioteca.');
+    if(new Set(states.map(s=>s.id)).size!==states.length)fail('Los estados de un elemento necesitan identificadores únicos.');
+  }
   for(const asset of project.assets)if(asset.voiceReference){const meta=asset.voiceReference;if(asset.type!=='audio'||meta.projectId!==project.id||assets.get(meta.sourceAssetId)?.type!=='audio'||meta.sourceAssetId===asset.id)fail('Un perfil de voz debe conservar su audio original en esta película.');}
   for(const character of project.characters)if(character.voice?.engine==='qwen'&&character.voice.referenceAssetId&&assets.get(character.voice.referenceAssetId)?.voiceReference?.characterId!==character.id)fail('El perfil de voz pertenece a otro personaje. Crea una referencia propia para este personaje.');
   const voices=[...project.characters.map(character=>character.voice),...(project.dialogueLines??[]).map(line=>line.voice)];

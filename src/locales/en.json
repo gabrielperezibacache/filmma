@@ -1376,5 +1376,12 @@
   "Pausar montaje": "Pause edit",
   "Tiempo del montaje": "Edit time",
   "Cabezal del montaje": "Edit playhead",
-  "Ver visor": "View preview"
+  "Ver visor": "View preview",
+  "Buscar texto, escena o personaje…": "Search text, scenes or characters…",
+  "Copia editable de «{0}»": "Editable snapshot of “{0}”",
+  "Escena y secuencia": "Scene and sequence",
+  "Fountain conserva texto y planos; usa Proyecto completo para guardar también la estructura, los estados y las referencias.": "Fountain keeps text and shots; use Full project to retain structure, states and references too.",
+  "Acción del plano {0}": "Shot {0} action",
+  "Diálogo del plano {0}": "Shot {0} dialogue",
+  "Título del plano {0}": "Shot {0} title"
 }

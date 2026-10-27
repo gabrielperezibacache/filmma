@@ -172,19 +172,21 @@ export async function importProjectArchive(archivePath: string, context: Omit<Ex
       if (!sourceAssetId || sourceAssetId === asset.id) throw fail('Una copia mejorada tiene una referencia original inexistente o circular.');
       asset.enhancement = { ...asset.enhancement, sourceAssetId };
     }
+    const sequenceIds=new Map((rawProject.data.story?.sequences??[]).map(s=>[s.id,randomUUID()]));
+    const storySceneIds=new Map((rawProject.data.story?.scenes??[]).map(s=>[s.id,randomUUID()]));
     const sceneIds = new Map(rawProject.data.scenes.map((scene) => [scene.id, randomUUID()]));
     const characterIds = new Map(rawProject.data.characters.map((character) => [character.id, randomUUID()]));
     const dialogueIds = new Map((rawProject.data.dialogueLines??[]).map(line=>[line.id,randomUUID()]));
     const remapVoice=(voice?:CharacterVoice):CharacterVoice|undefined=>voice?.engine==='qwen'&&voice.referenceAssetId?{...voice,referenceAssetId:remap(voice.referenceAssetId),voiceId:`profile-${remap(voice.referenceAssetId)}`}:voice;
     const project: Project = {
-      ...rawProject.data, id: randomUUID(), assets, updatedAt: new Date().toISOString(),
+      ...rawProject.data, story:rawProject.data.story?{sequences:rawProject.data.story.sequences.map(s=>({...s,id:sequenceIds.get(s.id)!})),scenes:rawProject.data.story.scenes.map(s=>({...s,id:storySceneIds.get(s.id)!,sequenceId:sequenceIds.get(s.sequenceId)!}))}:undefined, id: randomUUID(), assets, updatedAt: new Date().toISOString(),
       scenes: rawProject.data.scenes.map((scene) => {
-        const next = { ...scene, id: sceneIds.get(scene.id)!, characterIds: scene.characterIds.map((id) => characterIds.get(id)!),
+        const next = { ...scene, storySceneId:scene.storySceneId?storySceneIds.get(scene.storySceneId):undefined, id: sceneIds.get(scene.id)!, characterIds: scene.characterIds.map((id) => characterIds.get(id)!),
           continuity: scene.continuity && Object.fromEntries(Object.entries(scene.continuity).map(([id, state]) => [characterIds.get(id) ?? id, state])),
           assetId: remap(scene.assetId), videoAssetId: remap(scene.videoAssetId), takeAssetIds:scene.takeAssetIds?.map(id => remap(id)!), endAssetId: remap(scene.endAssetId) };
         delete next.clearVideoAsset; delete next.preserveVideoAsset; return next;
       }),
-      characters: rawProject.data.characters.map((character) => ({ ...character, id: characterIds.get(character.id)!, assetId: remap(character.assetId),voice:remapVoice(character.voice) })), audioAssetId: remap(rawProject.data.audioAssetId),
+      characters: rawProject.data.characters.map((character) => ({ ...character, states:character.states?.map(s=>({...s,id:randomUUID()})),referenceAssetIds:character.referenceAssetIds?.map(id=>remap(id)!), id: characterIds.get(character.id)!, assetId: remap(character.assetId),voice:remapVoice(character.voice) })), audioAssetId: remap(rawProject.data.audioAssetId),
       dialogueLines:rawProject.data.dialogueLines?.map(line=>({...line,id:dialogueIds.get(line.id)!,sceneId:sceneIds.get(line.sceneId)!,characterId:line.characterId?characterIds.get(line.characterId):undefined,audioAssetId:remap(line.audioAssetId),voice:remapVoice(line.voice)})),
       tracks: rawProject.data.tracks?.map((track) => ({ ...track, id: randomUUID(), clips: track.clips.map((clip) => ({ ...clip, id: randomUUID(), assetId: remap(clip.assetId)!, sceneId: sceneIds.get(clip.sceneId)!,dialogueLineId:clip.dialogueLineId?dialogueIds.get(clip.dialogueLineId):undefined })) })),
       subtitleCues: rawProject.data.subtitleCues?.map((cue) => ({ ...cue, id: randomUUID(), dialogueLineId:dialogueIds.get(cue.dialogueLineId??(cue.id.startsWith('dialogue-')?cue.id.slice(9):'')), sceneId: sceneIds.get(cue.sceneId)!, characterId: cue.characterId ? characterIds.get(cue.characterId) : undefined })),

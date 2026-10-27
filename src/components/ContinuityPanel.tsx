@@ -1,4 +1,5 @@
-import { useId, useMemo, useState } from 'react';
+import CharacterStatePicker from './CharacterStatePicker';
+import { useEffect, useId, useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import { AlertCircle, ArrowLeft, ArrowRight, Check, CircleHelp, Link2, RotateCcw, ScanEye, Shirt, Users } from 'lucide-react';
 import type { ContinuityOverride, Project } from '../types';
@@ -8,6 +9,8 @@ import './ContinuityPanel.css';
 export type ContinuityPanelProps = {
   project: Project;
   sceneId: string;
+  initialCharacterId?:string;
+  onPause?:()=>void;
   onChangeProject: (project: Project) => void;
   onSelectScene?: (sceneId: string) => void;
 };
@@ -16,10 +19,11 @@ const examples = {
   props: 'Lata de película en la mano derecha…', notes: 'Mantiene la mirada hacia la pantalla, a la derecha del encuadre…',
 };
 
-export default function ContinuityPanel({ project, sceneId, onChangeProject, onSelectScene }: ContinuityPanelProps) {
+export default function ContinuityPanel({ project, sceneId, onChangeProject, onSelectScene,initialCharacterId,onPause }: ContinuityPanelProps) {
   const prefix = useId();
   const [view, setView] = useState<'state' | 'review'>('state');
-  const [selectedCharacterId, setSelectedCharacterId] = useState('');
+  const [selectedCharacterId, setSelectedCharacterId] = useState(initialCharacterId??'');
+  useEffect(()=>{if(initialCharacterId)setSelectedCharacterId(initialCharacterId)},[initialCharacterId,sceneId]);
   const [wholeProject, setWholeProject] = useState(false);
   const scene = project.scenes.find((item) => item.id === sceneId);
   const appearances = useMemo(() => resolveSceneContinuity(project, sceneId), [project, sceneId]);
@@ -31,9 +35,9 @@ export default function ContinuityPanel({ project, sceneId, onChangeProject, onS
   const patch = (value: Partial<ContinuityOverride>) => {
     if (selected) onChangeProject(updateContinuity(project, sceneId, selected.character.id, value));
   };
-  const restoreInheritance = () => patch({ costume: undefined, appearance: undefined, props: undefined, notes: undefined, intentionalChange: undefined, changeReason: undefined });
+  const restoreInheritance = () => patch({ costume: undefined, appearance: undefined, props: undefined, notes: undefined, intentionalChange: undefined, changeReason: undefined,stateLabel:undefined });
   const linkCharacter = (characterId: string) => onChangeProject({ ...project, updatedAt: new Date().toISOString(), scenes: project.scenes.map((item) => item.id === sceneId ? { ...item, characterIds: [...new Set([...item.characterIds, characterId])] } : item) });
-  const clearOrphan = (characterId: string) => onChangeProject(updateContinuity(project, sceneId, characterId, { costume: undefined, appearance: undefined, props: undefined, notes: undefined, intentionalChange: undefined, changeReason: undefined }));
+  const clearOrphan = (characterId: string) => onChangeProject(updateContinuity(project, sceneId, characterId, { costume: undefined, appearance: undefined, props: undefined, notes: undefined, intentionalChange: undefined, changeReason: undefined,stateLabel:undefined }));
   const navigateTabs = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
@@ -59,7 +63,7 @@ export default function ContinuityPanel({ project, sceneId, onChangeProject, onS
         {selected && <div className="continuity-state-editor" key={`${sceneId}:${selected.character.id}`}>
           <div className="continuity-inheritance"><Link2 size={15} aria-hidden="true"/><p>{previousScene ? <>Continúa desde <button type="button" disabled={!onSelectScene} onClick={() => onSelectScene?.(previousScene.id)}>«{previousScene.title}»<ArrowLeft size={11}/></button></> : 'Primera aparición. Parte de la ficha del elemento.'}</p></div>
           {selected.character.description && <details className="continuity-identity"><summary>Identidad de {selected.character.name}</summary><p>{selected.character.description}</p><small>El estado de este plano tiene prioridad sobre el vestuario o el estado general de la ficha.</small></details>}
-          <div className="continuity-fields">{continuityFields.map((field) => {
+          <CharacterStatePicker onPause={onPause} key={`${sceneId}:${selected.character.id}`} project={project} shotId={sceneId} characterId={selected.character.id} onChange={onChangeProject}/>{selected.state.overrides.stateLabel&&<p className="state-snapshot-label">Copia editable de «{selected.state.overrides.stateLabel}»</p>}<div className="continuity-fields">{continuityFields.map((field) => {
             const own = Object.prototype.hasOwnProperty.call(selected.state.overrides, field);
             const source = selected.state.sources[field];
             return <div className="continuity-field" key={field}>
