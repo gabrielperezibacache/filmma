@@ -8,9 +8,11 @@ El plan original agrupa proyectos, flujo guiado, guion, personajes, dirección, 
 | Segunda | Montaje con visor persistente, división/duplicación y bloqueo de pistas, mezcla y subtítulos ligados al guion | [Segunda entrega](SECOND-DELIVERY.md). La escucha aislada afecta al visor; no es normalización LUFS. |
 | Tercera | Secuencias y escenas narrativas, repercusiones sobre la continuidad, estados por elemento y referencias de apoyo | [Tercera entrega](THIRD-DELIVERY.md). El análisis es editorial y de vigencia; no demuestra identidad facial. |
 
+| Cuarta | Planificación de inicio/final, notas de rodaje, alternativas revisables, instrucciones finales y storyboard con muestras temporales | [Cuarta entrega](FOURTH-DELIVERY.md). Es planificación y consulta; no certifica identidad visual ni genera ángulos nuevos. |
+
 ## Apartados pendientes del plan original
 
-- Dirección y storyboard: comparaciones de decisiones y de instrucciones finales, inicio/final del plano, alternativas de encuadre y anotaciones de rodaje.
+- Dirección y storyboard avanzados: anotaciones espaciales sobre la imagen, representación de movimientos y nuevas vistas generadas sólo cuando el adaptador las admita. La planificación textual y las muestras del montaje están entregadas.
 - Editor: selección múltiple, agrupación, marcadores y copias ligeras para reproducción.
 - Sonido y subtítulos: normalización medida, atenuación de música durante diálogos, comparación de interpretaciones, ajuste por palabras, estilos y zonas seguras. Una transcripción real debe distinguirse del texto preparado desde el guion.
 - Color y acabado: scopes, comparación entre planos y evaluación de LUT; pruebas temporales de restauración y reescalado sobre varios fotogramas.

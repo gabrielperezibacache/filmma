@@ -181,7 +181,7 @@ export async function importProjectArchive(archivePath: string, context: Omit<Ex
     const project: Project = {
       ...rawProject.data, story:rawProject.data.story?{sequences:rawProject.data.story.sequences.map(s=>({...s,id:sequenceIds.get(s.id)!})),scenes:rawProject.data.story.scenes.map(s=>({...s,id:storySceneIds.get(s.id)!,sequenceId:sequenceIds.get(s.sequenceId)!}))}:undefined, id: randomUUID(), assets, updatedAt: new Date().toISOString(),
       scenes: rawProject.data.scenes.map((scene) => {
-        const next = { ...scene, storySceneId:scene.storySceneId?storySceneIds.get(scene.storySceneId):undefined, id: sceneIds.get(scene.id)!, characterIds: scene.characterIds.map((id) => characterIds.get(id)!),
+        const next = { ...scene, planning:scene.planning?{...scene.planning,alternatives:scene.planning.alternatives?.map(a=>({...a,id:randomUUID()}))}:undefined, storySceneId:scene.storySceneId?storySceneIds.get(scene.storySceneId):undefined, id: sceneIds.get(scene.id)!, characterIds: scene.characterIds.map((id) => characterIds.get(id)!),
           continuity: scene.continuity && Object.fromEntries(Object.entries(scene.continuity).map(([id, state]) => [characterIds.get(id) ?? id, state])),
           assetId: remap(scene.assetId), videoAssetId: remap(scene.videoAssetId), takeAssetIds:scene.takeAssetIds?.map(id => remap(id)!), endAssetId: remap(scene.endAssetId) };
         delete next.clearVideoAsset; delete next.preserveVideoAsset; return next;

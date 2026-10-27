@@ -10,7 +10,9 @@ export type StoryboardShot = {
   source?: Asset; sourceId?: string; sourceLabel: string;
   characters: string[]; continuity: string[];storyContext:string;
 };
-export type StoryboardThumbnail = { status: 'ready' | 'failed' | 'cancelled'; dataUrl?: string; sourceTime?: number; message?: string };
+export type StoryboardFrameRole='opening'|'middle'|'closing';
+export type StoryboardFrameTask={shot:StoryboardShot;role:StoryboardFrameRole;key:string};
+export type StoryboardThumbnail = {sampleRole?:StoryboardFrameRole;limited?:boolean; status: 'ready' | 'failed' | 'cancelled'; dataUrl?: string; sourceTime?: number; message?: string };
 export type StoryboardThumbnails = Record<string, StoryboardThumbnail>;
 
 /** A missing selected take must remain missing, rather than silently show its reference. */
@@ -19,15 +21,15 @@ export function storyboardSource(project: Project, scene: Scene): Asset | undefi
   return project.assets.find(asset => asset.id === id && (asset.type === 'video' || asset.type === 'image'));
 }
 
-export function storyboardSampleTime(scene: Scene, fps: number, sourceDuration?: number, sourceFps = fps) {
+export function storyboardSampleTime(scene: Scene, fps: number, sourceDuration?: number, sourceFps = fps,role:StoryboardFrameRole='middle') {
   const rate = Number.isFinite(fps) && fps > 0 ? fps : 24;
   const frames = Math.max(1, Math.round((Number.isFinite(scene.duration) ? scene.duration : 1) * rate));
-  const editedTime = Math.min(frames - 1, Math.round(frames / 2)) / rate;
+  const editedTime=(role==='opening'?0:role==='closing'?frames-1:Math.min(frames-1,Math.round(frames/2)))/rate;
   const trim = Math.max(0, Number.isFinite(scene.trimStart) ? scene.trimStart! : 0);
   const time = trim + editedTime * playbackSpeed(scene.speed);
   const frameRate = Number.isFinite(sourceFps) && sourceFps > 0 ? sourceFps : rate;
   return sourceDuration !== undefined && Number.isFinite(sourceDuration)
-    ? Math.min(time, Math.max(0, sourceDuration - 1 / frameRate)) : time;
+    ? Math.min(time, Math.max(0, sourceDuration - (role==='closing'||role==='opening' ? .0001 : 1/frameRate))) : time;
 }
 
 export function buildStoryboard(project: Project): StoryboardShot[] {
@@ -82,10 +84,10 @@ export function storyboardDirection(scene: Scene) {
 }
 
 export function storyboardCsv(project: Project, thumbnails: StoryboardThumbnails = {}) {
-  const headings = ['Plano', 'Título', 'Entrada', 'Salida', 'Duración (s)', 'FPS', 'Fuente', 'Archivo seleccionado', 'Instante de fuente (s)', 'Miniatura', 'Dirección libre vigente', 'Cinematografía', 'Acción', 'Diálogo / voz', 'Personajes y objetos', 'Continuidad', 'Intención del plano','Escena y secuencia'];
+  const headings = ['Plano', 'Título', 'Entrada', 'Salida', 'Duración (s)', 'FPS', 'Fuente', 'Archivo seleccionado', 'Instante de fuente (s)', 'Miniatura', 'Dirección libre vigente', 'Cinematografía', 'Acción', 'Diálogo / voz', 'Personajes y objetos', 'Continuidad', 'Intención del plano','Escena y secuencia','Inicio previsto','Final previsto','Notas de rodaje','Alternativas de dirección','Fuente al inicio (s)','Fuente al final (s)'];
   const rows = buildStoryboard(project).map(shot => {
     const thumbnail = thumbnails[shot.scene.id];
-    return [shot.index + 1, shot.scene.title, shot.start, shot.end, Number(shot.duration.toFixed(6)), shot.fps, shot.sourceLabel, shot.source?.name ?? '', thumbnail?.sourceTime?.toFixed(3) ?? '', thumbnail?.status === 'ready' ? 'Disponible' : thumbnail?.message ?? 'No calculada', !shot.scene.cinematography?.framing && !shot.scene.cinematography?.movement ? shot.scene.camera : '', storyboardCinematography(shot.scene).join('\n'), shot.scene.description, shot.scene.dialogue, shot.characters.join('; '), shot.continuity.join('\n\n'), shot.scene.prompt,shot.storyContext];
+    return [shot.index + 1, shot.scene.title, shot.start, shot.end, Number(shot.duration.toFixed(6)), shot.fps, shot.sourceLabel, shot.source?.name ?? '', thumbnail?.sourceTime?.toFixed(3) ?? '', thumbnail?.status === 'ready' ? 'Disponible' : thumbnail?.message ?? 'No calculada', !shot.scene.cinematography?.framing && !shot.scene.cinematography?.movement ? shot.scene.camera : '', storyboardCinematography(shot.scene).join('\n'), shot.scene.description, shot.scene.dialogue, shot.characters.join('; '), shot.continuity.join('\n\n'), shot.scene.prompt,shot.storyContext,shot.scene.planning?.opening??'',shot.scene.planning?.closing??'',shot.scene.planning?.notes??'',shot.scene.planning?.alternatives?.map(a=>a.name).join('; ')??'',thumbnails[storyboardFrameKey(shot.scene.id,'opening')]?.sourceTime?.toFixed(4)??'',thumbnails[storyboardFrameKey(shot.scene.id,'closing')]?.sourceTime?.toFixed(4)??''];
   });
   return '\uFEFF' + [headings, ...rows].map(row => row.map(storyboardCsvCell).join(',')).join('\r\n') + '\r\n';
 }
@@ -98,16 +100,19 @@ export function storyboardHtml(project: Project, thumbnails: StoryboardThumbnail
   const e = storyboardEscapeHtml, shots = buildStoryboard(project), total = buildTimeline(project);
   const paragraph = (title: string, text: string) => text.trim() ? `<section><h3>${e(title)}</h3><p>${e(text)}</p></section>` : '';
   const cards = shots.map(shot => {
-    const thumbnail = thumbnails[shot.scene.id], data = storyboardImageData(thumbnail), filterId = `shot-color-${shot.index}`;
-    const source = `${shot.sourceLabel}${shot.source?.name ? ` · ${shot.source.name}` : ''}${thumbnail?.sourceTime !== undefined ? ` · fuente ${thumbnail.sourceTime.toFixed(3)} s` : ''}`;
-    return `<article><header><span>Plano ${String(shot.index + 1).padStart(2, '0')}</span><span>${e(shot.start)} — ${e(shot.end)} · ${shot.duration.toFixed(2)} s</span></header><h2>${e(shot.scene.title || 'Plano sin título')}</h2>
-      <figure>${data ? `<svg width="0" height="0" aria-hidden="true"><defs><filter id="${filterId}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${colorMatrix(shot.scene.color).join(' ')}"/></filter></defs></svg><img src="${data}" alt="${e(`Muestra de ${shot.scene.title}`)}" style="filter:${storyboardLook(shot.scene)}url(#${filterId})">` : `<div class="missing">${e(thumbnail?.message || 'Sin miniatura disponible')}</div>`}<figcaption>${e(source)}</figcaption></figure>
+    const frames=storyboardFrameEntries(shot,thumbnails);
+    const pictures=frames.map(({role,label,thumbnail})=>{const data=storyboardImageData(thumbnail),filterId=`shot-color-${shot.index}-${role}`;
+      const source=`${label} · ${shot.sourceLabel}${shot.source?.name?` · ${shot.source.name}`:''}${thumbnail?.sourceTime!==undefined?` · fuente ${thumbnail.sourceTime.toFixed(4)} s`:''}${thumbnail?.limited?' · limitado por la duración del original':''}`;
+      return `<figure>${data?`<svg width="0" height="0" aria-hidden="true"><defs><filter id="${filterId}" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${colorMatrix(shot.scene.color).join(' ')}"/></filter></defs></svg><img src="${data}" alt="${e(label+' de '+shot.scene.title)}" style="filter:${storyboardLook(shot.scene)}url(#${filterId})">`:`<div class="missing">${e(thumbnail?.message||'Sin miniatura disponible')}</div>`}<figcaption>${e(source)}</figcaption></figure>`}).join('');
+    return `<article><header><span>Plano ${String(shot.index+1).padStart(2,'0')}</span><span>${e(shot.start)} — ${e(shot.end)} · ${shot.duration.toFixed(2)} s</span></header><h2>${e(shot.scene.title||'Plano sin título')}</h2><div class="sample-grid">${pictures}</div>
+      ${paragraph('Inicio previsto',shot.scene.planning?.opening??'')}${paragraph('Final previsto',shot.scene.planning?.closing??'')}${paragraph('Notas de rodaje — no enviadas al modelo',shot.scene.planning?.notes??'')}
+      ${(shot.scene.planning?.alternatives?.length??0)>0?`<details><summary>Alternativas de dirección guardadas</summary>${shot.scene.planning!.alternatives!.map(a=>paragraph(a.name,[a.prompt,a.opening,a.closing,a.negativePrompt?`Restricciones: ${a.negativePrompt}`:'',...storyboardDirection({...shot.scene,camera:a.camera,cinematography:a.cinematography})].filter(Boolean).join('\n'))).join('')}</details>`:''}
       ${paragraph('Escena y secuencia',shot.storyContext)}${paragraph('Dirección', storyboardDirection(shot.scene).join('\n'))}
       ${paragraph('Acción', shot.scene.description)}${paragraph('Diálogo / voz', shot.scene.dialogue)}${paragraph('Personajes y objetos', shot.characters.join(' · '))}
       ${paragraph('Continuidad prevista', shot.continuity.join('\n\n'))}${paragraph('Intención del plano', shot.scene.prompt)}</article>`;
   }).join('\n');
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${e(project.name)} · Storyboard</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#eeeede;color:#202421;font:15px/1.6 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:40px}h1{font:400 42px/1.15 Georgia,serif;letter-spacing:-.025em;margin:0 0 12px}h2{font:400 26px/1.2 Georgia,serif;margin:14px 0}h3{font-size:12px;margin:18px 0 5px}p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.intro{max-width:75ch}.facts{margin:16px 0;color:#4d574d}.notice{margin:20px 0 32px;max-width:80ch;font-size:13px}.shots{display:grid;grid-template-columns:1fr 1fr;gap:34px 28px}article{min-width:0;border-top:1px solid #8a9585;padding:16px 0;break-inside:avoid}header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font:11px/1.5 monospace;color:#4d574d}figure{margin:0;position:relative}figure>svg{position:absolute}img{display:block;width:100%;height:260px;object-fit:contain;background:#171a19}figcaption{font-size:11px;line-height:1.6;margin:9px 0 18px;overflow-wrap:anywhere}.missing{height:180px;display:grid;place-items:center;padding:20px;background:#e2e5d9;color:#4d574d}.footer{border-top:1px solid #8a9585;margin-top:32px;padding-top:16px;font-size:12px}@media(max-width:700px){main{padding:24px 18px}.shots{grid-template-columns:1fr}h1{font-size:34px}}@media print{@page{size:A4;margin:14mm}body{background:white;font-size:10pt}main{padding:0;max-width:none}h1{font-size:26pt}h2{font-size:17pt}.shots{display:block}article{margin-bottom:8mm}figure{float:left;width:48%;margin:0 5% 3mm 0}img{height:auto;max-height:65mm}article:after{content:'';display:block;clear:both}.notice{font-size:9pt}h3{font-size:9pt}p{orphans:3;widows:3}.footer{font-size:9pt}}
+    *{box-sizing:border-box}body{margin:0;background:#eeeede;color:#202421;font:15px/1.6 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:40px}h1{font:400 42px/1.15 Georgia,serif;letter-spacing:-.025em;margin:0 0 12px}h2{font:400 26px/1.2 Georgia,serif;margin:14px 0}h3{font-size:12px;margin:18px 0 5px}p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.intro{max-width:75ch}.facts{margin:16px 0;color:#4d574d}.notice{margin:20px 0 32px;max-width:80ch;font-size:13px}.shots{display:grid;grid-template-columns:1fr 1fr;gap:34px 28px}article{min-width:0;border-top:1px solid #8a9585;padding:16px 0;break-inside:avoid}header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;font:11px/1.5 monospace;color:#4d574d}.sample-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px}figure{margin:0;position:relative}figure>svg{position:absolute}img{display:block;width:100%;height:260px;object-fit:contain;background:#171a19}figcaption{font-size:11px;line-height:1.6;margin:9px 0 18px;overflow-wrap:anywhere}.missing{height:180px;display:grid;place-items:center;padding:20px;background:#e2e5d9;color:#4d574d}.footer{border-top:1px solid #8a9585;margin-top:32px;padding-top:16px;font-size:12px}@media(max-width:700px){main{padding:24px 18px}.shots{grid-template-columns:1fr}h1{font-size:34px}}@media print{@page{size:A4;margin:14mm}body{background:white;font-size:10pt}main{padding:0;max-width:none}h1{font-size:26pt}h2{font-size:17pt}.shots{display:block}article{margin-bottom:8mm}figure{float:left;width:48%;margin:0 5% 3mm 0}img{height:auto;max-height:65mm}article:after{content:'';display:block;clear:both}.notice{font-size:9pt}h3{font-size:9pt}p{orphans:3;widows:3}.footer{font-size:9pt}}
   </style></head><body><main><h1>${e(project.name)}</h1><p class="intro">${e(project.logline)}</p><p class="facts">Storyboard · ${shots.length} planos · ${e(frameToTimecode(total.totalFrames, total.fps))} · ${total.fps} fps · ${e(project.format)}</p><p class="notice">Muestras de las fuentes seleccionadas, con look y color de previsualización. No incluye capas, transiciones ni subtítulos. Las imágenes de referencia se identifican expresamente. Este documento conserva el guion y la continuidad previstos; no certifica identidad visual. Para guardarlo como PDF, abre Imprimir en tu navegador.</p><div class="shots">${cards || '<p>No hay planos en este proyecto.</p>'}</div><p class="footer">Filmma · Copia de consulta independiente. Miniaturas de hasta 720 px por lado; originales sin modificar. Cambios posteriores en Filmma no actualizan esta hoja.</p></main></body></html>`;
 }
 
@@ -128,6 +133,16 @@ export async function collectStoryboardThumbnails(shots: StoryboardShot[], load:
   return result;
 }
 
+export const storyboardFrameKey=(id:string,role:StoryboardFrameRole)=>role==='middle'?id:`${id}:${role}`;
+export function storyboardFrameTasks(shots:StoryboardShot[],view:'middle'|'bookends'='bookends'):StoryboardFrameTask[]{return shots.flatMap(shot=>((view==='bookends'&&(shot.source?.type==='video'||(!shot.source&&!!shot.scene.videoAssetId)))?['opening','closing']as const:['middle']as const).map(role=>({shot,role,key:storyboardFrameKey(shot.scene.id,role)})));}
+export function storyboardFrameEntries(shot:StoryboardShot,thumbnails:StoryboardThumbnails,view?:'middle'|'bookends'){
+ const pair=(shot.source?.type==='video'||(!shot.source&&!!shot.scene.videoAssetId))&&(view==='bookends'||(view!=='middle'&&(thumbnails[storyboardFrameKey(shot.scene.id,'opening')]||thumbnails[storyboardFrameKey(shot.scene.id,'closing')])));
+ return(pair?['opening','closing']as const:['middle']as const).map(role=>({role,key:storyboardFrameKey(shot.scene.id,role),label:role==='opening'?'Inicio editado':role==='closing'?'Último instante editado':shot.source?.type==='image'?'Imagen de referencia':'Punto medio editado',thumbnail:thumbnails[storyboardFrameKey(shot.scene.id,role)]}));
+}
+export async function collectStoryboardFrames(tasks:StoryboardFrameTask[],load:(shot:StoryboardShot,signal:AbortSignal,role:StoryboardFrameRole)=>Promise<StoryboardThumbnail>,signal:AbortSignal,onItem?:(key:string,value:StoryboardThumbnail,completed:number)=>void):Promise<StoryboardThumbnails>{
+ const result:StoryboardThumbnails={};for(const[index,task]of tasks.entries()){if(signal.aborted)break;let value:StoryboardThumbnail;try{value=task.shot.source?await load(task.shot,signal,task.role):{status:'failed',message:task.shot.sourceLabel}}catch(error){if(signal.aborted)break;value={status:'failed',message:error instanceof Error?error.message:'No se pudo leer la fuente seleccionada.'}}if(signal.aborted)break;result[task.key]=value;onItem?.(task.key,value,index+1)}return result;
+}
+
 function waitForMedia(target: HTMLMediaElement | HTMLImageElement, event: string, signal: AbortSignal, ready: () => boolean) {
   if (signal.aborted) return Promise.reject(new DOMException('Cancelado', 'AbortError'));
   if (ready()) return Promise.resolve();
@@ -142,7 +157,7 @@ function waitForMedia(target: HTMLMediaElement | HTMLImageElement, event: string
 }
 
 /** Native browser decoding only reads the local media. Nothing is uploaded or written to the original. */
-export async function captureStoryboardThumbnail(shot: StoryboardShot, signal: AbortSignal): Promise<StoryboardThumbnail> {
+export async function captureStoryboardThumbnail(shot: StoryboardShot, signal: AbortSignal, role:StoryboardFrameRole='middle'): Promise<StoryboardThumbnail> {
   if (!shot.source) return { status: 'failed', message: shot.sourceLabel };
   const url = new URL(shot.source.url, window.location.href);
   if (url.origin !== window.location.origin || !['http:', 'https:'].includes(url.protocol)) throw new Error('La miniatura necesita una fuente importada en la biblioteca local.');
@@ -171,11 +186,11 @@ export async function captureStoryboardThumbnail(shot: StoryboardShot, signal: A
     const metadata = waitForMedia(video, 'loadedmetadata', signal, () => video.readyState >= 1);
     video.src = url.href; video.load(); await metadata;
     if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error('No se pudo determinar la duración de la toma seleccionada.');
-    const target = storyboardSampleTime(shot.scene, shot.fps, video.duration, shot.source.enhancement?.fps);
+    const target = storyboardSampleTime(shot.scene, shot.fps, video.duration, shot.source.enhancement?.fps,role);
     if (Math.abs(video.currentTime - target) > .00001) {
       const seek = waitForMedia(video, 'seeked', signal, () => false); video.currentTime = target; await seek;
     }
     await waitForMedia(video, 'loadeddata', signal, () => video.readyState >= 2);
-    return draw(video, video.videoWidth, video.videoHeight, video.currentTime);
+    return{...draw(video,video.videoWidth,video.videoHeight,video.currentTime),sampleRole:role,limited:target+1e-5<storyboardSampleTime(shot.scene,shot.fps,undefined,shot.fps,role)};
   } finally { video.pause(); video.removeAttribute('src'); video.load(); canvas.width = canvas.height = 1; }
 }

@@ -220,7 +220,7 @@ Abre **Tomas** para generar entre una y cuatro alternativas del mismo plano. Usa
 
 **Comparar dos tomas** abre dos reproductores independientes. Elige las versiones y comprueba interpretación, cámara, rostro, ropa y objetos. **Usar esta toma** conserva guion, personajes, duración y acabado del plano; una fuente distinta empieza desde el inicio a velocidad normal. Alternar entre un original y su copia mejorada conserva el recorte y la velocidad. **Deshacer** recupera la selección anterior. Las alternativas generadas e importadas permanecen accesibles en Tomas y Biblioteca. La selección de otra fuente obliga a actualizar la revisión de continuidad antes de exportar con IA. **Duplicar este plano en el montaje** sigue creando otro plano; es una operación distinta.
 
-En **Storyboard**, cada ficha reúne la fuente elegida, sus tiempos de montaje, dirección —incluida referencia de autor, función de la toma y movimiento—, época activa y sus notas, acción, diálogo, personajes y continuidad prevista. Los videos se muestrean cerca de la mitad del tramo editado, respetando recorte y velocidad; al agotarse la fuente se usa su último fotograma. Las referencias fijas están identificadas. La hoja reproduce el look y color de previsualización, pero no compone las capas, transiciones ni subtítulos: revísalos en el montaje.
+En **Storyboard**, cada ficha reúne la fuente elegida, sus tiempos de montaje, dirección —incluida referencia de autor, función de la toma y movimiento—, época activa y sus notas, acción, diálogo, personajes y continuidad prevista. La vista inicial **Inicio y final** muestra dos instantes del tramo editado de video, respetando recorte, velocidad y FPS; **Punto medio** ofrece una sola muestra. Si la fuente se agota, aparece su límite. Las referencias fijas se identifican y se muestran una sola vez. La hoja reproduce el look y color de previsualización, pero no compone las capas, transiciones ni subtítulos: revísalos en el montaje.
 
 **Descargar hoja imprimible** guarda un HTML con sus imágenes incorporadas, utilizable sin conexión. Ábrelo en un navegador y usa Imprimir para crear un PDF si lo necesitas. **Lista de planos · CSV** exporta los datos de rodaje y continuidad. Ambos son documentos de consulta y conservan intactos los originales; la hoja no es un render de la película. Para transferir todas las tomas y su procedencia utiliza el paquete Filmma.
 
@@ -269,3 +269,12 @@ El perfil muestra su nombre, duración y audio de referencia. Si cambias de voz,
 **Proyecto completo** incluye el audio original y la referencia preparada, junto con sus vínculos al personaje y a las grabaciones. Al importarlo se recuperan esas relaciones; la instalación de Hermes, sus modelos y las claves de servicios no viajan en el paquete. Puedes consultar los formatos, comprobaciones de integridad y límites en [Voces propias por personaje](VOICE-PROFILES.md).
 
 La [tercera entrega](THIRD-DELIVERY.md) incorpora secuencias y escenas en Guion, plantillas de estado y referencias en Personajes, y revisión del efecto sobre la continuidad antes de mover bloques o aplicar estados.
+
+
+## Planificación de Dirección · cuarta entrega
+
+En Dirección, escribe **Inicio previsto**, **Final previsto** y **Notas de rodaje**. Los dos primeros guían la próxima generación; las notas pertenecen a producción. Consulta el guion y la continuidad junto a ellos. **Alternativas de intención y encuadre** conserva hasta seis versiones creativas: guárdalas, explora otra opción y compara antes de aplicar. Cambiar dirección conserva el video, guion, voz y estados narrativos actuales.
+
+**Instrucciones finales de generación** muestra el texto compartido con el servidor, el modo y las imágenes utilizadas. Permite copiar, descargar TXT y comparar con el plano anterior. La imagen final sólo actúa como ancla en MiniMax H3 y perfiles compatibles; el texto de final previsto es una intención independiente.
+
+Desde Storyboard, **Planificar este plano** vuelve al campo de inicio. La hoja HTML incluye muestras y planificación y se imprime como PDF; el CSV tiene 24 campos. Guarda **Proyecto completo** para conservar también las alternativas y los originales. Consulta [alcance y verificación de la cuarta entrega](FOURTH-DELIVERY.md).

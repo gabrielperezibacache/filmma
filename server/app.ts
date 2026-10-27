@@ -1,4 +1,4 @@
-import{storyContextText}from'../src/story-structure.js';
+import{buildGenerationInstructions}from'../src/generation-instructions.js';
 import { registerDialogueRoutes } from './dialogue.js';
 import {registerApplicationRoutes} from './application.js';
 import {registerModelManager} from './model-manager.js';
@@ -17,8 +17,7 @@ import { aiProcessingFields, defaultAiProcessing, validateAiProcessing, projectS
 import { parseJsonOutput, runProcess } from './process.js';
 import { writeZip } from './zip.js';
 import { MAX_MANIFEST_BYTES, registerExtensions } from './extensions.js';
-import { buildContinuityPrompt, continuityContext, resolveSceneContinuity } from '../src/continuity.js';
-import { buildCinematographyPrompt } from '../src/cinematography.js';
+import { continuityContext, resolveSceneContinuity } from '../src/continuity.js';
 import { renderProject } from './render.js';
 import { createWaveformService } from './waveform.js';
 import { enhanceVideo, inspectEnhancementMedia, type EnhancedMedia } from './enhance.js';
@@ -423,10 +422,7 @@ export async function createApp(options: AppOptions = {}) {
     if (hasId && (input.expectedProjectId !== project.id || input.expectedProjectFingerprint !== projectFingerprint(project))) throw Object.assign(new Error('El proyecto o sus ajustes cambiaron antes de iniciar la generación. Actualiza el estado y revisa la solicitud; no se creó ningún trabajo.'), { status: 409 });
   }
   function effectiveGenerationPrompt(input: GenerationInput, snapshot: Project, scene: Project['scenes'][number], referenceCharacterIds: string[]) {
-    const constraints = input.negativePrompt ?? scene.negativePrompt;
-    const continuity = buildContinuityPrompt(snapshot, scene.id, referenceCharacterIds);
-    const subjectRoles = scene.characterIds.map(id => snapshot.characters.find(character => character.id === id)?.role ?? '');
-    return [input.prompt ?? scene.prompt, storyContextText(snapshot,scene.id)?`Story scene context (creative notes):\n${storyContextText(snapshot,scene.id)}`:'', buildCinematographyPrompt(scene, subjectRoles), continuity ? `Effective continuity for this shot:\n${continuity}` : '', constraints ? `Visual constraints / Avoid: ${constraints}` : ''].filter(Boolean).join('\n');
+    return buildGenerationInstructions(snapshot,scene,{prompt:input.prompt,negativePrompt:input.negativePrompt,referenceCharacterIds});
   }
   async function validateGeneration(input: GenerationInput, snapshot: Project, scene: Project['scenes'][number]) {
     const invalid = (message: string) => Object.assign(new Error(`«${scene.title}»: ${message}`), { status: 400 });

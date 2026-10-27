@@ -1,0 +1,30 @@
+// Run against an explicitly isolated QA store; never against a production project.
+import {readFile,writeFile,copyFile} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
+import {speechIsCurrent} from '../src/dialogue.ts';
+const base=process.env.FILMMA_QA_URL??'http://127.0.0.1:4320',root=process.cwd(),out=join(root,'output/qa/fourth-delivery'),store=join(out,'store');
+const hash=b=>createHash('sha256').update(b).digest('hex');
+const ensure=(v,message)=>{if(!v)throw Error(message)};
+const get=async path=>{const r=await fetch(base+path);ensure(r.ok,`GET ${path}: ${r.status}`);return r.json()};
+const post=async(path,body)=>{const r=await fetch(base+path,{method:'POST',headers:{'X-Filmma-Client':'filmma','Content-Type':'application/json'},body:JSON.stringify(body)});ensure(r.ok,`${path}: ${r.status} ${await r.clone().text()}`);return r.json()};
+const before=(await get('/api/bootstrap')).project;ensure(before.id==='qa-second-delivery','This script requires the isolated delivery QA project.');
+const system=await get('/api/application');ensure(resolve(system.dataDirectory)===resolve(store),'QA data directory mismatch.');
+ensure(!(await get('/api/jobs')).jobs.some(j=>['running','queued'].includes(j.status)),'QA has active work.');
+await writeFile(join(out,'project-demo-final.json'),JSON.stringify(before,null,2));
+const protectedFiles=JSON.parse(await readFile(join(out,'qa-originals-before.json'),'utf8'));
+const sourcePath=a=>a.url.startsWith('/api/media/')?join(store,'media',a.url.split('/').at(-1)):join(root,'public',a.url);
+const beforeVoice=await Promise.all(before.assets.filter(a=>a.speech).map(async a=>({id:a.id,current:speechIsCurrent(before,before.dialogueLines.find(l=>l.id===a.speech.lineId),a),sha256:hash(await readFile(sourcePath(a)))})));
+const wait=async id=>{const deadline=Date.now()+120000;while(Date.now()<deadline){const j=(await get('/api/jobs')).jobs.find(j=>j.id===id);if(['completed','failed','cancelled'].includes(j.status)){ensure(j.status==='completed',j.message);return j}await new Promise(r=>setTimeout(r,250))}throw Error('QA export timeout')};
+const movie=await wait((await post('/api/export',{format:'mp4',resolution:'720p'})).job.id),moviePath=join(store,'exports',movie.result.filename);await copyFile(moviePath,join(out,'Filmma-cuarta-entrega-animatica-720p.mp4'));
+const bin=join(root,'release/mac-arm64/Filmma.app/Contents/Resources/bin'),probe=JSON.parse(execFileSync(join(bin,'ffprobe'),['-v','error','-count_frames','-show_streams','-of','json',moviePath],{encoding:'utf8'}));const v=probe.streams.find(s=>s.codec_type==='video');ensure(v.width===1280&&v.height===720&&v.nb_read_frames==='288'&&v.avg_frame_rate==='24/1','Unexpected QA render');ensure(probe.streams.some(s=>s.codec_type==='audio'),'Missing audio');execFileSync(join(bin,'ffmpeg'),['-v','error','-i',moviePath,'-f','null','-']);
+const pack=await wait((await post('/api/export',{format:'project'})).job.id),packagePath=join(store,'exports',pack.result.filename);await copyFile(packagePath,join(out,'Filmma-cuarta-entrega.filmma.zip'));
+const form=new FormData();form.append('projectFile',new Blob([await readFile(packagePath)]),'Filmma-cuarta-entrega.filmma.zip');const r=await fetch(base+'/api/projects/import',{method:'POST',headers:{'X-Filmma-Client':'filmma'},body:form});ensure(r.status===201,`Import ${r.status}: ${await r.clone().text()}`);const imported=(await r.json()).project;
+const alts=before.scenes[0].planning.alternatives,restored=imported.scenes[0].planning.alternatives;ensure(alts.length===1&&restored.length===1,'Alternatives missing');ensure(alts[0].id!==restored[0].id,'Alternative ID not remapped');ensure(JSON.stringify({...restored[0],id:alts[0].id})===JSON.stringify(alts[0]),'Alternative directions changed');
+for(let i=0;i<before.scenes.length;i++)for(const key of ['opening','closing','notes'])ensure(imported.scenes[i].planning[key]===before.scenes[i].planning[key],`Planning ${key} changed`);
+ensure(imported.scenes[0].videoAssetId!==before.scenes[0].videoAssetId,'Media ID not remapped');
+const newVoice=await Promise.all(imported.assets.filter(a=>a.speech).map(async a=>({id:a.id,current:speechIsCurrent(imported,imported.dialogueLines.find(l=>l.id===a.speech.lineId),a),sha256:hash(await readFile(sourcePath(a)))})));ensure(beforeVoice.every((a,i)=>a.current&&newVoice[i].current&&a.sha256===newVoice[i].sha256),'Qwen voice provenance or original changed');
+for(const[id,sha]of Object.entries(protectedFiles)){const a=before.assets.find(a=>a.id===id);ensure(hash(await readFile(sourcePath(a)))===sha,`Original changed: ${id}`)}
+const csv=await readFile(join(out,'Filmma-cuarta-entrega-planos.csv'),'utf8'),html=await readFile(join(out,'Filmma-cuarta-entrega-storyboard.html'),'utf8');ensure(csv.split('\r\n')[0].split(',').length===24,'CSV columns');ensure(html.includes('fuente 0.2500 s')&&html.includes('fuente 3.2188 s'),'HTML source samples missing');ensure((html.match(/<img /g)??[]).length===4,'Storyboard must include two video samples and two single still references');
+const result={version:'0.6.0',movie:{file:'Filmma-cuarta-entrega-animatica-720p.mp4',width:v.width,height:v.height,frames:+v.nb_read_frames,fps:v.avg_frame_rate,duration:+v.duration,audio:true,fullDecode:true,kind:'QA animatic: one technical zoom reference and two still images; not new AI generation'},package:{file:'Filmma-cuarta-entrega.filmma.zip',planningPreserved:true,alternativeIdsRemapped:true,alternativeInstructionsPreserved:true,storyPreserved:imported.story.scenes.length===before.story.scenes.length},voices:{before:beforeVoice,after:newVoice,originalPreserved:true},sources:{count:Object.keys(protectedFiles).length,allUnchanged:true},storyboard:{embeddedImages:4,sourceTimes:[.25,3.2188],csvColumns:24},newAiGeneration:false};await writeFile(join(out,'export-import-verification.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));

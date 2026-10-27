@@ -72,7 +72,10 @@ export const timelineClipSchema = clipAudioSchema.extend({ id, assetId: id, dial
 export const editorTrackSchema = z.object({ id, name: text(250), type: z.enum(['video', 'audio']), muted: z.boolean(), volume: z.number().min(0).max(1), locked:z.boolean().optional(), clips: z.array(timelineClipSchema).max(500) });
 export const subtitleCueSchema = z.object({ id, sceneId: id, dialogueLineId:id.optional(), start: seconds, end: seconds, text: text(2000), characterId: id.optional(), sourceDialogue: text().optional() }).refine((cue) => cue.end > cue.start, 'El subtítulo debe terminar después de empezar.');
 export const storyStructureSchema=z.object({sequences:z.array(z.object({id,title:text(250)})).max(100),scenes:z.array(z.object({id,sequenceId:id,title:text(250),setting:text(500),notes:text(2000)})).max(100)});
+export const directionAlternativeSchema=z.object({id,name:text(120).min(1),prompt:text(),negativePrompt:text(),camera:text(250),cinematography:cinematographySchema.optional(),opening:text(1200),closing:text(1200)}).strict();
+export const shotPlanningSchema=z.object({opening:text(1200).optional(),closing:text(1200).optional(),notes:text(4000).optional(),alternatives:z.array(directionAlternativeSchema).max(6).optional()}).strict();
 export const sceneSchema = z.object({
+  planning:shotPlanningSchema.optional(),
   storySceneId:id.optional(),
   id, title: text(250), description: text(), dialogue: text(), prompt: text(),
   negativePrompt: text(), duration: z.number().min(1).max(120),
@@ -117,6 +120,7 @@ export function validateEditingReferences(project: Project) {
   for (const group of [tracks, clips, cues, project.dialogueLines??[]]) if (new Set(group.map((item) => item.id)).size !== group.length) fail('Los identificadores de pistas, clips y subtítulos deben ser únicos en su grupo.');
   const scenes = new Set(project.scenes.map((scene) => scene.id)), characters = new Set(project.characters.map((character) => character.id));
   const assets = new Map(project.assets.map((asset) => [asset.id, asset]));
+  for(const shot of project.scenes){const alts=shot.planning?.alternatives??[];if(new Set(alts.map(a=>a.id)).size!==alts.length)fail('Cada alternativa de dirección necesita un identificador único dentro de su plano.');}
   const sequences=project.story?.sequences??[],storyScenes=project.story?.scenes??[];
   for(const group of [sequences,storyScenes])if(new Set(group.map(x=>x.id)).size!==group.length)fail('La estructura narrativa contiene identificadores repetidos.');
   for(const scene of storyScenes)if(!sequences.some(s=>s.id===scene.sequenceId))fail('Una escena narrativa pertenece a una secuencia inexistente.');

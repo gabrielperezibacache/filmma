@@ -1,3 +1,4 @@
+import { buildGenerationInstructions } from '../src/generation-instructions';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
@@ -45,6 +46,7 @@ test('the final generation prompt adapts an object shot while preserving people,
     const scene = f.store.project.scenes[0]!;
     scene.prompt = 'A vintage cinema camera rests on a wooden table.';
     scene.negativePrompt = 'No logos or text';
+    scene.planning = { opening: 'The camera starts on the table.', closing: 'The lens catches a reflection.', notes: 'Production-only QA: record room tone.' };
     scene.cinematography = { framing: 'medium', angle: 'eye-level', lens: '50mm' };
     scene.characterIds = ['object'];
     delete scene.assetId; delete scene.endAssetId; delete scene.videoAssetId;
@@ -62,6 +64,10 @@ test('the final generation prompt adapts an object shot while preserving people,
       const job = f.store.jobs.find(item => item.id === jobId)!;
       assert.equal(job.status, 'completed', job.message);
       const generation = f.store.project.assets.find(asset => asset.id === job.result!.originalAssetId)!.generation!;
+      assert.equal(generation.prompt, buildGenerationInstructions(f.store.project, f.store.project.scenes[0]!));
+      assert.match(generation.prompt, /Planned opening: The camera starts on the table/);
+      assert.match(generation.prompt, /Intended ending: The lens catches a reflection/);
+      assert.doesNotMatch(generation.prompt, /Production-only QA/);
       assert(generation.prompt.startsWith(scene.prompt));
       assert.match(generation.prompt, /Visual constraints \/ Avoid: No logos or text/);
       if (characterId === 'object') {
