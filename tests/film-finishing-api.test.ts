@@ -7,6 +7,11 @@ import { join } from 'node:path';
 import { createApp } from '../server/app.js';
 import { runProcess, parseJsonOutput } from '../server/process.js';
 
+// Hosted Mac CPU encodes can exceed the M4's timings. These bounds apply only
+// to the test harness; render checks and production limits remain unchanged.
+const jobWaitMs=process.env.CI?120_000:40_000;
+const testTimeoutMs=process.env.CI?180_000:60_000;
+
 async function fixture(mode = 'success') {
   const directory = await mkdtemp(join(tmpdir(), 'filmma-film-ai-')), dataDirectory = join(directory, 'data');
   await mkdir(join(dataDirectory, 'media'), { recursive: true });
@@ -32,13 +37,13 @@ if(out.status){console.error(out.stderr);process.exit(1)}console.log(JSON.string
   const server = f.app.listen(0, '127.0.0.1'); await once(server, 'listening'); const address = server.address(); assert(address && typeof address !== 'string');
   const base = `http://127.0.0.1:${address.port}`;
   const request = (path: string, body: unknown, method = 'POST') => fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'X-Filmma-Client': 'filmma' }, body: JSON.stringify(body) });
-  const wait = async (id: string) => { for (let n = 0; n < 2000; n++) { const job = f.store.jobs.find(item => item.id === id)!; if (['completed', 'failed', 'cancelled'].includes(job.status)) return job; await new Promise(done => setTimeout(done, 20)); } throw new Error('Job timeout'); };
+  const wait = async (id: string) => { const deadline=performance.now()+jobWaitMs;while(performance.now()<deadline){ const job = f.store.jobs.find(item => item.id === id)!; if (['completed', 'failed', 'cancelled'].includes(job.status)) return job; await new Promise(done => setTimeout(done, 20)); }const job=f.store.jobs.find(item=>item.id===id);throw new Error(`Job timeout after ${jobWaitMs} ms: ${job?.status}, ${job?.progress}%, ${job?.message}`); };
   const waitStarted = async () => { for (let n = 0; n < 500; n++) { if (await readFile(calls).catch(() => undefined)) return; await new Promise(done => setTimeout(done, 20)); } throw new Error('Worker timeout'); };
   const records = async () => (await readFile(calls, 'utf8').catch(() => '')).trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
   return { ...f, directory, dataDirectory, source, base, controls, calls, release, request, wait, waitStarted, records, close: async () => { await f.close(); server.closeAllConnections(); await new Promise<void>(done => server.close(() => done())); await rm(directory, { recursive: true, force: true }); } };
 }
 
-test('batch deduplicates sources and active requests, applies same copy to scenes and layer, and reuses compatible versions', { timeout: 60000 }, async () => {
+test('batch deduplicates sources and active requests, applies same copy to scenes and layer, and reuses compatible versions', { timeout: testTimeoutMs }, async () => {
   const f = await fixture();
   try {
     const before = structuredClone(f.store.project), body = { projectId: before.id, strength: .35 };
@@ -57,7 +62,7 @@ test('batch deduplicates sources and active requests, applies same copy to scene
   } finally { await f.close(); }
 });
 
-test('processing profiles have distinct batch jobs and caches and always return to the retained original', { timeout: 60000 }, async()=>{
+test('processing profiles have distinct batch jobs and caches and always return to the retained original', { timeout: testTimeoutMs }, async()=>{
   const f=await fixture('pause');
   try {
     const body={projectId:f.store.project.id,strength:.35};
@@ -73,7 +78,7 @@ test('processing profiles have distinct batch jobs and caches and always return 
   }finally{await f.close();}
 });
 
-test('automatic generation finishing passes the chosen restoration profile and conserves the generated original', {timeout:60000},async()=>{
+test('automatic generation finishing passes the chosen restoration profile and conserves the generated original', {timeout:testTimeoutMs},async()=>{
  const f=await fixture();try{
   f.store.project.aiFinishing={enabled:true,strength:.8,processingProfile:'restore'};
   const response=await f.request('/api/generate',{sceneId:f.store.project.scenes[0]!.id,model:'ltx-2b',conditioningMode:'text',duration:1});assert.equal(response.status,202);
@@ -85,7 +90,7 @@ test('automatic generation finishing passes the chosen restoration profile and c
  }finally{await f.close();}
 });
 
-test('strict 4K export requires the reviewed restoration profile and reuses the reviewed copy without neural inference', {timeout:60000},async()=>{
+test('strict 4K export requires the reviewed restoration profile and reuses the reviewed copy without neural inference', {timeout:testTimeoutMs},async()=>{
  const f=await fixture();try{
   f.store.project.scenes=f.store.project.scenes.slice(0,1);f.store.project.tracks=[];
   const scene=f.store.project.scenes[0]!;scene.trimStart=0;scene.speed=1;scene.characterIds=[];
@@ -105,7 +110,7 @@ test('strict 4K export requires the reviewed restoration profile and reuses the 
  }finally{await f.close();}
 });
 
-test('batch preserves newer manual selections including layer ABA, and stale autosave keeps new family bindings with local trim', { timeout: 60000 }, async () => {
+test('batch preserves newer manual selections including layer ABA, and stale autosave keeps new family bindings with local trim', { timeout: testTimeoutMs }, async () => {
   const f = await fixture('pause');
   try {
     const before = structuredClone(f.store.project);
@@ -123,7 +128,7 @@ test('batch preserves newer manual selections including layer ABA, and stale aut
   } finally { await f.close(); }
 });
 
-test('generation preflight rejects a missing AI model; failure and cancellation after generation retain its original', { timeout: 60000 }, async () => {
+test('generation preflight rejects a missing AI model; failure and cancellation after generation retain its original', { timeout: testTimeoutMs }, async () => {
   for (const mode of ['fail', 'pause']) {
     const f = await fixture(mode);
     try {
@@ -141,7 +146,7 @@ test('generation preflight rejects a missing AI model; failure and cancellation 
   }
 });
 
-test('deleting and restoring a scene during finishing prevents automatic replacement of that restored selection', { timeout: 60000 }, async () => {
+test('deleting and restoring a scene during finishing prevents automatic replacement of that restored selection', { timeout: testTimeoutMs }, async () => {
   const f = await fixture('pause');
   try {
     const submitted = await (await f.request('/api/enhance-sequence', { projectId: f.store.project.id, strength: .35 })).json(); await f.waitStarted();
@@ -155,7 +160,7 @@ test('deleting and restoring a scene during finishing prevents automatic replace
   } finally { await f.close(); }
 });
 
-test('AI export uses its snapshot, stores reusable copies without applying them, and never exports after IA failure', { timeout: 60000 }, async () => {
+test('AI export uses its snapshot, stores reusable copies without applying them, and never exports after IA failure', { timeout: testTimeoutMs }, async () => {
   const f = await fixture('pause');
   try {
     f.store.project.scenes = f.store.project.scenes.slice(0, 1); f.store.project.tracks = []; f.store.project.scenes[0]!.trimStart = 0; f.store.project.scenes[0]!.speed = 1;
@@ -172,7 +177,7 @@ test('AI export uses its snapshot, stores reusable copies without applying them,
   } finally { await f.close(); }
 });
 
-test('finishing completion after switching movies is saved only to the original movie', { timeout: 60000 }, async () => {
+test('finishing completion after switching movies is saved only to the original movie', { timeout: testTimeoutMs }, async () => {
   const f = await fixture('pause');
   try {
     const firstId = f.store.project.id;
