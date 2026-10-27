@@ -22,7 +22,6 @@ jobs:
       - name: Install build tools
         run: brew install ffmpeg x264 pkg-config
       - run: npm ci
-      - run: npm test
       - name: Release version
         shell: bash
         run: |
@@ -41,6 +40,8 @@ jobs:
           git -C build/sources/x264 archive --format=tar.gz --output=../x264-b35605a.tar.gz b35605ace3ddf7c1a5d67a2eb553f034aef41d55
           git -C build/sources/x264 show b35605ace3ddf7c1a5d67a2eb553f034aef41d55:COPYING > build/sources/x264-COPYING.txt
           uv python install 3.12
+          echo "$GITHUB_WORKSPACE/build/media-runtime/bin" >> "$GITHUB_PATH"
+      - run: npm test
       - name: Build Mac installer
         run: npm run desktop:build
       - run: npm run release:checksums
