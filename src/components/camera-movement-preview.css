@@ -1,0 +1,19 @@
+.camera-movement-study{margin:0 0 26px;padding:20px 0 22px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.camera-movement-heading{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.cinema-guide .camera-movement-heading h4{font-size:14px;line-height:1.5;font-weight:500;margin:0}
+.camera-movement-heading>span{font-size:11px;color:var(--muted)}
+.camera-movement-layout{display:grid;grid-template-columns:minmax(180px,1fr) minmax(170px,1fr);align-items:center;gap:22px;margin:12px 0}
+.camera-movement-layout>svg{display:block;width:100%;height:auto;max-height:240px;background:var(--bg);border-radius:6px}
+.cinema-guide .camera-movement-notes p{font-size:12px;line-height:1.65;color:var(--muted);margin:0 0 15px;max-width:42ch}
+.camera-movement-notes dl{margin:0;font-size:11px;line-height:1.6}
+.camera-movement-notes dl>div+div{margin-top:9px}
+.camera-movement-notes dt{color:var(--text);font-weight:500}
+.camera-movement-notes dd{color:var(--muted);margin:2px 0 0}
+.camera-movement-controls{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.camera-movement-controls button{min-height:44px;font-size:12px}
+.camera-movement-steps{display:flex;gap:4px}
+.camera-movement-steps button{background:transparent;color:var(--muted);border:1px solid transparent;border-radius:5px;padding:9px 15px}
+.camera-movement-steps button[aria-pressed=true]{border-color:var(--border);color:var(--accent)}
+.camera-movement-steps button:hover{color:var(--text)}
+.cinema-guide .camera-movement-limit{font-size:11px;line-height:1.65;color:var(--muted);margin:14px 0 0;max-width:72ch}
+@media(max-width:540px){.camera-movement-layout{grid-template-columns:1fr;gap:16px}.camera-movement-layout>svg{max-height:220px}.cinema-guide .camera-movement-notes p{font-size:13px;max-width:none}.camera-movement-notes dl{display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:12px}.camera-movement-notes dl>div+div{margin:0}.camera-movement-controls{gap:6px}.camera-movement-controls>.quiet-button{padding-left:10px;padding-right:10px}.camera-movement-steps button{padding-left:12px;padding-right:12px}.camera-movement-heading>span{font-size:11px}}

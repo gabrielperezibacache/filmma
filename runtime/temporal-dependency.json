@@ -1,0 +1,14 @@
+{
+  "name": "opencv-python-headless",
+  "version": "4.11.0.86",
+  "importVersion": "4.11.0",
+  "registry": "https://pypi.org/pypi/opencv-python-headless/4.11.0.86/json",
+  "filename": "opencv_python_headless-4.11.0.86-cp37-abi3-macosx_13_0_arm64.whl",
+  "url": "https://files.pythonhosted.org/packages/dc/53/2c50afa0b1e05ecdb4603818e85f7d174e683d874ef63a6abe3ac92220c8/opencv_python_headless-4.11.0.86-cp37-abi3-macosx_13_0_arm64.whl",
+  "bytes": 37326460,
+  "sha256": "48128188ade4a7e517237c8e1e11a9cdf5c282761473383e77beb875bb1e61ca",
+  "architectures": [
+    "arm64"
+  ],
+  "hashProvenance": "Digest published by PyPI JSON for the pinned macOS arm64 wheel; not a separate publisher signature."
+}

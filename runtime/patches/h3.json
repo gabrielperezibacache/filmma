@@ -1,0 +1,14 @@
+{
+  "description": "Local compatibility fixes for the pinned H3 source. Unknown source versions are preserved and rejected for review.",
+  "patches": [
+    {
+      "id": "ignore-hidden-safetensors-shards",
+      "path": "h3_weights.c",
+      "beforeSha256": "d68476becd34dee90b78797ce9fb9025f65f3e222e01bb3f498b2d005d5f1fcc",
+      "afterSha256": "c70fb0f5db90eaf6efc24208e01ac4aefb12c9953675e14f9862bf01d25f5a35",
+      "before": "static int safetensors_name(const char *name) {\n    static const char suffix[] = \".safetensors\";",
+      "after": "static int safetensors_name(const char *name) {\n    /* macOS AppleDouble companions are metadata, not tensor shards. */\n    if (name[0] == '.') return 0;\n    static const char suffix[] = \".safetensors\";",
+      "reason": "Skip macOS AppleDouble and other dot-prefixed metadata, matching h3_safetensors.c inventory behavior. Preserve all SSD files; malformed visible tensor shards still fail validation."
+    }
+  ]
+}

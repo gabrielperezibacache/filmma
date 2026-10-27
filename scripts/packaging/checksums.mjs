@@ -1,0 +1,2 @@
+import{readdir,readFile,writeFile}from'node:fs/promises';import{createHash}from'node:crypto';import{join}from'node:path';
+const directory='release';const files=(await readdir(directory)).filter(n=>/^Filmma-.*\.(dmg|zip)$/.test(n)).sort();const lines=[];for(const file of files)lines.push(`${createHash('sha256').update(await readFile(join(directory,file))).digest('hex')}  ${file}`);await writeFile(join(directory,'SHA256SUMS.txt'),lines.join('\n')+'\n');console.log(lines.join('\n'));

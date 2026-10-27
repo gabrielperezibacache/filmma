@@ -1,0 +1,11 @@
+.audio-waveform{height:82px;position:relative;overflow:hidden;background:var(--ui-1c251f);color:var(--ui-bbcea4);border:1px solid var(--ui-3f5141);border-radius:4px;min-width:0}
+.audio-waveform svg{position:absolute;inset:5px 0 19px;width:100%;height:calc(100% - 24px);fill:none;stroke:currentColor;pointer-events:none}
+.audio-waveform .waveform-baseline{stroke:var(--ui-52664b);stroke-width:1;vector-effect:non-scaling-stroke}
+.waveform-state{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px;font-size:11px;color:var(--ui-b9c9ad);line-height:1.4}
+.waveform-state button{display:inline-flex;align-items:center;gap:5px;min-height:34px;background:var(--ui-2b3829);color:var(--ui-dce7ce);border:1px solid var(--ui-60764d);border-radius:4px;font:inherit;padding:5px 8px;cursor:pointer}
+.waveform-caption{position:absolute;bottom:6px;left:10px;font-size:9px;color:var(--ui-a3b598);font-variant-numeric:tabular-nums;pointer-events:none}
+.audio-waveform.is-compact{height:24px;position:absolute;bottom:3px;left:1px;right:1px;background:transparent;border:0;border-radius:0;pointer-events:none;color:var(--ui-bcdbac)}
+.audio-waveform.is-compact svg{inset:0;width:100%;height:100%}
+.audio-waveform.is-compact .waveform-state{justify-content:flex-start;padding:1px 6px;font-size:8px;white-space:nowrap;overflow:hidden}
+.audio-waveform.is-muted{color:var(--ui-7b9570)}
+@media(max-width:760px){.waveform-state button{min-height:44px}.audio-waveform:not(.is-compact){height:94px}}

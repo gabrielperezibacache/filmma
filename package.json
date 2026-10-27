@@ -1,0 +1,51 @@
+{
+  "name": "filmma-studio",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n api,studio \"tsx watch server/index.ts\" \"vite --host 127.0.0.1 --port 4317\"",
+    "build": "tsc -b && vite build",
+    "start": "tsx server/index.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check": "tsc -b",
+    "model:doctor": "python3 runtime/filmma_runtime.py doctor --json",
+    "desktop:prepare": "node scripts/packaging/prepare-desktop.mjs",
+    "desktop:build": "npm run build && npm run desktop:prepare && electron-builder --config desktop/electron-builder.cjs --mac --arm64",
+    "desktop:dev": "electron .",
+    "release:checksums": "node scripts/packaging/checksums.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "lucide-react": "^0.468.0",
+    "motion": "^12.23.12",
+    "multer": "^2.0.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@babel/parser": "^8.0.8",
+    "@babel/traverse": "^8.0.7",
+    "@babel/types": "^8.0.8",
+    "@playwright/test": "^1.55.1",
+    "@types/express": "^5.0.3",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.3",
+    "concurrently": "^9.2.1",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.20.5",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.7"
+  },
+  "main": "desktop/main.cjs",
+  "description": "Estudio local de cine, guion y continuidad en Apple Silicon",
+  "author": "Filmma",
+  "license": "UNLICENSED"
+}

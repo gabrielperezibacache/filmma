@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "model": "realesrgan-x4plus",
+  "version": "20220424",
+  "engine": "realesrgan-ncnn-vulkan",
+  "engineVersion": "v0.2.0",
+  "repository": "https://github.com/xinntao/Real-ESRGAN",
+  "runtimeRepository": "https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan",
+  "licenseUrl": "https://github.com/xinntao/Real-ESRGAN/blob/v0.2.5.0/LICENSE",
+  "runtimeLicenseUrl": "https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan/blob/v0.2.0/LICENSE",
+  "platform": "darwin",
+  "architectures": ["arm64", "x86_64"],
+  "tile": 128,
+  "threads": "1:1:1",
+  "nativeScale": 4,
+  "defaultStrength": 0.35,
+  "temporalMode": "frame-independent-conservative",
+  "archive": {
+    "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-macos.zip",
+    "bytes": 51817124,
+    "sha256": "e0ad05580abfeb25f8d8fb55aaf7bedf552c375b5b4d9bd3c8d59764d2cc333a"
+  },
+  "hashProvenance": "SHA256 measured on the official HTTPS release downloaded on 2026-10-17; upstream did not publish a separate signed checksum. These pins detect later changes, not an upstream signature.",
+  "files": [
+    {
+      "path": "realesrgan-ncnn-vulkan",
+      "bytes": 26787080,
+      "sha256": "c1c35d92079085de96b9d547fd7e4464bc8a2e9ccf28d7b8c712d72ade91b7cc",
+      "executable": true
+    },
+    {
+      "path": "models/realesrgan-x4plus.bin",
+      "bytes": 33424520,
+      "sha256": "713ee713b0353afaa27976f0563a64a5043bd70b9bd8936c2e26e25ebcdbcddf"
+    },
+    {
+      "path": "models/realesrgan-x4plus.param",
+      "bytes": 116029,
+      "sha256": "35330ececcea33b6c397a72548e788d5d53becee4734c50b7fada36e89f10a86"
+    }
+  ]
+}

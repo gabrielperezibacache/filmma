@@ -1,0 +1,9 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import {PreferencesProvider} from './preferences-context';
+import './appearance.css';
+import ErrorBoundary from './ErrorBoundary';
+import './styles.css';
+import './workflow-shell.css';
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><ErrorBoundary><PreferencesProvider><App/></PreferencesProvider></ErrorBoundary></React.StrictMode>);

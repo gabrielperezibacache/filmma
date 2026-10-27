@@ -1,0 +1,27 @@
+.project-output-settings { container-type:inline-size; min-width:0; color:var(--text); }
+.project-output-settings fieldset { min-inline-size:0; margin:0; padding:0; border:0; }
+.project-output-settings legend { padding:0; margin:0 0 8px; color:var(--text); font-size:14px; font-weight:600; line-height:1.5; }
+.project-output-settings .project-output-scope { color:var(--muted); font-size:12px; line-height:1.65; margin:0 0 14px; }
+.project-output-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.project-output-settings .project-output-fields label { display:grid; gap:8px; min-width:0; margin:0; color:var(--text); font-size:12px; }
+.project-output-settings select { width:100%; min-height:44px; font-size:13px; padding:10px; }
+.project-output-settings select:focus-visible,.project-output-reset:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.project-output-settings .project-output-help { margin:12px 0 0; max-width:65ch; font-size:12px; line-height:1.65; color:var(--muted); }
+.project-output-settings .project-output-reset { display:inline-flex; align-items:center; min-height:44px; margin:3px 0 0; padding:6px 0; font-size:12px; line-height:1.5; color:var(--accent); text-align:left; }
+.project-output-settings .project-output-reset:hover { text-decoration:underline; text-underline-offset:4px; color:var(--text); }
+.project-output-settings.is-compact legend { font-size:13px; }
+.sw-brief-fields>.project-output-settings { grid-column:1/-1; border-top:1px solid var(--border); padding-top:20px; }
+.sw-brief-fields>.sw-project-title { grid-column:1/-1; }
+.sw-scene-time .sw-duration-field { flex:1 1 210px; max-width:300px; }
+.sw-scene-time .sw-duration-field>label { display:block; color:var(--sw-paper-muted); margin:0 0 7px; font-size:12px; }
+.sw-duration-field .commit-number-control { max-width:150px; }
+.sw-duration-field .commit-number-control input { min-height:44px; font-size:14px; padding:8px 40px 8px 12px; color:var(--sw-ink); background:var(--ui-ffffff54); border-color:var(--sw-paper-line); border-radius:4px; }
+.sw-duration-field .commit-number-control>span,.sw-duration-field .commit-number-help { color:var(--sw-paper-muted); }
+.sw-duration-field .commit-number-help { font-size:11px; margin-top:6px; }
+.sw-duration-field.commit-number .commit-number-error { color:var(--ui-8c3924); }
+@container (max-width:420px) { .project-output-fields { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:640px) {
+  .project-output-settings select,.sw-duration-field .commit-number-control input { font-size:16px; }
+  .project-output-settings .project-output-scope,.project-output-settings .project-output-help,.project-output-settings .project-output-reset { font-size:13px; }
+  .sw-scene-time .sw-duration-field { max-width:none; }
+}

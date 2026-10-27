@@ -1,0 +1,57 @@
+name: Filmma for Mac
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: macos-release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: astral-sh/setup-uv@v6
+      - name: Install build tools
+        run: brew install x264 pkg-config
+      - run: npm ci
+      - run: npm test
+      - name: Release version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.2.${GITHUB_RUN_NUMBER}"
+          fi
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          echo "FILMMA_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Portable media runtime and sources
+        run: |
+          python3 scripts/packaging/build-media-runtime.py
+          mkdir -p build/sources
+          git clone --filter=blob:none --no-checkout https://code.videolan.org/videolan/x264.git build/sources/x264
+          git -C build/sources/x264 archive --format=tar.gz --output=../x264-b35605a.tar.gz b35605ace3ddf7c1a5d67a2eb553f034aef41d55
+          git -C build/sources/x264 show b35605ace3ddf7c1a5d67a2eb553f034aef41d55:COPYING > build/sources/x264-COPYING.txt
+          uv python install 3.12
+      - name: Build Mac installer
+        run: npm run desktop:build
+      - run: npm run release:checksums
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Filmma-${{ env.FILMMA_VERSION }}-arm64
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/SHA256SUMS.txt
+      - name: Publish private release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "v$FILMMA_VERSION" release/*.dmg release/*.zip release/SHA256SUMS.txt --title "Filmma $FILMMA_VERSION" --notes "Apple Silicon. Instalador con firma ad hoc, sin notarización Apple. Conserva proyectos y modelos externos."

@@ -1,0 +1,32 @@
+/** Isolated UI fixture. All generation requests are refused before runtime work. */
+import express from 'express';
+import {createServer as createHttpServer} from 'node:http';
+import {createServer as createViteServer} from 'vite';
+import react from '@vitejs/plugin-react';
+import {createApp} from '../server/app.ts';
+import {createSeedProject} from '../server/seed.ts';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+import {createHash} from 'node:crypto';
+const root=resolve(import.meta.dirname,'..'),evidence=join(root,'output/qa/export-hd720-ui'),store=join(evidence,'store');
+await mkdir(store,{recursive:true});
+const originalHash=createHash('sha256').update(await readFile(join(root,'data/project.json'))).digest('hex');
+const project=createSeedProject();project.id='qa-native-resolution';project.name='QA · Resolución nativa';project.logline='Prueba aislada de controles. No genera videos.';
+project.scenes=project.scenes.slice(0,1);project.scenes[0].duration=15;project.scenes[0].characterIds=[];delete project.scenes[0].assetId;
+await writeFile(join(store,'project.json'),JSON.stringify(project,null,2));await writeFile(join(store,'jobs.json'),'[]');
+const fixture=await createApp({dataDirectory:store,distDirectory:join(evidence,'not-built'),credentialsDirectory:join(evidence,'private-test-connection'),skipDiagnostics:true,python:'/not-used',codex:'/not-used'});
+const shell=express(),server=createHttpServer(shell),blocked=[];
+const oldValidation={status:'media-verified',model:'minimax-h3',mode:'text-to-video',outputAvailable:true,parameters:{memoryProfile:'h3-long-ssd',width:512,height:320,numFrames:345,fps:24,steps:20}};
+const nativePilot={status:'media-verified',model:'minimax-h3',mode:'text-to-video',outputAvailable:true,parameters:{memoryProfile:'h3-native-ssd',width:1024,height:576,numFrames:22,fps:24,steps:20}};
+const hdShortPilot={...nativePilot,parameters:{...nativePilot.parameters,width:1280,height:736}};
+const system={platform:'darwin',arch:'arm64',memoryGB:36,ffmpeg:{available:true},codex:{available:false,authenticated:false},runtime:{available:true,models:[{id:'minimax-h3',available:true,lastValidation:oldValidation,validationHistory:[oldValidation,nativePilot,hdShortPilot]},{id:'ltx-2b',available:true}]}};
+shell.get('/api/bootstrap',(_req,res)=>res.json({project:fixture.store.project,jobs:fixture.store.jobs,system}));
+shell.get('/api/system',(_req,res)=>res.json(system));
+shell.get('/api/upscaler',(_req,res)=>res.json({ok:true,ready:true,installed:true,supported:true,model:'realesrgan-x4plus',temporalAvailable:process.env.FILMMA_QA_TEMPORAL_READY!=='0'}));
+shell.post('/api/upscaler/setup',(req,res)=>{blocked.push(req.path);res.status(409).json({error:'Esta interfaz aislada no instala componentes.'})});
+shell.post(/^\/api\/(generate|generate-variants|generate-sequence|models\/|export|enhance)/,(req,res)=>{blocked.push(req.path);res.status(409).json({error:'Esta prueba de interfaz no permite generar ni procesar videos.'})});
+shell.use(fixture.app);
+const vite=await createViteServer({configFile:false,root,plugins:[react()],server:{host:'127.0.0.1',port:5173,strictPort:true,proxy:{'/api':'http://127.0.0.1:5174'}},appType:'spa'});await vite.listen();
+server.listen(5174,'127.0.0.1',()=>console.log('UI aislada: http://127.0.0.1:5173/ · generación desactivada'));
+async function stop(){const currentHash=createHash('sha256').update(await readFile(join(root,'data/project.json'))).digest('hex');await writeFile(join(evidence,'fixture-result.json'),JSON.stringify({blockedGenerationRequests:blocked,jobs:fixture.store.jobs.length,originalHash,currentHash,productionUnchanged:originalHash===currentHash},null,2));await fixture.close();await vite.close();server.closeAllConnections();server.close(()=>process.exit(0));}
+process.on('SIGINT',()=>void stop());process.on('SIGTERM',()=>void stop());

@@ -1,0 +1,55 @@
+.storyboard-workspace{max-width:1500px;margin:0 auto;padding:38px 40px 60px;min-width:0;color:var(--text);font-size:14px;line-height:1.65}
+.storyboard-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:30px;margin-bottom:28px}
+.storyboard-heading h1{font:400 40px/1.2 FilmmaDisplay,Georgia,serif;letter-spacing:-.025em;text-wrap:balance}
+.storyboard-heading h1 span{color:var(--accent)}
+.storyboard-heading p{max-width:62ch;color:var(--muted);margin-top:14px}
+.storyboard-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.storyboard-actions button{min-height:44px;justify-content:center;font-size:13px;white-space:normal}
+.storyboard-summary{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 0;color:var(--muted);font-size:13px}
+.storyboard-summary time{font-family:ui-monospace,monospace;color:var(--text)}
+.storyboard-preparation{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;min-height:70px;color:var(--accent);font-size:13px}
+.storyboard-preparation button{min-height:44px;font-size:13px}
+.storyboard-preparation progress{width:100%;height:4px;accent-color:var(--accent);margin-top:-8px;margin-bottom:12px}
+.storyboard-note{color:var(--muted);max-width:80ch;font-size:13px;margin:0 0 32px}
+.storyboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:38px 28px;list-style:none;padding:0;margin:0}
+.storyboard-shot{min-width:0;border-top:1px solid var(--border);padding-top:14px}
+.storyboard-shot article>header{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font:12px/1.5 ui-monospace,monospace;margin-bottom:14px}
+.storyboard-shot article>header>span:first-child{color:var(--accent)}
+.storyboard-shot figure{margin:0}
+.storyboard-picture{height:220px;position:relative;background:var(--ui-0d100e);overflow:hidden}
+.storyboard-picture>img{display:block;width:100%;height:100%;object-fit:contain}
+.storyboard-picture>.color-filter-defs{position:absolute}
+.storyboard-missing{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;color:var(--muted);text-align:center;font-size:13px}
+.storyboard-missing p{max-width:35ch}
+.storyboard-shot figcaption{display:flex;flex-direction:column;gap:3px;color:var(--muted);font-size:11px;line-height:1.6;margin-top:10px;min-height:44px;overflow-wrap:anywhere}
+.storyboard-shot figcaption>span:first-child{color:var(--text)}
+.storyboard-shot-title{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:14px}
+.storyboard-shot h2{font:400 27px/1.25 FilmmaDisplay,Georgia,serif;letter-spacing:-.015em;overflow-wrap:anywhere;text-wrap:balance}
+.storyboard-open{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--accent);border:1px solid var(--border);border-radius:6px;flex-shrink:0}
+.storyboard-time{font:11px/1.5 ui-monospace,monospace;color:var(--muted);display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.storyboard-direction{font-size:12px;color:var(--muted);margin-top:12px;overflow-wrap:anywhere}
+.storyboard-script{margin-top:24px}
+.storyboard-shot h3{font-size:12px;font-weight:500;color:var(--muted);margin:20px 0 7px}
+.storyboard-script p,.storyboard-characters p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+.storyboard-dialogue{color:var(--accent)}
+.storyboard-characters{margin:20px 0}
+.storyboard-continuity{border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px 0}
+.storyboard-continuity summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:var(--text)}
+.storyboard-continuity summary>span{font-size:11px;color:var(--muted);flex-shrink:0}
+.storyboard-continuity[open] summary{color:var(--accent)}
+.storyboard-continuity p{white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted);font-size:13px;margin:15px 0}
+.storyboard-continuity button{min-height:44px;font-size:12px;margin-bottom:8px}
+.storyboard-footer{display:flex;align-items:flex-start;gap:14px;border-top:1px solid var(--border);padding-top:26px;margin-top:42px;color:var(--muted)}
+.storyboard-footer svg{flex-shrink:0;margin-top:3px;color:var(--accent)}
+.storyboard-footer p{font-size:13px;max-width:75ch}
+.storyboard-error{color:var(--ui-e4c29e);margin:12px 0 24px}
+.storyboard-empty{padding:65px 0;max-width:65ch}
+.storyboard-empty svg{color:var(--accent);margin-bottom:20px}
+.storyboard-empty h2{font:400 29px/1.3 FilmmaDisplay,Georgia,serif;margin-bottom:16px}
+.storyboard-empty p{color:var(--muted)}
+.storyboard-workspace button:hover:not(:disabled){filter:brightness(1.15)}
+.storyboard-workspace button:focus-visible,.storyboard-workspace summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.storyboard-workspace button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:1250px){.storyboard-workspace{padding:30px 24px 50px}.storyboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 24px}.storyboard-heading h1{font-size:35px}.storyboard-picture{height:250px}}
+@media(max-width:760px){.storyboard-workspace{padding:24px 16px 44px;font-size:16px}.storyboard-heading{flex-direction:column;gap:22px}.storyboard-heading h1{font-size:34px}.storyboard-heading p{font-size:16px}.storyboard-actions{width:100%;gap:10px}.storyboard-actions button{font-size:14px}.storyboard-grid{grid-template-columns:minmax(0,1fr);gap:36px}.storyboard-picture{height:250px}.storyboard-summary{flex-wrap:wrap;font-size:13px}.storyboard-note,.storyboard-footer p{font-size:14px}.storyboard-shot h2{font-size:30px}.storyboard-shot figcaption{font-size:12px}.storyboard-script p,.storyboard-characters p{font-size:16px}.storyboard-shot h3,.storyboard-direction,.storyboard-continuity p{font-size:14px}.storyboard-continuity summary{font-size:14px}.storyboard-continuity summary>span{font-size:12px}.storyboard-preparation{font-size:14px;gap:4px}.storyboard-preparation button{font-size:13px}.storyboard-workspace button,.storyboard-workspace summary{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.storyboard-workspace *{scroll-behavior:auto;transition:none;animation:none}}
