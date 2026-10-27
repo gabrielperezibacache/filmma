@@ -31,6 +31,7 @@ async function createWindow(){
  window.webContents.setWindowOpenHandler(({url})=>{if(allowedExternal(url))void shell.openExternal(url);return{action:'deny'}});
  window.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith(endpoint+'/'))event.preventDefault()});
  window.on('close',async event=>{if(quitting||!owned)return;event.preventDefault();const state=await request(endpoint+'/api/jobs');if(state?.jobs?.some(j=>['queued','running'].includes(j.status))){window.hide();return}quitting=true;app.quit()});
+ window.on('closed',()=>{window=undefined});
  await window.loadURL(endpoint);window.show();
 }
 ipcMain.handle('filmma:choose-directory',async()=>{const r=await dialog.showOpenDialog(window,{properties:['openDirectory','createDirectory'],buttonLabel:'Elegir carpeta del modelo'});return r.canceled?null:r.filePaths[0]});
@@ -41,7 +42,7 @@ if(!app.requestSingleInstanceLock())app.quit();else{
   Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'Filmma',submenu:[{role:'about'},{label:'Configuración…',accelerator:'CmdOrCtrl+,',click:()=>window?.webContents.send('filmma:settings')},{type:'separator'},{role:'hide'},{role:'quit'}]},{label:'Editar',submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},{label:'Ventana',submenu:[{role:'minimize'},{role:'zoom'},{role:'front'}]}]));
   try{await engine();await createWindow()}catch(e){dialog.showErrorBox('Filmma no pudo abrirse',e.message);quitting=true;app.quit()}
  });
- app.on('activate',()=>{if(window)window.show()});
+ app.on('activate',()=>{if(window&&!window.isDestroyed())window.show();else if(endpoint)void createWindow()});
  app.on('before-quit',async event=>{if(quitting)return;if(!owned){quitting=true;return}event.preventDefault();const state=await request(endpoint+'/api/jobs');if(state?.jobs?.some(j=>['queued','running'].includes(j.status))){const choice=await dialog.showMessageBox(window,{type:'question',buttons:['Seguir trabajando','Cancelar tareas y salir'],defaultId:0,cancelId:0,message:'Hay tareas en curso',detail:'Puedes dejar Filmma trabajando en segundo plano. Salir cancela las tareas; los originales y descargas parciales se conservan.'});if(choice.response===0){window.hide();return}}quitting=true;worker?.kill('SIGTERM');app.quit()});
  app.on('will-quit',()=>{if(owned)worker?.kill('SIGTERM')});
 }
