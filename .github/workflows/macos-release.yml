@@ -41,7 +41,8 @@ jobs:
           git -C build/sources/x264 show b35605ace3ddf7c1a5d67a2eb553f034aef41d55:COPYING > build/sources/x264-COPYING.txt
           uv python install 3.12
           echo "$GITHUB_WORKSPACE/build/media-runtime/bin" >> "$GITHUB_PATH"
-      - run: npm test
+      - name: Test with bounded render concurrency
+        run: node --import tsx --test --test-concurrency=2 tests/*.test.ts
       - name: Build Mac installer
         run: npm run desktop:build
       - run: npm run release:checksums
