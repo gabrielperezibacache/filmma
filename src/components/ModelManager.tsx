@@ -16,7 +16,7 @@ export default function ModelManager({jobs,onJob,onActivate,onAssistant}:{jobs:J
  const activeSignature=active.map(j=>j.id).join(':');
  useEffect(()=>{load().catch(()=>{});if(!activeSignature)return;const timer=setInterval(()=>load().catch(()=>{}),5000);return()=>clearInterval(timer)},[activeSignature]);
  const m=report?.models.find((m:any)=>m.id===selected),running=active.find(j=>j.type==='runtime');
- useEffect(()=>{if(!m)return;setPath(m.weights?.directory??'');setReferences(m.weights?.withReferences??true);setPresetId(m.presets?.[0]?.id??'');setPlan(undefined);setLicense(false);setError('');setNotice('')},[selected,!!report]);
+ useEffect(()=>{if(!m)return;setPath(m.weights?.directory??'');setReferences(m.weights?.withReferences??true);setPresetId(m.presets?.some((p:any)=>p.id===preferences.modelPresetId)?preferences.modelPresetId:m.presets?.[0]?.id??'');setPlan(undefined);setLicense(false);setError('');setNotice('')},[selected,!!report]);
  const run=async(name:string,work:()=>Promise<void>)=>{setBusy(name);setError('');setNotice('');try{await work()}catch(e:any){setError(e.message)}finally{setBusy('')}};
  const planDownload=()=>run('plan',async()=>{const q=new URLSearchParams({model:selected,modelDirectory:path,withReferences:String(selected==='minimax-h3'&&references)});setPlan(await api(`/runtime/plan?${q}`));setLicense(false)});
  const job=async(endpoint:string,body:any)=>{const d=await api(endpoint,body);onJob(d.job);await load()};

@@ -24,6 +24,21 @@ class RuntimeContractTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_explicit_verification_checks_sha256_without_fetching_or_modifying_files(self):
+        target = self.root / 'weights.bin'
+        original = b'tiny fixture weights'
+        target.write_bytes(original)
+        entries = [{'path': 'weights.bin', 'size': len(original), 'sha256': hashlib.sha256(original).hexdigest()}]
+        with patch.object(runtime, 'model_dir', return_value=self.root), patch.object(runtime, 'selected_files', return_value=entries), patch.object(runtime, 'exclusive_lock', return_value=__import__('contextlib').nullcontext()), patch.object(runtime, 'emit') as emit:
+            runtime.verify_model('ltx-2b')
+            self.assertTrue(emit.call_args.kwargs['complete'])
+            self.assertEqual(target.read_bytes(), original)
+            target.write_bytes(b'X' * len(original))
+            with self.assertRaises(runtime.RuntimeFailure) as error:
+                runtime.verify_model('ltx-2b')
+            self.assertEqual(error.exception.code, 'MODEL_INTEGRITY_FAILED')
+            self.assertEqual(target.read_bytes(), b'X' * len(original))
+
     def test_h3_frame_geometry_is_reported(self):
         normalized = runtime.normalize_request({**self.request, 'numFrames': 23})
         self.assertEqual(normalized['numFrames'], 39)

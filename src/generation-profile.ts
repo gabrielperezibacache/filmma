@@ -30,7 +30,7 @@ export function longProfileValidationMessage(validation?:H3LongValidation|readon
  * project's exact aspect ratio; any native mismatch is fitted without cropping. */
 export function generationDimensions(format:string,long:boolean,quality:string,nativeResolution:NativeResolution='standard'){
  const detail=nativeResolution==='detail',balanced=nativeResolution==='balanced',hd=nativeResolution==='hd720';
- const existing=hd?{'16:9':[1280,736],'9:16':[736,1280],'1:1':[960,960]}:detail?{'16:9':[1024,576],'9:16':[576,1024],'1:1':[768,768]}:balanced?{'16:9':[768,448],'9:16':[448,768],'1:1':[576,576]}:long?{'16:9':[512,320],'9:16':[320,512],'1:1':[384,384]}:
+ const existing=hd?{'16:9':[1280,736],'9:16':[736,1280],'1:1':[960,960]}:detail?{'16:9':[1024,576],'9:16':[576,1024],'1:1':[768,768]}:balanced?{'16:9':[768,448],'9:16':[448,768],'1:1':[576,576]}:long||quality==='conservative'?{'16:9':[512,320],'9:16':[320,512],'1:1':[384,384]}:
   quality==='quality'?{'16:9':[768,448],'9:16':[448,768],'1:1':[640,640]}:
   {'16:9':[512,288],'9:16':[288,512],'1:1':[512,512]};
  const known=existing[format as keyof typeof existing];
@@ -64,7 +64,7 @@ export function generationPreview(model:string,requested:number,_sceneDuration:n
  const maximumNativeFrames=hdLong?H3_HD_MAX_FRAMES:h3NativeMaximumFrames(size.width,size.height),maximumNativeSeconds=maximumNativeFrames/24;
  const videoTokens=h3NativeVideoTokens(size.width,size.height,numFrames);
  const blockedReason=native&&(numFrames>maximumNativeFrames||videoTokens>(hdLong?H3_HD_MAX_VIDEO_TOKENS:H3_NATIVE_MAX_VIDEO_TOKENS))?`A ${size.width} × ${size.height}, el presupuesto de memoria admite hasta ${secondsLabel(maximumNativeSeconds)} s nativos (${maximumNativeFrames} fotogramas). ${nativeResolution==='hd720'?'El perfil HD largo sólo admite 16:9 o 9:16. ':''}Reduce la duración o elige otra resolución. No se cambiarán automáticamente.`:undefined;
- return {long,native,hdLong,supervised,blockedReason,limit,numFrames,seconds:numFrames/24,fps:24,...size,maximumNativeFrames,maximumNativeSeconds,videoTokens,steps:native?20:long?Math.max(2,Math.min(20,Math.round(longSteps))):model==='minimax-h3'&&quality==='quality'?20:4,...(supervised?{memoryProfile:hdLong?H3_HD_PROFILE:native?H3_NATIVE_PROFILE:H3_LONG_PROFILE}:{})};
+ return {long,native,hdLong,supervised,blockedReason,limit,numFrames,seconds:numFrames/24,fps:24,...size,maximumNativeFrames,maximumNativeSeconds,videoTokens,steps:native?20:long?Math.max(2,Math.min(20,Math.round(longSteps))):model==='minimax-h3'&&['quality','conservative'].includes(quality)?20:4,...(supervised?{memoryProfile:hdLong?H3_HD_PROFILE:native?H3_NATIVE_PROFILE:H3_LONG_PROFILE}:{})};
 }
 
 /** Preserve the native clock before generation. Rounding a 24 fps source down

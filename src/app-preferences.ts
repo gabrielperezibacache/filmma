@@ -6,6 +6,7 @@ export const DEFAULT_APP_PREFERENCES = {
   language: 'es' as 'es'|'en', startPage: 'home' as 'home'|'script'|'studio',
   automaticUpdateChecks: true,
   preferredModel: 'ltx-2b' as 'ltx-2b'|'minimax-h3',
+  modelPresetId: 'ltx-preview' as 'ltx-preview'|'ltx-balanced'|'h3-safe'|'h3-hd',
   recommendedProfile: 'balanced' as 'balanced'|'quality'|'preview',
 };
 export type AppPreferences = typeof DEFAULT_APP_PREFERENCES;

@@ -193,3 +193,6 @@ test('all output proportions use native dimensions within the selected memory bu
  assert.deepEqual(generationDimensions('4:3',false,'draft'),{width:512,height:384});
  assert.deepEqual(generationDimensions('2.39:1',false,'quality'),{width:768,height:320});
 });
+
+// The profile selected in Models must match the generation controls exactly.
+test('conservative MiniMax preset preserves its 512 by 320 raster and 20 steps',()=>{const p=generationPreview('minimax-h3',1,3,'16:9','conservative');assert.deepEqual([p.width,p.height,p.numFrames,p.steps],[512,320,22,20])});

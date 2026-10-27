@@ -20,7 +20,7 @@ jobs:
           cache: npm
       - uses: astral-sh/setup-uv@v6
       - name: Install build tools
-        run: brew install x264 pkg-config
+        run: brew install ffmpeg x264 pkg-config
       - run: npm ci
       - run: npm test
       - name: Release version
