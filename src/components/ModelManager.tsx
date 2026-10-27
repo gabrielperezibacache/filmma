@@ -6,7 +6,7 @@ import {tr} from '../i18n';
 import type {ModelPreset} from '../model-presets';
 import type {Job} from '../types';
 import './application-settings.css';
-declare global{interface Window{filmmaDesktop?:{chooseDirectory:()=>Promise<string|null>;openExternal:(url:string)=>Promise<void>;onSettings:(callback:()=>void)=>()=>void}}}
+declare global{interface Window{filmmaDesktop?:{getVersion:()=>Promise<string>;chooseDirectory:()=>Promise<string|null>;openExternal:(url:string)=>Promise<void>;onSettings:(callback:()=>void)=>()=>void}}}
 const gb=(n:number)=>`${(n/1024**3).toLocaleString(undefined,{maximumFractionDigits:1})} GiB`;
 export default function ModelManager({jobs,onJob,onActivate,onAssistant}:{jobs:Job[];onJob:(job:Job)=>void;onActivate:(p:ModelPreset)=>void;onAssistant:()=>void}){
  const{preferences,save}=usePreferences();const[report,setReport]=useState<any>(),[selected,setSelected]=useState(preferences.preferredModel),[path,setPath]=useState(''),[references,setReferences]=useState(true),[plan,setPlan]=useState<any>(),[license,setLicense]=useState(false),[presetId,setPresetId]=useState(''),[busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('');

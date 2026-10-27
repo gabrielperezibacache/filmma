@@ -35,6 +35,7 @@ async function createWindow(){
  await window.loadURL(endpoint);window.show();
 }
 ipcMain.handle('filmma:choose-directory',async()=>{const r=await dialog.showOpenDialog(window,{properties:['openDirectory','createDirectory'],buttonLabel:'Elegir carpeta del modelo'});return r.canceled?null:r.filePaths[0]});
+ipcMain.handle('filmma:version',()=>app.getVersion());
 ipcMain.handle('filmma:open-external',async(_event,url)=>{if(!allowedExternal(url))throw new Error('Destino no permitido');await shell.openExternal(url)});
 if(!app.requestSingleInstanceLock())app.quit();else{
  app.on('second-instance',()=>{window?.show();window?.focus()});

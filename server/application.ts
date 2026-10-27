@@ -16,6 +16,7 @@ export async function registerApplicationRoutes(options:{app:Express;root:string
  const{app,root,dataDirectory,getJobs}=options,prefs=new ApplicationPreferences(dataDirectory);await prefs.init();
  const gh=options.gh??process.env.FILMMA_GH??'gh';
  let metadata={version:'0.2.0',commit:'',repository:REPOSITORY};
+ try{metadata.version=JSON.parse(await readFile(join(root,'package.json'),'utf8')).version??metadata.version}catch{}
  try{metadata={...metadata,...JSON.parse(await readFile(join(root,'desktop/build-info.json'),'utf8'))}}catch{}
  if(!metadata.commit){try{const r=await runProcess('git',['rev-parse','HEAD'],{cwd:root,timeoutMs:3000});if(r.code===0)metadata.commit=r.stdout.trim()}catch{}}
  const idle=()=>{if(getJobs().some(j=>['running','queued'].includes(j.status)))throw fail('Termina o cancela los trabajos activos antes de abrir el instalador.')};
@@ -53,7 +54,7 @@ export async function registerApplicationRoutes(options:{app:Express;root:string
   res.json({status:authStatus,url:'https://github.com/login/device',code,message:code?`Introduce el código ${code} en GitHub. Después vuelve y busca actualizaciones.`:'Completa la conexión de GitHub y vuelve a buscar actualizaciones.'});
  }));
  app.put('/api/application/preferences',route(async(req:any,res:any)=>res.json({preferences:await prefs.update(req.body)})));
- app.post('/api/application/updates/check',route(async(_req:any,res:any)=>res.json(await check(true))));
+ app.post('/api/application/updates/check',route(async(req:any,res:any)=>{const input=z.object({currentVersion:z.string().regex(/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/).optional()}).strict().parse(req.body??{});const value=await check(true);if(input.currentVersion&&value.latestVersion){const newer=value.latestVersion.localeCompare(input.currentVersion,undefined,{numeric:true})>0;res.json({...value,currentVersion:input.currentVersion,status:newer&&value.release?.artifact?'available':value.status==='available'?'current':value.status})}else res.json(value)}));
  app.get('/api/application/updates',route(async(_req:any,res:any)=>res.json(await check())));
  app.post('/api/application/open-data',route(async(_req:any,res:any)=>{if(process.platform!=='darwin')throw fail('Esta acción requiere macOS.');if(options.opener)await options.opener(dataDirectory);else{const r=await runProcess('open',[dataDirectory],{timeoutMs:5000});if(r.code!==0)throw fail('No se pudo abrir la carpeta.')}res.json({ok:true})}));
  let downloading:Promise<any>|undefined;
