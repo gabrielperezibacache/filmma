@@ -11,7 +11,7 @@
     "check": "tsc -b",
     "model:doctor": "python3 runtime/filmma_runtime.py doctor --json",
     "desktop:prepare": "node scripts/packaging/prepare-desktop.mjs",
-    "desktop:build": "npm run build && npm run desktop:prepare && electron-builder --config desktop/electron-builder.cjs --mac --arm64",
+    "desktop:build": "npm run build && npm run desktop:prepare && electron-builder --config desktop/electron-builder.cjs --mac --arm64 --publish never",
     "desktop:dev": "electron .",
     "release:checksums": "node scripts/packaging/checksums.mjs"
   },
