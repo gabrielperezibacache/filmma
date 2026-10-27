@@ -6,7 +6,7 @@ import {DEFAULT_APP_PREFERENCES,type AppPreferences} from '../src/app-preference
 export const preferencesSchema=z.object({
  theme:z.enum(['cinema','graphite','light','system']),accent:z.enum(['sage','amber','ocean','rose']),scale:z.enum(['standard','large']),
  density:z.enum(['comfortable','compact']),navigation:z.enum(['labels','icons']),motion:z.enum(['system','reduced']),language:z.enum(['es','en']),
- startPage:z.enum(['home','script','studio']),automaticUpdateChecks:z.boolean(),preferredModel:z.enum(['ltx-2b','minimax-h3']),modelPresetId:z.enum(['ltx-preview','ltx-balanced','h3-safe','h3-hd']),recommendedProfile:z.enum(['balanced','quality','preview']),
+ startPage:z.enum(['home','script','studio']),automaticUpdateChecks:z.boolean(),preferredModel:z.enum(['ltx-2b','minimax-h3']),modelPresetId:z.enum(['ltx-preview','ltx-balanced','h3-safe','h3-detail','h3-hd']),recommendedProfile:z.enum(['balanced','quality','preview']),
 }).strict();
 export class ApplicationPreferences {
  private pending:Promise<unknown>=Promise.resolve();

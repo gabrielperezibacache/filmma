@@ -28,7 +28,8 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
           else
-            VERSION="0.2.${GITHUB_RUN_NUMBER}"
+            BASE_VERSION="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")')"
+            VERSION="$BASE_VERSION.${GITHUB_RUN_NUMBER}"
           fi
           npm version "$VERSION" --no-git-tag-version --allow-same-version
           echo "FILMMA_VERSION=$VERSION" >> "$GITHUB_ENV"

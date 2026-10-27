@@ -4,7 +4,7 @@ Un estudio de cine local para Mac: escribe el guion, conserva la identidad de tu
 
 ## Abrir
 
-La versión de macOS se instala desde **Filmma-0.2.0-arm64.dmg**, disponible en las releases privadas del repositorio. Arrastra Filmma a Aplicaciones. Este paquete requiere Apple Silicon y macOS 27 o posterior; tiene firma ad hoc y todavía no está notarizado por Apple.
+La versión de macOS se instala desde el DMG más reciente de las [releases privadas](https://github.com/gabrielperezibacache/filmma/releases). Arrastra Filmma a Aplicaciones. Este paquete requiere Apple Silicon y macOS 27 o posterior; tiene firma ad hoc y todavía no está notarizado por Apple.
 
 En **Configuración** (⌘,) puedes cambiar apariencia, idioma y espacio de trabajo. **Motores** guía la elección de disco, revisión de licencia y espacio, descarga reanudable, verificación y prueba local. El botón de proporción y FPS de la cabecera cambia el formato de toda la película conservando originales y tiempos. Consulta [configuración, modelos y actualizaciones](docs/APPLICATION_SETTINGS.md).
 
@@ -20,6 +20,8 @@ npm run dev
 Estudio: `http://127.0.0.1:4317`. Servidor: `http://127.0.0.1:4318`. Para usar la versión compilada: `npm run build` y `npm start`.
 
 Consulta la [guía de uso](docs/GUIA.md) para recorrer todas las etapas.
+
+La [primera entrega de recuperación y calidad nativa](docs/FIRST-DELIVERY.md) añade historial verificable de proyectos, un recorrido según el estado de la película, recomendaciones por objetivo y una comparación local de resoluciones sin sustituir los originales.
 
 ## Del guion a la película
 

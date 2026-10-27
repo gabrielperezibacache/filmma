@@ -2,7 +2,11 @@
 
 Abre **Abrir Filmma.command** con doble clic. Si Filmma ya está funcionando, entra en [el estudio](http://127.0.0.1:4318). Puedes explorar «La última función» o abrir **Mis películas → Crear otra película**. Elige película o publicidad y ponle un título.
 
-La pantalla inicial **Película** reúne tu secuencia y propone el siguiente paso según lo que ya tienes: escribir, preparar un plano sin material, dar voz a un diálogo pendiente o volver al montaje. **Continuar** abre el plano correspondiente. También puedes entrar directamente a **Guion**, **Personajes**, **Dirección**, **Voces**, **Montaje** o **Continuidad** desde el recorrido de creación o la navegación.
+La pantalla inicial **Película** reúne tu secuencia y propone el siguiente paso según lo que ya tienes: escribir, definir personajes, conectar el modelo, convertir una referencia en video, dar voz, revisar continuidad o montar. **Continuar** abre el plano correspondiente. También puedes entrar directamente a **Guion**, **Personajes**, **Dirección**, **Voces**, **Montaje** o **Continuidad** desde el recorrido de creación o la navegación. Puedes montar una animática aunque todavía no tengas tomas de video.
+
+**Película → Recuperación** permite guardar un punto con nombre y previsualizar una versión anterior de guion, montaje y personajes. Antes de restaurar se guarda el estado actual; los originales y tomas más recientes siguen en la biblioteca. Si Filmma recupera una copia tras un archivo dañado, lo indica al abrir y conserva ese archivo. El historial empieza con esta versión de la aplicación; no inventa guardados de sesiones anteriores. Consulta [recuperación y pruebas nativas](FIRST-DELIVERY.md) para los límites y ubicación de las copias.
+
+En **Motores**, elige el objetivo de cada prueba: detalle, referencias de personajes o movimiento. **Disponible ahora** indica qué perfil puedes activar; el perfil objetivo puede necesitar conectar el SSD. **Comparar calidad nativa** genera y conserva muestras independientes sin modificar la película. Mira formas, texturas y movimiento antes de registrar una preferencia.
 
 ## 1. Escribe la historia
 

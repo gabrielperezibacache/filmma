@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {mergeProjectMedia,projectSavePayload} from '../src/projectSync.js';
+import {mergeProjectMedia,projectSavePayload,sameProjectContent} from '../src/projectSync.js';
 import {createSeedProject} from '../server/seed.js';
 import {assignScenePatch} from '../src/scene-source.js';
+
+test('server timestamp and property ordering do not create edits, but character continuity and undo states do',()=>{
+ const original=createSeedProject(),next=structuredClone(original);next.updatedAt='later';assert.equal(sameProjectContent(original,next),true);
+ const reordered=Object.fromEntries(Object.entries(next).reverse()) as typeof next;assert.equal(sameProjectContent(original,reordered),true);
+ next.characters[0].description+=' · reloj antiguo';assert.equal(sameProjectContent(original,next),false);assert.equal(sameProjectContent(next,original),false);
+});
 import {restoreHistorySnapshot} from '../src/projectHistory.js';
 import {listSceneTakes} from '../src/takes.js';
 import type {Project} from '../src/types.js';

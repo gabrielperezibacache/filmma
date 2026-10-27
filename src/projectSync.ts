@@ -1,5 +1,12 @@
 import type {Project} from './types';
 
+/** A timestamp or object-key ordering is not an edit. Evaluate this only after
+ * earlier queued saves settle, so undoing a pending edit is still persisted. */
+export function sameProjectContent(a:Project,b:Project){
+ const canonical=(p:Project)=>JSON.stringify({...p,updatedAt:''},(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
+ return canonical(a)===canonical(b);
+}
+
 /** Three-way merge: server completions may update unchanged clips, never a newer local choice. */
 export function mergeProjectMedia(local:Project, remote:Project, base:Project, allowClips=true):Project {
  if(local.id!==remote.id||local.id!==base.id)return local;

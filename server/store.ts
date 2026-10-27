@@ -3,17 +3,27 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createSeedProject } from './seed.js';
 import { projectSchema, type Job, type Project } from './types.js';
+import {RecoveryJournal} from './recovery.js';
 
 export class Store {
   project: Project = createSeedProject();
   jobs: Job[] = [];
   private pending: Promise<void> = Promise.resolve();
-  constructor(readonly directory: string) {}
+  readonly recovery:RecoveryJournal;
+  recoveryStatus?:{projectId:string;checkpointId:string;recoveredAt:string;preservedFile?:string};
+  constructor(readonly directory: string) {this.recovery=new RecoveryJournal(directory)}
 
   async init() {
     await Promise.all(['media', 'exports', 'work', 'projects'].map((dir) => mkdir(join(this.directory, dir), { recursive: true, mode: 0o700 })));
+    await this.recovery.init();
     try { this.project = projectSchema.parse(JSON.parse(await readFile(join(this.directory, 'project.json'), 'utf8'))); }
-    catch (error: any) { if (error.code !== 'ENOENT') throw new Error(`No se pudo leer el proyecto guardado. El archivo se conserva: ${error.message}`); }
+    catch (error: any) {
+      const recovered=await this.recovery.recover();
+      if(recovered){const preservedFile=await this.recovery.preserveDamaged(join(this.directory,'project.json'),'damaged-project');this.project=recovered.project;this.recoveryStatus={projectId:recovered.projectId,checkpointId:recovered.id,recoveredAt:new Date().toISOString(),preservedFile}}
+      else if (error.code !== 'ENOENT') throw new Error(`No se pudo leer el proyecto guardado y no existe una copia verificable. El archivo se conserva: ${error.message}`);
+    }
+    this.project=projectSchema.parse(this.project);
+    await this.recovery.archivePending(this.project);
     // The first demo reused its exterior for every shot. Upgrade only those exact
     // bundled references; preserve the user's scenes, writing and imported files.
     if (this.project.id === 'filmma-first-film') {
@@ -26,7 +36,7 @@ export class Store {
       const loaded = JSON.parse(await readFile(join(this.directory, 'jobs.json'), 'utf8'));
       if (!Array.isArray(loaded)) throw new Error('jobs.json no contiene una lista');
       this.jobs = loaded.slice(-300);
-    } catch (error: any) { if (error.code !== 'ENOENT') throw error; }
+    } catch (error: any) { if (error.code !== 'ENOENT'){await this.recovery.preserveDamaged(join(this.directory,'jobs.json'),'damaged-jobs');this.jobs=[]} }
     for (const job of this.jobs) {
       if (job.status === 'queued' || job.status === 'running') {
         job.status = 'failed'; job.message = 'El proceso se interrumpió al cerrar Filmma. Puedes volver a intentarlo.'; job.updatedAt = new Date().toISOString();
@@ -35,9 +45,10 @@ export class Store {
     await this.save();
   }
 
-  save() {
+  save(options:{reason?:string;label?:string;force?:boolean}={}) {
     // Snapshot before queueing: each rename replaces one complete JSON document.
     const project = JSON.stringify(this.project, null, 2);
+    const snapshot=structuredClone(this.project);
     const jobs = JSON.stringify(this.jobs.slice(-300), null, 2);
     const write = async (name: string, value: string) => {
       const temporary = join(this.directory, `${name}.${randomUUID()}.tmp`);
@@ -45,9 +56,14 @@ export class Store {
       await rename(temporary, join(this.directory, name));
     };
     this.pending = this.pending.catch(() => {}).then(async () => {
+      await this.recovery.record(snapshot,options.reason,options.label,options.force);
       await write('project.json', project);
       await write('jobs.json', jobs);
     });
     return this.pending;
+  }
+  checkpoint(label='',reason='manual'){
+    const snapshot=structuredClone(this.project);
+    const task=this.pending.catch(()=>{}).then(()=>this.recovery.record(snapshot,reason,label,true));this.pending=task.then(()=>{});return task;
   }
 }

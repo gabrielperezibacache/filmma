@@ -1,6 +1,7 @@
 import { registerDialogueRoutes } from './dialogue.js';
 import {registerApplicationRoutes} from './application.js';
 import {registerModelManager} from './model-manager.js';
+import {registerRecoveryRoutes} from './recovery-routes.js';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
@@ -243,12 +244,13 @@ export async function createApp(options: AppOptions = {}) {
   }
 
   const application = await registerApplicationRoutes({app,root,dataDirectory,getJobs:()=>store.jobs});
-  registerModelManager({app,root,dataDirectory,runtimePath,python,system,getJobs:()=>store.jobs,enqueue,invalidate:()=>{diagnostics=undefined},savePreferences:patch=>application.preferences.update(patch)});
+  registerRecoveryRoutes({app,store,getJobs:()=>store.jobs,mediaPath,onRestore:()=>{clipSelectionVersions.clear()}});
+  registerModelManager({app,root,dataDirectory,runtimePath,python,system,ffmpeg,ffprobe,getJobs:()=>store.jobs,enqueue,invalidate:()=>{diagnostics=undefined},savePreferences:patch=>application.preferences.update(patch)});
   app.get('/api/bootstrap', asyncRoute(async (_req, res) => {
     // Bind the hash to the returned snapshot even if diagnostics yield while
     // another request edits or switches the current project.
     const project = structuredClone(store.project), fingerprint = projectFingerprint(project);
-    res.json({ project, projectFingerprint: fingerprint, jobs: store.jobs, system: await system() });
+    res.json({ project, projectFingerprint: fingerprint, jobs: store.jobs, recovery:store.recoveryStatus??null, system: await system() });
   }));
   app.get('/api/system', asyncRoute(async (_req, res) => res.json(await system())));
   app.get('/api/jobs', (_req, res) => res.json({ jobs: store.jobs }));

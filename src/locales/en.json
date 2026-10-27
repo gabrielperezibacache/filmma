@@ -1360,5 +1360,9 @@
   "Tomas, sonido y ritmo": "Takes, sound and rhythm",
   "Vuelve a la sala de montaje": "Return to the editing room",
   "Época": "Period",
-  "Conservador · 512 px · 20 pasos": "Conservative · 512 px · 20 steps"
+  "Conservador · 512 px · 20 pasos": "Conservative · 512 px · 20 steps",
+  "Versión recuperada. El estado anterior y los originales se conservan.": "Version recovered. The previous state and originals are preserved.",
+  "Filmma recuperó una copia verificable del proyecto. El archivo anterior se conservó.": "Filmma recovered a verifiable project copy. The previous file was preserved.",
+  "Ver recuperación": "View recovery",
+  "Cerrar aviso de recuperación": "Dismiss recovery notice"
 }

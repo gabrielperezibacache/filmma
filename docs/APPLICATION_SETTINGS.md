@@ -18,6 +18,8 @@ El botón **16:9 · 24 fps** en la cabecera abre un borrador con vista del encua
 
 Las revisiones oficiales se consultan manualmente desde Hugging Face. Las variantes sin adaptador validado aparecen como pendientes de compatibilidad y no se sustituyen automáticamente. Un archivo presente no demuestra por sí solo calidad ni inferencia válida.
 
+El selector de objetivo recomienda perfiles por detalle nativo, referencias de personajes o vista previa de movimiento. Distingue lo preparado ahora de lo que requiere conectar o preparar un modelo. Una prueba registrada sólo acredita dimensiones, fotogramas, fps, pasos y perfil coincidentes; no garantiza identidad ni calidad estética. La comparación de resoluciones conserva muestras fuera de la película: [primera entrega](FIRST-DELIVERY.md).
+
 ### M4 Max con 36 GB
 
 Se recomiendan primero perfiles cortos. MiniMax HD 1280×736 con 22 fotogramas tuvo una prueba histórica verificada; una toma HD de 14,375 s alcanzó presión crítica de memoria. La aplicación mantiene un máximo de 15 s, pero ese máximo no garantiza que todas las resoluciones quepan. Exportación 4K y resolución nativa son decisiones distintas. No se relajan los límites del supervisor.
