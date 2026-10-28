@@ -1,0 +1,9 @@
+{
+  "kind": "ai-generated-illustration",
+  "intendedUse": "Onboarding and example project only; never substitute user media.",
+  "prompt": "Produce a brand new clean photographic cinematic still for Filmma's illustrative onboarding and example material. Use the central movie image of the reference UI only as the visual story reference. Output ONLY the cinematic image, no interface, no controls, no captions, no border, no logo, no written words. Widescreen 16:9 composition, highest detail. A fictional woman in her early thirties with short dark curly hair and a charcoal wool coat sits quietly three quarters profile among deep oxblood velvet seats in a small old Art Deco cinema. She looks toward the offscreen screen to the right. A warm ivory projector beam crosses the dusty air behind her from upper right to the back left, architectural warm tungsten lights and dark teal-blue shadows. Natural skin pores, believable unretouched face, subtle 35 mm grain, gentle optical falloff, restrained highlight halation, beautifully photographed tactile velvet and brass, deep but readable blacks. Lens at eye level, medium-wide composition with figure left of center and space to the right, grounded proportions. Warm amber is in the photograph, never an artificial overlay. Art direction must feel like a contemporary independent film about memory, not a promotional movie poster. Preserve the fictional character's coherent appearance within this one image; this is an illustrative reference, not actual video or a facial-continuity test. No UI pixels or text from the reference image.",
+  "source": "output/ui-redesign/originals/sala-de-cine.png",
+  "approvedForInterface": true,
+  "preservesExistingProjectAssets": true,
+  "approvalScope": "Clearly labelled illustration in empty/onboarding states only"
+}

@@ -12,3 +12,5 @@ test('the guide makes cast optional when not linked and does not let another fil
 test('a repeated character needs continuity review before the guide moves back to editing',()=>{const p=withTakes();for(const s of p.scenes)s.dialogue='';assert.equal(productionGuide(p,[],{},'ltx-2b').next.kind,'continuity');assert.equal(productionGuide(p,[],{},'ltx-2b',true).next.kind,'edit')});
 
 test('references are not mistaken for completed video takes',()=>{const p=createSeedProject();assert.equal(productionGuide(p,[],{},'ltx-2b').next.kind,'animate')});
+
+test('the home guide uses queued job context before a result exists and keeps other films separate',()=>{const p=withTakes(),before=structuredClone(p);const job={id:'context-only',type:'generate',status:'queued' as const,progress:0,message:'Preparing',createdAt:'',context:{projectId:p.id,sceneId:p.scenes[0].id}};assert.equal(productionGuide(p,[job],{},'ltx-2b').next.page,'jobs');assert.notEqual(productionGuide(p,[{...job,context:{...job.context,projectId:'another-film'}}],{},'ltx-2b').next.page,'jobs');assert.deepEqual(p,before)});

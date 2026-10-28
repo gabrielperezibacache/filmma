@@ -1448,5 +1448,7 @@
   "En curso": "In progress",
   "Completado": "Completed",
   "Falló": "Failed",
-  "Abrir para reconectar": "Open to reconnect"
+  "Abrir para reconectar": "Open to reconnect",
+  "Cámara": "Camera",
+  "Generar": "Generate"
 }

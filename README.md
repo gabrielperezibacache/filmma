@@ -2,6 +2,8 @@
 
 Un estudio de cine local para Mac: escribe el guion, conserva la identidad de tus personajes y objetos, dirige cada plano y exporta el montaje. Interfaz en español e inglés, con un visor cinematográfico y animaciones de Motion.
 
+La interfaz 0.12 organiza el trabajo como una sala de visionado: Inicio con visor y siguiente paso, Dirección y Montaje con secuencia e inspector, navegación por etapas y reorganización móvil. Consulta [el recorrido de la interfaz](docs/SCREENING-ROOM.md).
+
 ## Abrir
 
 La versión de macOS se instala desde el DMG más reciente de las [releases privadas](https://github.com/gabrielperezibacache/filmma/releases). Arrastra Filmma a Aplicaciones. Este paquete requiere Apple Silicon y macOS 27 o posterior; tiene firma ad hoc y todavía no está notarizado por Apple.

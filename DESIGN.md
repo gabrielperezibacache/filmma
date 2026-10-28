@@ -1,246 +1,243 @@
-# Filmma — sala de montaje
-La referencia fijada por el usuario es cine antiguo con interfaz moderna. Entorno: creador trabajando durante sesiones largas frente a un visor; superficies oscuras evitan competir con la imagen. Dirección: mesa de visionado de una cinemateca, no reproducción decorativa de un proyector.
+---
+name: Filmma — sala de dailies
+description: Estudio local de cine con la imagen como centro del trabajo.
+colors:
+  jade: "#bdd2c2"
+  jade-dark: "#26372f"
+  action-ink: "#181e27"
+  ink: "#10141c"
+  panel: "#191f29"
+  panel-raised: "#242c37"
+  border: "#333d4b"
+  ivory: "#f0f2f4"
+  silver: "#a2afbf"
+  viewer: "#080b10"
+typography:
+  brand:
+    fontFamily: "FilmmaDisplay, Georgia, serif"
+    fontSize: "32px"
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: "-0.03em"
+  headline:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontSize: "30px"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  title:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontSize: "22px"
+    fontWeight: 550
+    lineHeight: 1.3
+  body:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: 1.5
+  label:
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: 1.4
+  timecode:
+    fontFamily: "ui-monospace, SFMono-Regular, monospace"
+    fontSize: "11px"
+    letterSpacing: "0.2px"
+  status-mobile:
+    fontSize: "9px"
+  metadata-small:
+    fontSize: "10px"
+  context-label:
+    fontSize: "14px"
+  panel-title:
+    fontSize: "16px"
+  avatar-initial:
+    fontSize: "18px"
+  empty-title-mobile:
+    fontSize: "19px"
+  section-title:
+    fontSize: "20px"
+  shot-title-mobile:
+    fontSize: "21px"
+  detail-title-mobile:
+    fontSize: "23px"
+  dialog-title:
+    fontSize: "26px"
+  headline-compact:
+    fontSize: "27px"
+  brand-mobile:
+    fontSize: "28px"
+rounded:
+  flat: "0"
+  indicator: "2px"
+  time-label: "3px"
+  badge: "4px"
+  example-label: "5px"
+  thumbnail: "6px"
+  navigation: "7px"
+  control: "8px"
+  editor-viewer: "10px"
+  panel: "12px"
+  modal: "16px"
+spacing:
+  badge-inset: "1px"
+  tight: "2px"
+  example-inset: "3px"
+  micro: "4px"
+  text-gap: "5px"
+  compact: "6px"
+  icon-gap: "7px"
+  small: "8px"
+  project-inset: "9px"
+  row-inset: "10px"
+  primary-inset: "11px"
+  control: "12px"
+  mobile-row: "13px"
+  row-gap: "14px"
+  heading-inset: "15px"
+  panel: "16px"
+  mobile: "18px"
+  section: "20px"
+  advance: "22px"
+  shell: "24px"
+  fact-label-indent: "25px"
+  section-offset: "26px"
+  page: "28px"
+  section-bottom: "30px"
+  empty-action-indent: "36px"
+  page-bottom-mobile: "40px"
+  page-bottom: "52px"
+components:
+  button-primary:
+    backgroundColor: "{colors.jade}"
+    textColor: "{colors.action-ink}"
+    rounded: "{rounded.control}"
+    padding: "11px 16px"
+  button-quiet:
+    backgroundColor: "{colors.panel}"
+    textColor: "{colors.ivory}"
+    rounded: "{rounded.control}"
+    padding: "10px 14px"
+  button-text:
+    textColor: "{colors.ivory}"
+    padding: "4px 0"
+  input:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.ivory}"
+    rounded: "{rounded.control}"
+    padding: "10px 11px"
+  panel:
+    backgroundColor: "{colors.panel}"
+    textColor: "{colors.ivory}"
+    rounded: "{rounded.panel}"
+    padding: "20px"
+---
 
-## Sistema
-Grafito verdoso #171a19 y #202421, bordes #343a34, texto marfil #eceee5, secundario #a3afa2, acento celuloide #d3dba7. El guion se lee en papel claro. Marca con serif editorial local; controles con sans del sistema, tiempos con monospace. Navegación lateral con iconos y nombres legibles, cabecera discreta, visor amplio y un panel de dirección de 320px en el montaje. Planos usan imágenes y numeración funcional. Una transición con Motion mantiene identidad entre selección y visor; reduced-motion obligatorio. Sin datos falsos de rendimiento ni generaciones simuladas.
+# Design System: Filmma
 
-## Comportamiento
-Guion y casting editables, montaje ordenable, biblioteca de originales, export real y estado del motor visible. Demo explícita. Controles con nombres accesibles, foco y estados fallidos recuperables. Pantallas pequeñas reorganizan visor, inspector y timeline verticalmente.
+## Overview
+
+**Creative North Star: "Sala de dailies"**
+
+Filmma es una mesa de trabajo para escribir, dirigir, montar y revisar una película local. La imagen ocupa el centro; tinta azul, marfil y jade mate ordenan las herramientas durante sesiones largas. El recuerdo del cine procede de la marca, del lenguaje y del material audiovisual, con controles actuales y precisos.
+
+Este documento registra el mundo construido en la versión (0.12.0), aprobado como A para Inicio y B para Dirección/Montaje. Sustituye la antigua dirección verde. Las composiciones orientan la jerarquía; los planos, personajes, tiempos, trabajos y estados proceden del proyecto real. Las superficies conservadas mantienen sus funciones y patrones especializados.
+
+**Key Characteristics:**
+
+- Visor amplio, material real y encuadre completo en las vistas principales.
+- Herramientas compactas en sans, con navegación agrupada y contexto del plano.
+- Superficies mates con un borde, selección discreta y acciones concretas.
+- Edición reversible, originales accesibles y estados explícitos.
+
+Evidencia: [contrato aprobado](output/ui-redesign/approved-contract.md), [revisión final](output/ui-redesign/finish-review.md), `src/screening-room.css`, `src/screening-palette.css`, `src/styles.css` y `src/appearance.css`. La revisión final cierra M1–M3; no certifica accesibilidad integral, aplicación nativa ni calidad de los modelos.
+
+## Colors
+
+La paleta predeterminada es tinta azul con texto claro y jade contenido; la calidez fotográfica pertenece al material.
+
+### Primary
+
+- **Jade mate** (`jade`): acción principal, foco, selección y pequeños indicadores. **Jade oscuro** (`jade-dark`) y **tinta de acción** (`action-ink`) acompañan sus estados y texto.
+
+### Neutral
+
+- **Tinta de sala** (`ink`): fondo común y campos. **Panel** y **panel elevado**: contexto, inspectores y selección. **Borde**: separación precisa entre áreas.
+- **Marfil** (`ivory`): contenido principal. **Plata** (`silver`): ayuda y metadatos. **Negro de visor** (`viewer`): respaldo del medio, sin teñir la imagen.
+
+**The Semantic Theme Rule.** Los componentes compartidos consumen `--bg`, `--panel`, `--panel-light`, `--border`, `--text`, `--muted` y `--accent`; no fijan la paleta de Cinema dentro de cada pantalla.
+
+Cinema usa los tokens anteriores. Grafito, Luz de día y Sistema siguen disponibles; Sistema responde a la apariencia del equipo. Los acentos configurables conservan sus identificadores Salvia, Ámbar, Océano y Rosa; Salvia resuelve al jade en Cinema. Las variantes claras y de contraste viven en `appearance.css` e `interface-palette.css`; no se convierten en otra composición ni cambian el color del medio. Las etiquetas históricas de Configuración no son autoridad para restituir el antiguo verde.
+
+## Typography
+
+La sans del sistema sostiene títulos de operación, texto y controles. FilmmaDisplay usa Baskerville local, con Georgia/serif como respaldo, en la marca pequeña. Inicio, Dirección, Montaje, Configuración y Motores comparten encabezados sans; no añaden un antetítulo que repita su nombre.
+
+- **Marca:** token `brand`; en móvil baja a (28px).
+- **Encabezado:** token `headline`; en móvil (27px, interlínea 1.25). Montaje usa (27px) también en escritorio.
+- **Títulos contextuales:** `title` y `panel-title`; `section-title` para secuencia y errores de medio; `dialog-title` para diálogos. En móvil, `shot-title-mobile`, `empty-title-mobile` y `detail-title-mobile` corresponden a plano, vacío de Dirección y detalle de Biblioteca. Son ajustes por superficie, no una escala que deba aplicarse completa en cada pantalla.
+- **Texto y acciones:** `body`, `label` y `context-label`; texto operativo (12–14px), con campos de Dirección en móvil (16px) para entrada nativa. La descripción de página limita la lectura a (70ch).
+- **Medidas y etiquetas pequeñas:** (11px) para tiempos, ayudas y títulos de grupo; `metadata-small` para contador de trabajos, duraciones sobre miniaturas, metadatos de plano y datos compactos. `status-mobile` queda reservado al pie de estado móvil. El rango (9–11px) no sustituye al texto operativo. La inicial de un retrato ausente usa `avatar-initial`.
+- **Tiempos:** monoespaciados y cifras tabulares; no darles el mismo peso que la acción. `headline-compact` y `brand-mobile` registran las variantes ya descritas del encabezado y la marca.
+
+El tamaño cero de los botones que sólo muestran un icono en móvil oculta su texto visual; no es un escalón de lectura ni sustituye su nombre accesible.
+
+El guion mantiene su papel claro, campos Courier New y título editorial; otros paneles editoriales conservados pueden mantener su serif existente. Esta excepción no se extiende a nuevos encabezados de herramientas.
+
+## Layout
+
+La cabecera persistente mide (64px), el pie (28px) y la navegación agrupada (198px). Las páginas tienen ancho máximo (1600px) y relleno horizontal (28px). Historia, Rodaje, Montaje y entrega, y Estudio reúnen los destinos existentes. La selección combina fondo, texto, indicador jade y `aria-current`; el contador de trabajos representa actividad real.
+
+Inicio combina visor y siguiente paso en dos columnas, con panel lateral de (300px); debajo aparecen los datos reales, la secuencia horizontal y el recorrido de producción desplegable. El siguiente paso cambia según el proyecto. Dirección organiza secuencia, visor y controles en columnas de (148px / flexible / 320px), con Intención, Cámara y Generar en pestañas contextuales. La entrada de referencias de cámara es una fila abierta con miniatura (64px), texto y flecha, sin tarjeta anidada.
+
+Montaje usa (144px / flexible / 304px), con la línea de tiempo debajo a todo el ancho. Por encima de (1180px), el área de trabajo ocupa la altura de la ventana y cada región contiene su propio desplazamiento. Secuencia, Pistas, Mezcla, Subtítulos y Marcadores permanecen en el mismo dock; el inspector puede ocultarse sin cambiar de plano.
+
+El marco del visor de Montaje conserva la proporción del proyecto: en escritorio ocupa la altura de su región con ancho automático y límite del ancho disponible; en móvil ocupa el ancho con altura automática. La adaptación no estira ni recorta la fuente.
+
+- Hasta (1350px), las columnas y márgenes se estrechan. Entre (761px y 1180px), Inicio se apila, Dirección mueve el inspector debajo y Montaje conserva secuencia/visor, dock e inspector en ese orden.
+- Hasta (960px), la navegación mide (176px). La preferencia de sólo iconos usa (72px) en escritorio; los botones conservan nombre accesible y ayuda.
+- Hasta (760px), el menú nativo de secciones reemplaza la barra lateral; muestra el destino actual, cierra al elegir y admite Escape con retorno al resumen. Cabecera (60px) y márgenes (18px).
+- En móvil, Inicio presenta el visor antes del siguiente paso. Dirección presenta una tira de planos y apila visor, controles y cuaderno. Montaje ordena visor, tira de planos, dock e inspector, que comienza oculto en esta vista.
+- Las tiras, pestañas y líneas de tiempo desplazan dentro de su región. Las acciones principales, secundarias y de texto alcanzan (44px) de alto en móvil; los campos de Dirección usan (16px).
+
+Las preferencias de escala ampliada, densidad compacta, idioma e inicio siguen vigentes. El idioma cambia la interfaz disponible, conservando guiones, nombres y prompts escritos por el usuario.
+
+El espaciado construido combina detalle fino (1–7px), controles y separaciones compactas (8–16px), flujo entre áreas (18–30px) y cierres o sangrías puntuales (36px, 40px y 52px). La escala enumera los pasos observados; no impone incrementos uniformes. Los desplazamientos izquierdos del pie (96px, 196px y 222px) alinean el contenido con las variantes de navegación y son medidas de composición, no pasos de espaciado reutilizables.
+
+## Elevation & Depth
+
+Las superficies de trabajo usan tono, borde y espacio, sin resplandores ni gradientes decorativos. Los paneles principales no acumulan elevación. Los diálogos y avisos conservan sombra funcional: modal (`0 24px 90px #00000077`), aviso (`0 10px 35px #00000055`); el papel de guion mantiene su sombra (`0 12px 30px #00000033`). El fondo modal aplica desenfoque (4px).
+
+Las transiciones de botón duran (150ms). El cambio de medio en Inicio usa una apertura por recorte de (350ms), sin alterar color ni geometría del archivo. La preferencia del sistema y el ajuste de movimiento reducido suprimen esta animación; las animaciones existentes respetan sus controles de pausa y reducción.
+
+## Shapes
+
+Controles y miniaturas generales usan `control`, paneles y visores de Dirección `panel`, diálogos `modal`. La navegación usa `navigation`, los retratos `thumbnail` y el visor de Montaje `editor-viewer`. Las formas pequeñas también pertenecen al sistema: `indicator` para la marca lateral seleccionada, `time-label` para número/duración de Dirección, `badge` para contadores y rótulos sobre miniaturas, `example-label` para el aviso de proyecto de ejemplo. `flat` registra las filas abiertas de secuencia y referencias de cámara. Son funciones distintas, no radios intercambiables. Líneas finas y esquinas moderadas delimitan el trabajo; no se convierten todos los elementos en cápsulas.
 
 ## Components
-### Montaje y audio
-El montaje conserva el grafito, la salvia y el marfil, con el visor como centro de atención. Los controles de transición de entrada permanecen bajo V1 y describen el enlace entre el plano anterior y el seleccionado; los marcadores en los cortes permiten localizarlo. Tipo, duración e «Ir a la transición» se agrupan en el mismo panel.
 
-Los tiradores de los bordes de cada clip distinguen recorte de desplazamiento. Durante el arrastre muestran una previsualización local y tiempos legibles; al soltar aplican un único cambio deshacible. Mantienen alternativa de teclado y foco visible. Las ondas representan la amplitud del audio y reflejan recorte, volumen, silenciamiento y fundidos. Análisis pendiente, ausencia de pista, silencio y error tienen estados explícitos; el inspector permite reintentar el análisis fallido.
+- **Acciones:** jade para avanzar o confirmar; secundarias con borde y fondo de panel; acciones de texto para vínculos contextuales. Las principales aclaran su verbo y estado. Hover aclara el jade o eleva el tono del panel; deshabilitado conserva opacidad (.45). Foco visible con contorno de acento (2px) y separación (3px).
+- **Campos:** etiquetas visibles, fondo de sala, borde único y radio `control`. El foco cambia el borde y añade el anillo existente. Selectores conservan affordance nativa; las condiciones no disponibles y los errores se explican junto a la acción.
+- **Navegación y pestañas:** iconos Lucide de línea, texto legible, selección con más de una señal. Las pestañas de Dirección muestran subrayado y `aria-pressed`; las del inspector conservan la herramienta seleccionada. El menú móvil mantiene Configuración, Mis películas y Nuevo proyecto.
+- **Planos y chips:** miniatura real, número, duración y título identifican cada plano; una selección visible conecta secuencia, visor e inspector. Los chips de personajes conservan texto, vínculo y marca de selección, sin inventar retratos.
+- **Medios y vacíos:** los visores principales preservan encuadre con `contain`; las miniaturas de navegación pueden usar `cover`. Inicio prioriza la toma seleccionada o la referencia existente. Sólo cuando falta fuente muestra `public/studio/sala-de-cine-v1.webp` con etiqueta de imagen creada con IA; un archivo fallido muestra error y acceso a Biblioteca. Dirección presenta un vacío con importación. La ilustración (1672×941) conserva original y prompt en su procedencia; no representa un plano generado del usuario.
+- **Flujos conservados:** Guion, personajes/objetos, storyboard, voces, continuidad, biblioteca, trabajos, motores, recuperación y exportación mantienen sus herramientas. Recorte, reordenación, tomas, color, capas, audio, subtítulos, marcadores y versiones siguen vinculados a sus fuentes; la nueva organización visual no altera sus IDs ni semántica. Los diálogos de comparación conservan foco, cierre y límites explícitos; las revisiones pendientes o antiguas no aparentan aprobación.
 
-En móvil, los controles se apilan, los tiradores permanecen visibles y el desplazamiento horizontal queda dentro de las líneas de tiempo. El visor y el resto de la página conservan el ancho disponible.
+**The Original Frame Rule.** Una nueva interpretación es una versión identificada; el visor y los estados nunca presentan una ilustración o una copia derivada como el original del usuario.
 
-### Acabado y animación de capas
-«Acabado» vive en el inspector del plano, dentro del editor de tres columnas y sin restar protagonismo al visor. Agrupa exposición, contraste, saturación y temperatura con etiquetas visibles, valores monoespaciados y deslizadores en el acento existente. Comparar sin corrección, restablecer y copiar el color anterior son acciones discretas; los separadores y el espacio distinguen color, velocidad y mejora sobre las superficies de grafito, salvia y marfil.
+## Do's and Don'ts
 
-La velocidad se expresa de 0,25× a 4× junto a la duración conservada del plano. La ayuda explica el recorrido por el original y el último fotograma en silencio al agotarse la toma. «Mejorar imagen» presenta limpieza y reescalado como procesos locales convencionales, muestra progreso, fallos y dimensiones de cada versión, identifica cuál está en uso y permite volver al original. No atribuye al reescalado detalles reales ausentes de la toma.
+### Do:
 
-«Encuadre y animación» permanece en el inspector de la capa visual junto a su color. Posición horizontal, posición vertical, escala y opacidad muestran su valor; los rombos y tiempos localizan fotogramas clave, con selección actual visible y curvas «Lineal», «Suave» y «Mantener». Las acciones permiten añadir, actualizar, localizar, eliminar y restablecer; los puntos fuera del tramo se identifican expresamente. En móvil el flujo continúa vertical, los ajustes de encuadre pasan a dos columnas y las acciones conservan nombres accesibles y áreas táctiles amplias.
+- **Do** dar prioridad al medio real y conservar su encuadre en el visor principal.
+- **Do** reutilizar tokens semánticos, jerarquía sans y variantes de apariencia existentes.
+- **Do** mantener datos, vínculos, estados de trabajo y acciones reversibles junto al contexto del plano.
+- **Do** identificar los ejemplos, ilustraciones IA, versiones y límites de cada revisión.
 
-### Resolución de entrega
-El diálogo de exportación conserva su composición y controles existentes. Un selector nativo con etiqueta visible muestra Full HD o 4K y sus dimensiones exactas según el formato del proyecto. La ayuda distingue ampliación de detalle nativo y anticipa el mayor tiempo y espacio. El botón de película repite las dimensiones elegidas; el proyecto completo conserva sus originales. El formato cuadrado se identifica por dimensiones, sin llamarlo 4K UHD.
+### Don't:
 
-## IA local y revisión de continuidad
-
-«Detalle con IA local» conserva el ritmo visual del inspector y separa instalación, intensidad y creación de una copia. El 35 % inicial es conservador; copiar la intensidad del plano anterior facilita coherencia entre tomas. El progreso se muestra junto al proceso. «Versiones y continuidad» reúne los resultados sin aplicarlos automáticamente.
-
-La comparación abre un diálogo nativo con foco contenido y Escape para cerrar. Superpone las versiones sincronizadas, con separación, avance por fotograma y zoom de 1×, 2× o 4×. Los nombres de personajes aportan contexto de revisión; no se presentan como prueba de reconocimiento facial. La interfaz explica que pueden variar texturas, ofrece volver al original y conserva guion y tiempos.
-
-### Acabado de la película
-El acabado común se abre bajo la línea de tiempo, antes de las pistas adicionales. Una intensidad compartida conecta la mejora automática después de generar, la preparación de planos y capas y la exportación 4K. El panel muestra cuántas fuentes pueden prepararse, progreso real y resultados reutilizados o fallidos; volver a originales conserva la edición y admite deshacer. Las revisiones de escenas y capas abren el mismo contexto de personajes.
-
-En exportación, la opción de IA aparece al elegir 4K y guía el orden de trabajo: preparar y usar las versiones, revisar exactamente las fuentes seleccionadas y exportarlas. El diálogo muestra si la revisión está vigente y ofrece acceso directo a Continuidad; la exportación aprobada no crea otra versión ni sustituye material revisado. Los controles se apilan en móvil sin desplazamiento horizontal de la página. Las fuentes limitadas a 15 segundos, SDR y Full HD se describen antes de comenzar; la interfaz no promete identidad facial ni estabilidad temporal garantizadas.
-
-### Apariciones y revisión visual
-
-«Continuidad» tiene un espacio propio bajo «Lo que permanece», con la misma tipografía editorial, grafito, marfil y acento de celuloide. Una lista de apariciones sitúa cada personaje u objeto entre el plano anterior y el actual; la comparación ocupa el área principal. Se conserva la diferencia entre la revisión escrita del guion, la comparación original-versión y esta comparación visual entre planos.
-
-Rostro, vestuario y objetos se alternan mediante controles con etiquetas. Cada imagen identifica su plano y el instante de fuente, y permite dibujar una zona normalizada sobre la imagen visible o editar coordenadas e instante. Las zonas elegidas se distinguen de las estimadas; la ayuda pide comparar la misma parte en ambos planos. Cambiar una zona o el instante deja la revisión pendiente hasta analizar de nuevo. En móvil, ambas imágenes y sus controles se apilan, con foco visible y áreas táctiles amplias.
-
-Los estados dicen «Posible diferencia», «No concluyente» y «Sin diferencia evidente», con texto que explica su alcance. No usan porcentajes de identidad ni convierten la ausencia de evidencia en aprobación. El muestreo múltiple se describe en [«Continuidad visual a lo largo de la toma»](#continuidad-visual-a-lo-largo-de-la-toma) y muestra el color del plano; las capas y transiciones requieren visionado. Los objetos se comparan con zonas manuales, sin prometer reconocimiento semántico.
-
-El estado previsto en el guion permanece junto a la imagen. Cada pareja admite revisión o cambio intencional, con nota cuando hay diferencias o límites. La confirmación final exige reconocer el alcance del análisis. La interfaz distingue informe pendiente, análisis activo, cancelado, incompleto, obsoleto y revisado; reabrir una decisión retira la aprobación final. Cambios en las fuentes, la edición visual, los vínculos o las regiones requieren nueva revisión antes de exportar en 4K. Los originales se conservan y el análisis no corrige ni reemplaza material automáticamente.
-
-
-### Dirección, tomas y storyboard
-La dirección cinematográfica amplía el inspector existente y dispone de un espacio propio con diecisiete decisiones opcionales y cinco propuestas propias. Debe explicar que son instrucciones para generar, no una corrección del clip actual. Las tarjetas de secuencia, el TXT y la hoja visual muestran la dirección efectiva, sin contradecirla con indicaciones antiguas.
-
-Tomas conserva la selección del montaje mientras llegan alternativas. La comparación usa un diálogo nativo con foco, cierre por Escape y reproductores independientes. Los originales importados permanecen en la galería después de cambiar de toma; las copias IA permanecen vinculadas a su fuente. No se fabrica procedencia para archivos antiguos. Abrir la comparación pausa los reproductores de la galería.
-
-Storyboard es una mesa de lectura editorial dentro del sistema grafito, salvia y marfil. Muestras reales de las fuentes seleccionadas, tiempos monoespaciados, acción y continuidad forman la ficha. Decodificación serial y miniaturas hasta 720 px de lado mayor; los errores se muestran como ausencia de muestra, sin sustituir un video faltante por otra imagen. En móvil la navegación horizontal se desplaza dentro de su propia barra y el contenido no desborda. Los controles mantienen teclado, foco y movimiento reducido.
-
-
-### Voces e interpretación
-Voces continúa la mesa de guion: papel marfil para las palabras, fondo grafito para interpretar y comparar. La secuencia permanece visible; una intervención concentra personaje, entrada y texto, seguida por voz y labios. El guion original se consulta y la preparación propone antes de añadir. No se calcula una duración inventada: la grabación real determina la forma de onda y el subtítulo.
-
-La voz elegida pertenece al personaje, y el estado de cada grabación muestra si sigue correspondiendo al texto y su continuidad. Las versiones antiguas se pueden escuchar, pero no aplicar como actuales. Motores muestran disponibilidad real y preparación local, sin sugerir acceso a modelos propietarios de otro servicio. La copia labial requiere revisión explícita y conserva acceso al original; explica el audio sustituido y el límite de una intervención. Los reproductores son independientes y no presentan una comparación temporal como sincronizada automáticamente.
-
-Controles de al menos 44 px, etiquetas explícitas, foco visible, navegación horizontal contenida en móvil. La forma de onda debe estar en su sección, nunca usar la posición absoluta de las miniaturas del montaje. El estado vacío no requiere recursos generados ni modifica el proyecto.
-
-### Inicio y recorrido de producción
-
-«Película» es la entrada al trabajo: título editorial, premisa, recuentos de planos y material, siguiente paso y secuencia. La sugerencia usa el contenido guardado: escribir el primer plano o completar uno vacío, preparar el siguiente sin material, dar voz a un diálogo sin grabación vigente y, después, volver al montaje. El recorrido «Escribe → Define → Dirige → Interpreta → Monta → Revisa» mantiene acceso directo a cada tarea. Los estados de material y los trabajos activos describen datos reales del proyecto.
-
-El conjunto es una herramienta de operación: la serif FilmmaDisplay queda en títulos y marca; texto, campos y acciones usan la sans del sistema. Los rótulos de navegación tienen 12 px en escritorio y 11 px en móvil. La barra lateral de 158 px ofrece icono y nombre en una fila; hasta 1000 px se reduce a 142 px y, hasta 760 px, pasa a navegación horizontal contenida. La selección se reconoce por texto, fondo y acento, sin depender sólo del icono. No se añaden antetítulos que repitan el nombre visible de una sección.
-
-Las superficies de Inicio y Dirección comparten un ancho máximo de 1500 px y márgenes interiores de 40 px en escritorio, 24 px en el ancho intermedio y 18 px en móvil. La secuencia se presenta en filas con número, muestra, acción, personajes y estado. El recorrido pasa de seis a tres y después a dos columnas; las filas y acciones se reorganizan sin sacar el desplazamiento horizontal de sus barras.
-
-### Dirección visual progresiva
-
-«Dirección» reúne visor, acción y diálogo del guion, personajes vinculados, intención y preparación de la siguiente toma. «Montaje» conserva edición, tiempos, sonido y acabado. En escritorio, la toma y su contexto se sitúan a la izquierda; la dirección ocupa una columna de 320–420 px. Hasta 1100 px se apilan visor y controles, y en móvil el flujo continúa verticalmente.
-
-«Explorar referencias» abre una guía nativa en ocho grupos: Dirección, Encuadre, Época, Óptica y foco, Luz y color, Película, Cámara y Movimiento. Sus 17 campos contienen 139 opciones. Cada elección ofrece imagen o esquema, nombre y explicación, con un selector nativo equivalente. Las referencias combinan 37 archivos WebP de 36 imágenes únicas creadas con IA —el plano medio y la paleta natural comparten la misma base— con diagramas conceptuales. Doce imágenes originales ilustran lecturas parciales de referentes de dirección; cuatro sitúan ejemplos ficticios de época. Los originales se conservan. Son ejemplos orientativos, sin verificación histórica, reproducción exacta de un autor ni simulación óptica; reutilizar una imagen para ilustrar otra decisión exige explicar su alcance.
-
-La guía mantiene un borrador local: explorar, limpiar, copiar época o quitar notas no altera el plano hasta aplicar. «Aplicar al plano» guarda el conjunto en una acción deshacible. La selección se señala con borde, acento y marca de verificación; el pie mantiene estado pendiente, límite de las imágenes y acciones. Una lista desplegable de cambios compara las elecciones anteriores y pendientes. El diálogo usa foco visible, Escape y retorno al control que lo abrió. A 800 px se apila la guía; a 540 px ocupa la pantalla y muestra referencias en dos columnas, con los campos de contexto histórico en una sola columna.
-
-«Directores», «Tipos de toma» y «Movimiento» forman una fila de tres accesos discretos antes de las decisiones de época y captura. Cada uno muestra su elección actual y abre el campo correspondiente en el mismo borrador. Los referentes de autor explican una decisión formal concreta; no sustituyen la identidad, el guion o las elecciones explícitas de encuadre, óptica, luz y cámara. El tipo de toma describe su función narrativa y permanece separado del tamaño de plano.
-
-«Movimiento» reúne 21 trayectorias y cuatro ritmos de acción. Al elegir una trayectoria, «Recorrido de cámara» presenta un esquema con vista superior o lateral, explicación y estados «Inicio» y «Final». El rectángulo representa la cámara, el círculo al sujeto y la línea discontinua el recorrido. «Ver recorrido» reproduce una sola animación a petición; se puede detener o repetir. Se detiene cuando el esquema deja de ser visible o la pestaña se oculta. Con movimiento reducido se conservan los estados estáticos y no se ofrece reproducción animada. El esquema y las notas se muestran en paralelo en escritorio y se apilan en móvil; los controles mantienen 44 px mínimos. Es una ayuda conceptual sin escala, no una previsualización del video ni una trayectoria física garantizada.
-
-Los accesos «Época», «Película · FILM», «Lentes» y «Cámaras» son filas compactas en dos columnas dentro del inspector. Cada acceso muestra el nombre de la decisión y su selección actual, o «Elegir…», con separadores discretos. Abren el mismo borrador directamente en su campo; conservan foco visible y etiquetas además del icono. El año de la historia y el carácter de captura se presentan como decisiones independientes.
-
-«Época» reúne 20 periodos y permite precisar año o intervalo, lugar y cultura, interpretación y detalles que deben permanecer. La selección incluye todas las décadas de 1900 a 2019. La fidelidad histórica se expresa como intención de verosimilitud; la estilización y la historia alternativa tienen nombres explícitos. Las notas no presuponen vestuario, voz ni identidad. «Copiar sólo la época anterior» conserva las decisiones de captura del destino; «Sin indicación» conserva notas inactivas y lo explica, mientras «Quitar época y notas» las retira del borrador. Los avisos de fecha, lugar y combinación son orientativos, sin bloquear ni corregir automáticamente el plano.
-
-«Película» distingue cinco formatos de ocho familias de emulsión y revelado; «Tipo de lente» y «Tipo de cámara» ofrecen ocho opciones cada uno. Las ayudas describen el efecto buscado y sus límites junto al control. No se presenta una elección de película como resolución nativa, una lente como simulación medida ni una cámara como hardware disponible. Las decisiones explícitas tienen prioridad sobre caracteres heredados incompatibles, conservando el dato anterior y explicando por qué queda inactivo.
-
-Cuando dos apariciones consecutivas del mismo personaje tienen época definida y cambia su periodo o año, Continuidad muestra un recordatorio editorial del salto temporal. El contexto activo acompaña a Codex y al storyboard. Ese recordatorio no altera identidad, voz, vestuario u objetos, y no funciona como aprobación visual.
-
-«Apertura sugerida» y «Profundidad de campo» comunican una sola intención coherente: escoger un valor f ajusta la profundidad y escoger una profundidad incompatible retira el valor f anterior. Una indicación antigua de cámara se muestra aparte como «Dirección heredada» mientras no exista encuadre o movimiento nuevo. El selector permanece en «Sin indicación» hasta que se elija un valor estructurado; no interpreta libremente el texto heredado como una selección. Las instrucciones y los documentos de consulta respetan esa misma prioridad.
-
-### Voz propia del personaje
-
-«Voz del personaje» vive en su ficha y se reutiliza en Voces. Motor, voz, idioma y ritmo permanecen asociados al personaje en todas sus escenas. Para Qwen, «Crear voz desde un audio» reúne importación o selección del original, reproducción, inicio, duración de 3–30 segundos, escucha del fragmento y nombre. «Crear y usar voz» muestra preparación real y conserva el original; el perfil resultante se identifica por nombre, duración y referencia local, con su propio reproductor.
-
-Qwen reutiliza la instalación de Hermes. La interfaz distingue esa voz predeterminada de los perfiles propios guardados en la película. Crear una referencia no genera una interpretación; cada grabación se escucha antes de aplicarla. Las versiones anteriores permanecen accesibles y pierden vigencia cuando ya no corresponden a texto, voz o continuidad. La persistencia, integridad de las referencias y transferencia en el paquete Filmma se describen en [Voces propias por personaje](docs/VOICE-PROFILES.md).
-
-Voces presenta «Texto → Voz → Labios» como accesos a las tres partes de una intervención: quién dice qué, escuchar y montar, sincronizar y revisar. El papel marfil conserva el texto y el grafito contiene reproducción y procesos. Los campos tienen etiquetas, errores junto a la acción y controles de al menos 44 px; en móvil la selección de proveedor y la importación se apilan, mientras inicio y duración mantienen una pareja legible. La referencia ayuda a conservar el timbre; la interfaz no afirma semejanza medida ni actuación idéntica.
-
-### Perfil de generación y duración nativa
-
-Esta ampliación de Dirección y del pie de generación en Montaje conserva grafito, marfil, salvia y controles nativos con etiquetas visibles. El límite solicitado se distingue de la duración nativa prevista, sus fotogramas, cadencia y dimensiones. MiniMax H3 mantiene el perfil breve de 1–4 segundos y permite escribir límites de hasta 15 segundos mediante el perfil largo experimental: con el límite de 15 segundos, su cadencia produce 345 fotogramas a 24 fps, es decir, 14,375 segundos. El acabado UHD posterior no se presenta como generación nativa 4K.
-
-Antes de generar, «Ajustar montaje» conserva exactamente la duración nativa prevista, sin redondearla al reloj del montaje ni reducirla en aplicaciones sucesivas. Si el montaje excede la toma prevista, se avisa de que mantendrá el último fotograma. Para una toma existente, el aviso considera recorte y velocidad, explica que el último fotograma queda en silencio y ofrece ajustar el montaje al tramo disponible cuando alcanza su duración mínima.
-
-El perfil largo admite sólo texto. Las imágenes iniciales, finales y referencias visuales de personajes se conservan; su presencia bloquea ese perfil y la ayuda permite volver al límite breve para utilizarlas. El botón distingue preparación, cola y generación, muestra el mensaje real del trabajo y mantiene «Ver progreso». El envío simple de la misma escena se bloquea mientras su solicitud o trabajo sigue activo; las variantes intencionales conservan su flujo propio.
-
-Registro de esta ampliación: revisión de acabado **SHIP**, sin corrección material, sobre las capturas [escritorio](output/qa/minimax-scene/controls-desktop-final.png) y [móvil](output/qa/minimax-scene/controls-mobile-final.png). La validación larga está activa y pendiente; no hay resultado largo aprobado. La [prueba breve MiniMax → IA local → UHD](output/qa/minimax-scene/short-4k/README.md) está verificada en su alcance documentado y no acredita la duración larga ni detalle nativo 4K.
-
-> El detector registra un aviso `side-tab` preexistente en el borde del bloque de diálogo (`blockquote`). Se conserva como indicio estático, sin convertirlo en un fallo material de estos controles ni alterar la identidad existente.
-
-### Duración editable y salida de la película
-
-La duración de generación y la duración en montaje tienen campos y ayudas propios. Los campos aceptan coma o punto decimal, conservan un borrador mientras se escribe y confirman con Enter o al salir; Escape restaura el valor guardado. Los errores aparecen junto al campo, explican el rango y conservan el valor anterior. La recomendación de 3 segundos pertenece a la solicitud de generación. La duración en montaje admite 1–120 segundos y sólo cuantiza una edición confirmada al fotograma; enfocar un valor existente no lo modifica.
-
-«Salida de la película» reúne «Proporción» y «FPS de salida» en Dirección, Montaje, Guion y Exportar. Las opciones recomendadas, 16:9 y 24 fps, llevan ese texto visible; restaurarlas exige pulsar la acción correspondiente. Los proyectos existentes conservan sus elecciones y las películas nuevas usan los valores recomendados. La ayuda distingue la cadencia de salida de los 24 fps nativos y no promete interpolación ni movimiento adicional. El cambio de cadencia conserva la configuración anterior si invalida subtítulos o hace coincidir fotogramas clave.
-
-Los selectores comparten etiquetas persistentes, foco salvia y un mínimo de 44 px de altura. Se disponen en dos columnas y se apilan cuando el contenedor mide hasta 420 px; conservan grafito, marfil y tipografía operativa. El guion mantiene sus campos sobre papel marfil. Las dimensiones exactas acompañan a la resolución de entrega; «4K UHD» se reserva para 3840 × 2160 en 16:9, con nombres específicos para vertical y panorámico, y «Alta resolución» para los demás formatos.
-
-### Reglas para ampliar estas superficies
-
-- Mantener grafito, marfil y salvia; reservar la serif editorial para marca y títulos.
-- Mostrar nombres de tareas y estados además de iconos y color.
-- Conservar originales, borradores separados y aplicación explícita de las decisiones.
-- Distinguir una referencia ilustrativa, una indicación de generación y una toma del proyecto.
-- Mostrar Inicio y Final para explicar el movimiento; reproducir un recorrido sólo a petición y respetar movimiento reducido.
-- No convertir la cámara heredada en una selección estructurada que el usuario no ha elegido.
-- No presentar disponibilidad local, referencia vocal o estado visual como una garantía de resultado.
-- No presentar una imagen de referencia de autor ni un esquema de cámara como predicción de la toma generada.
-
-### Recuperación, recorrido guiado y calidad nativa
-
-Estas superficies prolongan la cinemateca moderna: títulos con serif editorial, operación en sans, grafito y marfil, salvia para acciones y selección. La jerarquía usa ritmo y separadores discretos; los medios y los datos del proyecto conservan el protagonismo.
-
-«Recuperación» ordena guardar un punto, elegir un guardado, revisar sus cambios y recuperar mediante una acción explícita. La fila seleccionada tiene fondo diferenciado y estado accesible; la marca de coincidencia con el estado actual tiene otro significado. La vista previa reúne título, fecha, planos, personajes y diferencias antes de «Recuperar esta versión». Junto a esa acción se explica que el estado actual quedará como punto de retorno y que se conservarán originales y tomas nuevas. Los archivos ausentes bloquean la recuperación con una indicación para reconectar su disco. En escritorio, lista y vista previa comparten dos columnas; en móvil se apilan, la vista previa deja de ser fija y el campo para nombrar el punto mantiene su etiqueta sobre el control.
-
-El recorrido conserva las seis etapas con acceso libre y añade preparación expresada en texto y recuentos. «Preparado» describe los datos disponibles para trabajar; calidad y continuidad requieren comprobar el resultado. El siguiente paso reconoce trabajos activos, personajes pendientes, modelo o disco ausente e imágenes que aún pueden convertirse en tomas; ofrece montar una animática cuando ya hay imágenes. En móvil, el recorrido permanece en dos columnas y las acciones y accesos de ayuda continúan en vertical.
-
-Las recomendaciones parten de tres objetivos: detalle nativo, personajes y referencias, o probar movimiento. «Disponible ahora» se distingue de «Perfil objetivo al preparar el modelo». Cada propuesta muestra dimensiones, duración y pasos, junto al alcance exacto de su evidencia y la admisión de imagen o sólo texto. «Usar perfil», «Conectar disco» y «Preparar modelo» responden a su disponibilidad real. Una prueba registrada corresponde a esos parámetros: no acredita calidad estética, identidad facial ni una toma más larga. La comparación HD de MiniMax mantiene visible su límite de sólo texto y ausencia de referencias del reparto.
-
-«Comparar calidad nativa» reúne motor, motivo de observación y parámetros comunes antes de iniciar. Los videos de prueba permanecen fuera de la película, con acceso a sus originales, dimensiones, fotogramas, FPS y tiempo medido de proceso y verificación. El pico de asignación MLX se identifica como una medida parcial de memoria. «Medios verificados» describe comprobación técnica; la evaluación visual se registra aparte mediante perfil preferido y notas, tras observar varios fotogramas, formas, texturas, movimiento y texto inventado, además de rostros y manos cuando aparezcan. No hay puntuación automática de calidad. Controles y videos se apilan en móvil; las nuevas acciones conservan etiquetas, foco visible y áreas táctiles de al menos 44 px.
-
-### Montaje integrado: pistas, mezcla y subtítulos
-
-La segunda entrega conserva la cinemateca moderna y concentra la edición bajo un visor compacto. En escritorio, la imagen permanece visible mientras el panel inferior tiene desplazamiento propio; transporte y pestañas «Secuencia», «Pistas», «Mezcla» y «Subtítulos» permanecen en su cabecera y comparten cabezal. «Ajustes del plano» abre la interfaz extensa existente. En móvil, «Ver visor» amplía el mismo visor y «Volver a herramientas» devuelve a la pestaña, selección, cabezal y posición de lectura conservados. Las líneas de tiempo contienen su desplazamiento horizontal.
-
-«Guion y continuidad de este plano» despliega acción, diálogo y personajes junto a la edición, con vestuario, objetos y cambios previstos o pendientes. Sus accesos llevan a Guion, Voces y la ficha del personaje. El contexto se distribuye en dos columnas en escritorio y una en móvil, con la serif editorial reservada para títulos y la sans operativa para datos y acciones.
-
-En Pistas, los candados protegen posición, recortes y edición de clips; dividir, duplicar y eliminar se desactivan durante el bloqueo. El aviso aclara que sus vínculos siguen al guion cuando se reordena. Nivel y silencio de pista conservan controles propios. Los clips vinculados identifican su plano y personaje, y retirar un clip conserva el archivo original en la biblioteca.
-
-Mezcla reúne audio del plano, banda sonora y pistas en filas separadas por líneas discretas. Cada fuente presenta nivel porcentual, dB de ganancia, silencio y «Aislar». La escucha aislada se identifica en texto y afecta sólo al visor; la mezcla guardada conserva su destino de exportación. Las ondas representan fuentes y ajustes, sin atribuirles medición de pico combinado ni sonoridad LUFS. Ausencia de fuente, ausencia de clip en el cabezal y voces que requieren revisión tienen estados distintos. En móvil, filas y acciones se reorganizan manteniendo etiquetas accesibles y controles táctiles.
-
-Subtítulos combina bloques temporales con extremos de recorte, selección salvia y campos de texto, entrada, salida y personaje. Arrastre, división en el cabezal y pasos de teclado conservan el vínculo al plano y al personaje. «Importar SRT» presenta desplazamiento global, observaciones y tramos por plano antes de «Añadir subtítulos revisados»; la aplicación añade al contenido existente y conserva el diálogo del guion. Un cambio del montaje, guion o subtítulos exige revisar otra vez la propuesta.
-
-«Voz y guion de este texto» asocia una intervención y ofrece escuchar su audio y ver su onda. «Usar tiempos de esta voz» requiere una grabación vigente y ajusta entrada y salida conservando las palabras editadas; las voces pendientes de revisión muestran la causa y mantienen sus originales. La revisión independiente de [acabado de esta entrega](output/qa/second-delivery/finish-verdict.md) registra **SHIP** y resuelve la incidencia de visor fuera de pantalla sobre las recapturas suministradas; este registro describe decisiones visibles, sin ampliar la evidencia funcional de la entrega.
-
-### Historia, estados y conexiones del plano
-
-La tercera entrega amplía la cinemateca moderna con estructura narrativa y estados del reparto. Conserva grafito, marfil y salvia, FilmmaDisplay en títulos y sans en campos y acciones. «Estructura de la historia» ocupa una sección desplegable antes del guion; las líneas discretas separan creación, contexto y organización, mientras la escritura permanece sobre papel marfil.
-
-La organización opcional «Secuencia → escena narrativa → plano» acompaña al índice y a la lectura. Lugar, momento, objetivo y notas pertenecen a la escena narrativa. El orden del montaje permanece como referencia y admite planos intercalados de una misma escena; reunir y mover un bloque abre una revisión. Retirar la organización conserva los planos.
-
-La revisión nativa presenta repercusiones con nombres y recuentos: posiciones, estado heredado, vigencia de voces, labios, subtítulos y material para volver a mirar. Las posiciones anteriores y nuevas y los valores de estado antes y después se escriben junto al plano y personaje afectados. «Volver sin aplicar» y «Aplicar cambios revisados» mantienen la decisión explícita; una propuesta pierde vigencia si cambia el proyecto. Las grabaciones anteriores siguen disponibles para escuchar y los archivos y vínculos se conservan. En móvil, las diferencias pasan de columnas a lectura vertical y las acciones permanecen al pie del diálogo.
-
-La ficha distingue la referencia principal que utiliza el motor de las referencias de apoyo para comparar. «Estados narrativos» guarda plantillas independientes de identidad y voz; editar una plantilla conserva las copias ya aplicadas. Cada aparición recibe una copia editable mediante motivo narrativo y revisión, con herencia hasta el siguiente cambio explícito. «Apariciones en el guion» abre el selector de estado del plano con foco visible y conserva su fuente original.
-
-El contexto narrativo acompaña a Guion, Storyboard y Montaje. «Qué está conectado con este plano» reúne accesos con etiquetas y cantidades a Voces, Subtítulos, Pistas y Continuidad, manteniendo el plano seleccionado. La ayuda explica qué cambios pueden dejar voces o labios pendientes y que acortar afecta los tramos visibles, mientras los archivos completos permanecen en la biblioteca. En móvil, formularios y contexto se apilan, los accesos se distribuyen en dos columnas y los controles mantienen áreas de al menos 44 px y foco salvia.
-
-La [revisión independiente de acabado](output/qa/third-delivery/finish-review.md), sobre fuentes y las catorce capturas r2 suministradas, registra **SHIP**, sin correcciones materiales. Este registro describe las decisiones visibles y conserva el alcance de esa evidencia: un estado narrativo escrito no acredita semejanza visual, reconocimiento de personajes ni sincronización labial.
-
-### Dirección y storyboard: intención, alternativas y muestras
-
-La cuarta entrega conserva la cinemateca de grafito, marfil y salvia, con FilmmaDisplay en títulos y sans operativa en campos y acciones. «Inicio previsto» y «Final previsto» se leen en paralelo en escritorio y en vertical en móvil. Son intenciones para la próxima generación; las imágenes inicial y final son anclas visuales separadas. La ayuda distingue el ancla final compatible con MiniMax H3 en modo imagen de una imagen conservada que el perfil no utiliza. «Notas de rodaje» mantiene su carácter editorial: se guarda y se imprime, sin incorporarse al prompt.
-
-Cada plano admite hasta seis alternativas nombradas. La comparación presenta las decisiones «Actual» y «Alternativa» y permite desplegar sus instrucciones completas antes de «Aplicar esta alternativa». En móvil las diferencias se leen en secuencia y las acciones permanecen al pie. El acento destaca la aplicación explícita; «Volver sin aplicar» conserva una salida clara. La ayuda identifica guion, personajes, voces, notas y material seleccionado como contenido preservado; el video existente conserva su aspecto.
-
-«Instrucciones finales de generación» separa modo, imágenes asociadas, decisiones inactivas, restricciones y prompt final. Copiar y descargar TXT tienen acciones propias. La comparación con el plano anterior mantiene nombres e instrucciones independientes, en columnas que se apilan en móvil.
-
-Storyboard distingue «Inicio editado» y «Último instante editado» de las intenciones escritas; cada muestra conserva fuente e instante. Las parejas se muestran en paralelo y se apilan en móvil. Una imagen fija aparece una sola vez como «Imagen de referencia». Planificación, escena, acción, diálogo, personajes y continuidad siguen una lectura editorial continua, con acceso a «Planificar este plano». La hoja imprimible HTML se identifica como copia independiente con imágenes; la lista CSV conserva el contexto escrito y las fuentes. Los originales permanecen en la biblioteca.
-
-La [revisión independiente de acabado](output/qa/fourth-delivery/finish-review.md), sobre fuentes y nueve recortes r2 de escritorio y móvil, registra **SHIP**, sin incidencias materiales. Este registro conserva ese alcance: documenta decisiones visibles y no acredita ejecución del motor ni equivalencia visual de personajes.
-
-### Selección, grupos, marcadores y reproducción del visor
-
-La quinta entrega prolonga la cinemateca de grafito, marfil y salvia: serif editorial en títulos, sans en acciones y monoespaciada en tiempos. El visor y el transporte conservan su presencia en escritorio; «Ver visor» mantiene el acceso en móvil. Una barra breve de selección precede las pistas y las operaciones del conjunto quedan debajo. Formularios y acciones se apilan en móvil, con etiquetas persistentes, foco salvia y controles táctiles.
-
-«Seleccionar varios» permite alternar clips por toque; ⌘/Ctrl y Mayús ofrecen selección y rango con teclado y ratón. El recuento expresa el estado. Los grupos nombrados reúnen clips de pistas adicionales y se distinguen de la organización narrativa de V1. El movimiento conjunto conserva los planos de referencia; recortes y campos del inspector afectan al clip activo. Una pista bloqueada impide aplicar operaciones parciales. Los avisos de voces fragmentadas o ambiguas piden revisar sus tiempos sin reescribir el guion ni retirar sus vínculos.
-
-«Marcadores» reúne título, tipo, tiempo dentro del plano, personaje u objeto y nota. La lista identifica plano y tiempo; las señales acompañan al plano al reordenar el guion y conservan avisos cuando quedan fuera de tramo. Tipo y tiempo comparten fila en escritorio y se apilan en móvil. Una señal de continuidad indica qué revisar, sin corregir ni aprobar el material.
-
-«Reproducción del visor» permite preparar copias H.264 de hasta 1280 px por lado, muestra disponibilidad y dimensiones y vuelve al original cuando falta una copia. Las copias sirven al visor; exportación y análisis conservan las fuentes originales seleccionadas. Los contadores describen el video actual, sin acreditar FPS sostenidos ni memoria unificada.
-
-La [revisión independiente de acabado](output/qa/fifth-delivery/finish-review.md), sobre fuentes, diez capturas r2 y tres complementarias de escritorio y móvil, registra **SHIP**, con cobertura complementaria resuelta. Este registro conserva ese alcance y no acredita identidad facial ni fluidez sostenida de una película completa.
-
-### Sonido, subtítulos y color entre planos
-
-La sexta y séptima entregas amplían la operación del montaje dentro de la cinemateca existente: grafito, marfil y salvia, serif editorial en títulos y sans en etiquetas, ayudas y acciones. Los separadores y el espacio organizan los ajustes sin competir con el visor. «Acabado de sonido» continúa dentro de Mezcla; «Apariencia y zona segura» y «Dividir el texto por palabras» se despliegan dentro de Subtítulos. «Scopes y comparación entre planos» se abre desde Acabado del plano y pausa el visor.
-
-Sonido separa «Música y diálogos» de «Sonoridad de entrega» en dos columnas. La primera reúne activación, reducción, anticipación, recuperación y pistas elegidas, con recuento de tramos de voz audibles; al desactivarla, sus ajustes dependientes quedan inactivos. La ayuda distingue las voces vinculadas de la música y avisa cuando falta una voz colocada: el texto del guion no activa la atenuación. La segunda reúne normalización, objetivo integrado y techo de pico real. El visor reproduce la atenuación; la normalización se evalúa mediante la copia de escucha medida.
-
-«Medir y preparar escucha» guarda antes de iniciar y distingue envío, medición activa, cancelación y error. El progreso remite a Actividad. El informe usa una tabla con título y columnas «Antes» y «Copia» para LUFS, pico real y rango, seguida de vigencia, alcance de tolerancia, reproductor nativo y descarga WAV. Los valores usan cifras tabulares y unidades visibles. Una mezcla o fuente cambiada conserva la escucha anterior como referencia y muestra «Pendiente de medir de nuevo» con acceso a repetir. La ausencia de medida se escribe expresamente; una tolerancia cumplida sigue pidiendo escuchar el resultado. El objetivo inicial de −16 LUFS y el techo inicial de −1,5 dBTP son decisiones de Filmma, no una certificación de entrega.
-
-En Actividad, «Sonido del máster MP4» acompaña al registro de exportación cuando existe un informe de audio, con independencia de los resultados de mejora de imagen. Presenta sonoridad integrada, pico real y rango del AAC decodificado del archivo, estado de normalización, objetivo y techo configurados y tolerancia de ±1 LU y +0,2 dB sobre el techo. La implementación distingue copia dentro de tolerancia, copia sin normalizar, «Sin medida integrada» por silencio o señal insuficiente y «Fuera del objetivo»; los dos últimos son avisos accesibles que piden revisar el archivo. Este bloque registra esa exportación y no se actualiza con cambios posteriores del proyecto. Las capturas documentan el resultado dentro de tolerancia; no acreditan interacción con los avisos alternativos.
-
-La apariencia de subtítulos concentra estilo, tamaño relativo, posición y margen seguro en cuatro columnas. Blanco sobre negro, papel marfil y ámbar de cine son tratamientos del texto sobre la imagen; no sustituyen la paleta de la aplicación. Tamaño y margen conservan sus valores visibles. El estilo es común a toda la película y acompaña al visor y al MP4; el SRT conserva palabras y tiempos. El recuento de palabras y caracteres por segundo orienta la lectura sin aprobarla. Para textos de al menos dos palabras, la división permite elegir la primera palabra del siguiente tramo y cortar su tiempo en el cabezal; conserva personaje, intervención y guion, y comunica errores junto a la acción. Es temporización manual, sin transcripción ni alineación fonética automática.
-
-La revisión de color usa un diálogo de grafito con fondo atenuado, título editorial y barra de referencia, tratamiento de muestra, scope y «Capturar muestras». Propone una aparición anterior con personaje compartido o un plano vecino; permite cambiarla o revisar sólo el plano actual. En escritorio, referencia y plano actual se leen en paralelo. Cada columna presenta imagen sin recortar, archivo, dimensiones e instante de fuente, control por fotograma y accesos Inicio, Medio y Final; debajo aparecen scope, luma media y porcentajes de extremos. «Guion y continuidad previstos» despliega acción, diálogo y estados escritos junto a su muestra. La ausencia de captura muestra una instrucción en el mismo espacio reservado a la imagen.
-
-La acción principal captura después de guardar. Lectura activa, cancelación y errores tienen texto visible; cerrar cancela la captura. Cambiar color, fuente, recorte, velocidad o instante conserva las muestras anteriores y pide capturarlas otra vez. El aviso de final agotado acompaña al instante de fuente. «Sin look ni corrección» distingue la fuente del acabado; «Aplicar color de referencia» copia sólo corrección y look al plano actual, y los controles inferiores ajustan sólo ese plano mediante la edición deshacible existente. «Informe JSON» descarga metadatos y scopes con su vigencia; no registra una aprobación de continuidad.
-
-Los scopes distinguen forma de onda de luma, parada RGB e histograma RGB y luma con nombres y ejes visibles. El histograma sitúa el nivel digital de 0 a 255 en horizontal y la frecuencia relativa logarítmica en vertical, con «máx.» y «0»; su escala es independiente por canal. Se calculan sobre muestras SDR de RGB de 8 bits reducidas hasta 640 px por lado antes del look y la matriz del render, con luma digital ponderada Rec.709 de 0 a 255. No representan IRE, RAW ni HDR; las fuentes identificadas como HDR o BT.2020 se rechazan, y una fuente sin metadatos se interpreta como SDR sin certificarla. Los porcentajes de valores cercanos a los extremos no prueban pérdida de detalle en el original. La muestra excluye capas, transiciones, subtítulos y barras del lienzo; un color parecido y las notas del guion no certifican identidad, vestuario, objetos ni continuidad temporal. La ayuda pide revisar varios instantes y el máster exportado.
-
-Selectores, casillas, deslizadores y desplegables conservan etiquetas; tabla y gráficos tienen títulos o nombres accesibles. El diálogo nativo tiene nombre accesible, foco modal y cierre por Escape; errores y cambios de vigencia usan avisos accesibles. Botones, selectores y resúmenes principales mantienen un mínimo de 44 px y contorno de foco salvia; las decisiones no dependen sólo del color. No se añade movimiento automático. Hasta 760 px, los dos bloques de sonido se apilan y la apariencia de subtítulos pasa a dos columnas. En el informe AAC de Actividad, la sonoridad ocupa una fila completa y pico y rango quedan en dos columnas. La barra y las muestras de color pasan a una columna, el diálogo conserva desplazamiento vertical propio y las acciones inferiores ocupan el ancho disponible. El montaje mantiene su transporte, sus pestañas y el acceso móvil «Ver visor».
-
-Esta extensión produce copias de escucha y muestras locales, conserva originales y vínculos y no introduce generación IA. La [revisión independiente de acabado](output/qa/seventh-delivery/finish-review.md) registra **SHIP** dentro de su alcance, con los dos P2 resueltos y ocho capturas complementarias de escritorio y móvil revisadas en el pase de reemplazo; los avisos negativos de Actividad se juzgaron sólo en fuente y el cierre no acredita su interacción, ejecución nativa, identidad facial ni rendimiento sostenido.
-
-### Continuidad visual a lo largo de la toma
-
-La octava entrega amplía «Lo que permanece» en modo **Operate**, dentro de la cinemateca de grafito, marfil y salvia. FilmmaDisplay permanece en títulos; texto, campos y acciones usan la sans operativa. Separadores y espacio ordenan muestreo, apariciones, intervalo, muestras, contexto y decisión humana, con las imágenes como área principal.
-
-«Muestreo por plano» permite elegir tres instantes —inicio, medio y final— o cinco, añadiendo los cuartos. El resumen distingue fotogramas de fuente, intervalos y apariciones analizadas o conservadas. «Intervalo que revisar» y las parejas de miniaturas permiten localizar comparaciones entre planos y dentro de una toma; una única aparición de video también puede tener revisión interna. Las categorías conservan resultados independientes y el resumen mantiene la posible diferencia más relevante. Imágenes fijas y repeticiones por fuente agotada cuentan una vez y explican su límite.
-
-Cada muestra identifica plano, momento e instante de fuente. «Delimitar zona» y «Instante y coordenadas» mantienen tiempo y región independientes por muestra, personaje y aspecto; cambiar el final conserva los ajustes del inicio. Zona elegida y estimada tienen nombres y bordes diferenciados. Un cambio pide analizar de nuevo antes de aprobar. «Lo previsto en el guion» reúne estado efectivo, acción y diálogo de ambas muestras del intervalo, incluso dentro del mismo plano; el cambio narrativo previsto sigue separado de la decisión visual.
-
-En escritorio, las dos muestras y sus contextos se leen en paralelo. Las miniaturas pasan a una columna hasta 1100 px; hasta 760 px se apilan muestreo, apariciones, imágenes y contexto. Los selectores conservan etiquetas, las acciones principales mantienen un mínimo de 44 px y la selección se comunica además del color. El foco salvia acompaña a la operación; la nota enfocada está documentada en escritorio y móvil.
-
-«Tu revisión de esta aparición» exige confirmar todos sus intervalos; diferencias, incertidumbre y cambios intencionales requieren nota. La aprobación final del alcance permanece independiente. «Analizar cambios» conserva análisis y decisiones explícitas de apariciones con fuentes y contexto sin cambios, y deja pendientes las afectadas. «Rehacer análisis completo» retira las decisiones del informe nuevo. Ninguno hereda la confirmación final; reabrir o modificar las condiciones revisadas impide usar una aprobación desactualizada para exportar. Originales, vínculos e informes anteriores se conservan.
-
-La [revisión independiente de acabado](output/qa/eighth-delivery/finish-review.md), sobre fuentes y siete capturas r2 de escritorio (1440 × 1000) y móvil (390 × 844), registra **SHIP** para esta extensión, sin P1 ni P2 pendientes. El [registro funcional](output/qa/eighth-delivery/ui-verification.json) acredita el recorrido descrito y la [verificación local](output/qa/eighth-delivery/real-vision-verification.json) registra Apple Vision CPU, nueve posiciones de fuente, doce intervalos y un MP4 UHD técnico de 12 segundos con audio y decodificación completa. Son videos derivados de una imagen existente: el cierre no certifica identidad biométrica, reconocimiento semántico de objetos, continuidad de toda la película ni detalle nativo 4K. Las muestras SDR reducidas no inspeccionan todos los fotogramas ni la composición final. La cobertura no incluye lector de pantalla, contraste medido, recorrido completo de teclado, dibujo por arrastre ni capturas de carga, error, cancelación o vacío; tampoco evalúa el instalador nativo ni idiomas globales.
-
-### Biblioteca, procedencia y actividad del estudio
-
-La novena entrega amplía el modo **Operate** dentro de la cinemateca de grafito, marfil y salvia. FilmmaDisplay permanece en títulos; la sans operativa organiza nombres, metadatos, filtros y acciones. «Archivos» presenta búsqueda por nombre, etiqueta, plano o personaje, filtros de tipo, etiqueta, uso y disponibilidad, favoritos y recuento de resultados. La estantería usa tres columnas en escritorio y dos al abrir la ficha lateral. Las muestras conservan su encuadre completo; sonido y archivo ausente tienen representaciones escritas propias.
-
-La ficha separa reproducción y acciones, etiquetas, «Dónde se usa», «Procedencia y versiones» e «Integridad y reconexión» mediante espacio y líneas discretas. Seleccionar material abre su contexto; aplicarlo al plano o a la banda sonora requiere una acción explícita. Los usos permiten volver al plano, personaje o fuente. La procedencia presenta sólo los nombres, fechas, métodos, modelos y parámetros registrados, permite seguir la fuente y descargar JSON. «Procedencia no registrada» conserva la incertidumbre de archivos antiguos; el texto explica que estos registros no acreditan autoría ni autenticidad externa.
-
-La comprobación SHA256 distingue disponibilidad, verificación y contenido distinto. Reconectar exige una copia idéntica y conserva identificador, guion, personajes y tiempos. El feedback pertenece al archivo y permanece dentro de «Integridad y reconexión»: pendiente con «Verificando la copia», error con motivo y recuperación, y éxito con «Original reconectado», incluso después de desaparecer el botón. El bloque se revela sin cambiar el foco. Texto, separador y color acompañan la respuesta; error usa aviso semántico y pendiente y éxito usan estado semántico. Las recapturas acreditan error y éxito en ambos tamaños; el pendiente se revisó sólo en fuente. «Mis películas» ofrece «Abrir para reconectar» como decisión explícita ante fuentes ausentes.
-
-Actividad presenta filas con fecha, estado escrito y contexto de película, plano o fuente separado del resultado. Película, estado, proceso y búsqueda permiten localizar trabajos; «Detalles y resultados» conserva diagnóstico e informes existentes. Un fallo por archivo ausente explica cómo recuperar el original y ofrece «Revisar biblioteca»; un resultado disponible abre su archivo y procedencia. Los registros sin contexto mantienen esa condición. El mensaje de fallo o cancelación comunica que originales y resultados terminados permanecen disponibles y que el trabajo no se reinicia automáticamente.
-
-Hasta 1000 px, la ficha pasa delante de la colección. Hasta 760 px, búsqueda ocupa el ancho, filtros y acciones principales se reparten en dos columnas y la estantería queda en una. En Actividad, fecha y accesos de contexto se apilan y las acciones admiten varias filas. Nombres largos y huellas se ajustan dentro de su contenedor. Etiquetas nativas, mínimos de 44 px en controles principales y foco salvia constan en fuente; el foco del editor de etiquetas está documentado en escritorio.
-
-La [revisión independiente de acabado](output/qa/ninth-delivery/finish-review.md) registra **SHIP** para estas composiciones y fuentes, con el único P2 resuelto mediante cuatro recapturas de reconexión. Los [registros funcionales](output/qa/ninth-delivery/functional-verification.json) y de [preservación](output/qa/ninth-delivery/preservation-final.json) acreditan, en la prueba aislada, rechazo de copia distinta, reconexión exacta, originales conservados y vínculos al guion y personajes mantenidos o remapeados en el paquete. Este cierre no certifica identidad o precisión de modelos, calidad nativa de imagen ni instalador; tampoco contraste medido, lector de pantalla o recorrido completo de teclado. Carga, vacío, cancelación y contenido masivo carecen de cobertura visual completa.
+- **Don't** restituir el antiguo grafito verde como paleta predeterminada ni decorar herramientas con neón, resplandores o gradientes.
+- **Don't** servir capturas de las composiciones como interfaz ni extraer sus personajes, cifras o actividad ficticia.
+- **Don't** recortar el medio principal para imitar la maqueta ni repetir la ilustración para aparentar varios planos.
+- **Don't** prometer identidad, calidad, rendimiento, revisión completada o pruebas integrales sin evidencia.
