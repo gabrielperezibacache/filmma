@@ -9,9 +9,9 @@ El plan original agrupa proyectos, flujo guiado, guion, personajes, dirección, 
 | Tercera | Secuencias y escenas narrativas, repercusiones sobre la continuidad, estados por elemento y referencias de apoyo | [Tercera entrega](THIRD-DELIVERY.md). El análisis es editorial y de vigencia; no demuestra identidad facial. |
 | Cuarta | Planificación de inicio/final, notas de rodaje, alternativas revisables, instrucciones finales y storyboard con muestras temporales | [Cuarta entrega](FOURTH-DELIVERY.md). Es planificación y consulta; no certifica identidad visual ni genera ángulos nuevos. |
 | Quinta | Selección múltiple y grupos de clips adicionales, marcadores por plano y copias ligeras para el visor | [Quinta entrega](FIFTH-DELIVERY.md). Exportación y continuidad usan las fuentes originales; los contadores no certifican FPS sostenidos. |
-
 | Sexta | Sonoridad medida, normalización local, atenuación de música ligada a voces y apariencia/división manual de subtítulos | [Sexta entrega](SIXTH-DELIVERY.md). El visor no simula la normalización del máster; los tiempos por palabras son manuales. |
 | Séptima | Scopes SDR de muestras, comparación entre planos y contexto de continuidad junto al color | [Séptima entrega](SEVENTH-DELIVERY.md). Muestras reducidas, sin capas ni certificación HDR o identidad. |
+| Octava | Tres/cinco instantes por plano, intervalos internos, comparación por aspecto y revisión selectiva | [Octava entrega](EIGHTH-DELIVERY.md). Señales locales heurísticas; no reconocimiento de identidad ni análisis exhaustivo. |
 
 ## Apartados pendientes del plan original
 
@@ -19,7 +19,7 @@ El plan original agrupa proyectos, flujo guiado, guion, personajes, dirección, 
 - Editor avanzado: selección y reorganización conjunta de varios planos de V1, más herramientas de organización espacial y evaluación de reproducción sobre proyectos largos. Los grupos de clips adicionales, marcadores y copias ligeras están entregados.
 - Sonido y subtítulos avanzados: comparación de interpretaciones y alineación fonética automática. La normalización, atenuación, estilos, zonas seguras y división manual por palabras están entregados. Una transcripción real debe distinguirse del texto preparado desde el guion.
 - Color y acabado avanzados: evaluación de LUT y gestión de color HDR; pruebas temporales de restauración y reescalado sobre varios fotogramas. Los scopes SDR de muestras y la comparación entre planos están entregados.
-- Continuidad visual: varios instantes por plano y revisión selectiva de las apariciones afectadas, conservando los límites del reconocimiento local.
+- Continuidad visual avanzada: seguimiento de regiones con movimiento y oclusiones, comparación contextual ampliada y evaluación sobre secuencias reales. El muestreo múltiple y la revisión selectiva están entregados; no acreditan reconocimiento de identidad.
 - Biblioteca/actividad: etiquetas, favoritos, procedencia, reconexión de originales trasladados y recuperación de trabajos.
 - Exportación: perfiles de cine/publicidad/redes, evaluación de másteres y aceleración real del Mac.
 - Aplicación Mac: revisión integral de idiomas y accesibilidad, recuperación de actualizaciones fallidas y notarización con una identidad Apple disponible.

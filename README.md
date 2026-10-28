@@ -93,3 +93,6 @@ El acabado **Restauración estable** está disponible por toma y para toda la pe
 Tercera entrega: [guion estructurado y estados narrativos](docs/THIRD-DELIVERY.md). Cuarta entrega: [Dirección, alternativas y Storyboard](docs/FOURTH-DELIVERY.md). Quinta entrega: [grupos, marcadores y reproducción ligera](docs/FIFTH-DELIVERY.md). [Plan de desarrollo y pendientes](docs/DEVELOPMENT-PLAN.md).
 
 Las entregas [sexta](docs/SIXTH-DELIVERY.md) y [séptima](docs/SEVENTH-DELIVERY.md) incorporan acabado sonoro medido, subtítulos con estilo y scopes SDR para comparar planos, preservando guion, personajes y originales.
+
+
+La [octava entrega](docs/EIGHTH-DELIVERY.md) amplía Continuidad con tres o cinco instantes por plano, comparaciones internas y entre apariciones, zonas por muestra y reutilización de revisiones vigentes. Apple Vision local aporta señales de rostro, vestuario y objetos con revisión humana; conserva fuentes, guion y personajes.

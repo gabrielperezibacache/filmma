@@ -1,3 +1,4 @@
+import {reconcileVisualSettings} from '../src/visual-sampling.js';
 import {registerColorReview} from './color-review.js';
 import {registerSoundReview} from './sound-review.js';
 import {registerPlaybackProxies} from './playback-proxies.js';
@@ -198,13 +199,13 @@ export async function createApp(options: AppOptions = {}) {
   }));
   const pendingContinuity = new Map<string, Promise<Job>>();
   app.post('/api/continuity/analyze', asyncRoute(async (req, res) => {
-    const input = z.object({ projectId: z.string().max(100), settings: visualSettingsSchema.optional() }).parse(req.body);
-    const snapshot = continuityProject(input.projectId), settings = input.settings ?? await visualContinuity.settings(snapshot.id);
+    const input = z.object({ projectId: z.string().max(100), settings: visualSettingsSchema.optional(),force:z.boolean().optional() }).strict().parse(req.body);
+    const snapshot = continuityProject(input.projectId), settings = input.settings ?? reconcileVisualSettings(snapshot,await visualContinuity.settings(snapshot.id));
     const fingerprint = await visualContinuity.fingerprint(snapshot, settings), key = `${snapshot.id}:${fingerprint}`;
     const previous = store.jobs.find(job => job.type === 'continuity' && ['queued','running'].includes(job.status) && job.result?.projectId === snapshot.id && job.result?.continuityFingerprint === fingerprint);
     if (previous) return res.status(202).json({ job: previous });
     if (!pendingContinuity.has(key)) pendingContinuity.set(key, (async () => {
-      const report = await visualContinuity.create(snapshot, settings);
+      const report = await visualContinuity.create(snapshot, settings,input.force??false);
       try { return await enqueue('continuity', 'Comparando las apariciones de personajes y objetos…', async (signal, update) => {
         await visualContinuity.execute(snapshot, report, signal, (message, progress) => update(message, progress));
         return { projectId: snapshot.id, continuityReportId: report.id, continuityFingerprint: report.fingerprint };
@@ -214,7 +215,7 @@ export async function createApp(options: AppOptions = {}) {
     res.status(202).json({ job: await pendingContinuity.get(key) });
   }));
   app.put('/api/continuity/review', asyncRoute(async (req, res) => {
-    const input = z.object({ projectId:z.string().max(100),reportId:z.string().max(100),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),comparisonId:z.string().max(100).optional(),decision:z.enum(['reviewed','intentional','pending']).optional(),note:z.string().max(2000).default('') }).parse(req.body);
+    const input = z.object({ projectId:z.string().max(100),reportId:z.string().max(100),fingerprint:z.string().regex(/^[a-f0-9]{64}$/),comparisonId:z.string().max(100).optional(),decision:z.enum(['reviewed','intentional','pending']).optional(),allSamplesReviewed:z.boolean().optional(),note:z.string().max(2000).default('') }).parse(req.body);
     res.json({ report: await visualContinuity.review(continuityProject(input.projectId), input) });
   }));
   app.get('/api/continuity/media/:projectId/:reportId/:file', asyncRoute(async (req, res) => {

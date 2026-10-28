@@ -50,7 +50,7 @@ Esta exportación no inicia otra inferencia ni cambia las fuentes aprobadas por 
 
 ### Revisar las apariciones entre planos
 
-La revisión de continuidad compara cada personaje u objeto con su aparición anterior en el orden del montaje. Usa un fotograma por plano, cuyo instante puedes cambiar; respeta el recorte y la velocidad y aplica el color del plano. Compara las fuentes seleccionadas, incluidas las versiones IA, y no modifica sus archivos.
+La revisión de continuidad compara cada personaje u objeto con su aparición anterior en el orden del montaje. Usa tres o cinco instantes por plano, con intervalos entre apariciones y dentro de cada toma; puedes editar cada instante y su zona, y analizar sólo las apariciones afectadas conservando las revisiones vigentes; respeta el recorte y la velocidad y aplica el color del plano. Compara las fuentes seleccionadas, incluidas las versiones IA, y no modifica sus archivos.
 
 Puedes delimitar en ambas imágenes zonas de **Rostro**, **Vestuario** u **Objetos**, dibujándolas o ajustando sus coordenadas. El motor puede sugerir rostro y torso cuando hay un personaje sin ambigüedad; el torso es una estimación geométrica, no una segmentación de prendas. Los objetos requieren zonas manuales. Un resultado **Posible diferencia** o **No concluyente** necesita una decisión y una nota; **Sin diferencia evidente** sólo describe la zona y el fotograma examinados. No se confirma identidad ni se reconoce semánticamente la presencia de un objeto.
 

@@ -1417,5 +1417,10 @@
   "señal": "cue",
   "Pistas": "Tracks",
   "Scopes y comparación entre planos": "Scopes and shot comparison",
-  "Medición de sonido": "Sound measurement"
+  "Medición de sonido": "Sound measurement",
+  "Medio": "Middle",
+  "Primer cuarto": "First quarter",
+  "Último cuarto": "Last quarter",
+  "Has cambiado el muestreo, las zonas o los instantes. Analiza de nuevo para guardar estos ajustes y actualizar las imágenes.": "You changed sampling, regions or times. Analyze again to save these settings and update the images.",
+  "La fuente se agota antes de este instante; se muestra su último fotograma.": "The source ends before this moment; its last frame is shown."
 }

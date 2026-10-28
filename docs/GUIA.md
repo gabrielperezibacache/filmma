@@ -181,15 +181,15 @@ Los límites de 15 segundos, SDR y Full HD se comprueban sobre el archivo de ori
 
 ## Compara la continuidad antes de exportar en 4K
 
-Abre **Continuidad → Analizar continuidad**. El análisis se ejecuta localmente con Apple Vision en CPU. Cada personaje u objeto se compara con su aparición anterior en el orden actual del montaje, aunque haya otros planos entre ambas apariciones. Vincula el mismo elemento a los planos que deban compararse. Una primera aparición o un elemento presente en un solo plano no tiene una pareja anterior.
+Abre **Continuidad → Analizar continuidad**. El análisis se ejecuta localmente con Apple Vision en CPU. Cada personaje u objeto se compara con su aparición anterior en el orden actual del montaje, aunque haya otros planos entre ambas apariciones. Vincula el mismo elemento a los planos que deban compararse. Una primera aparición no tiene una pareja anterior; un video con una sola aparición sí puede revisarse mediante sus intervalos internos.
 
-Se toma **un fotograma editable por plano**, inicialmente cerca de su mitad. En **Instante y coordenadas**, cambia el instante dentro del plano; el análisis respeta el recorte y la velocidad de la fuente. Pulsa **Analizar de nuevo** para actualizar la imagen. Los fotogramas muestran la fuente seleccionada —original o versión IA— con el color del plano, pero no incluyen capas superpuestas ni transiciones.
+Se toman **tres o cinco instantes editables por plano**, comparados entre apariciones y dentro de cada toma. En **Instante y coordenadas**, cambia el tiempo de una muestra; el análisis respeta el recorte y la velocidad de la fuente. Pulsa **Analizar cambios** para actualizar las apariciones afectadas, conservando las revisiones vigentes de las demás. Los fotogramas muestran la fuente seleccionada —original o versión IA— con el color del plano, pero no incluyen capas superpuestas ni transiciones.
 
 Alterna **Rostro**, **Vestuario** y **Objetos**. **Delimitar zona** permite dibujar la parte que quieres comparar en cada imagen; también puedes ajustar sus coordenadas. Marca la misma parte del personaje, prenda u objeto en ambos planos. Para un personaje sin ambigüedad, el motor puede estimar una zona facial y sugerir el torso; comprueba siempre el encuadre sugerido. Los objetos necesitan zonas manuales: el motor compara su apariencia, no reconoce automáticamente qué objeto es.
 
 **Posible diferencia** señala un cambio que merece revisión. **No concluyente** indica que falta detalle, una zona o evidencia suficiente; no equivale a una comprobación satisfactoria. **Sin diferencia evidente** se refiere sólo a esa muestra y zona. La luz, la pose y el ángulo pueden producir avisos, y ningún resultado confirma la identidad de una persona.
 
-Revisa cada pareja y el estado previsto en el guion. Guarda **Revisado visualmente** o **Cambio intencional**; una diferencia, un resultado no concluyente o un cambio intencional requiere una nota. El cambio narrativo registrado en el guion aporta contexto, pero no aprueba por sí solo la comparación visual. Puedes reabrir una decisión para corregirla; entonces debes confirmar de nuevo la revisión final.
+Revisa todos los intervalos de cada aparición, confirma su casilla y consulta el estado previsto en el guion. Guarda **Revisado visualmente** o **Cambio intencional**; una diferencia, un resultado no concluyente o un cambio intencional requiere una nota. El cambio narrativo registrado en el guion aporta contexto, pero no aprueba por sí solo la comparación visual. Puedes reabrir una decisión para corregirla; entonces debes confirmar de nuevo la revisión final.
 
 Antes de **Guardar revisión para exportar**, reproduce también la película completa y añade una nota sobre lo revisado. El análisis no examina todos los fotogramas ni las capas, animaciones y transiciones del resultado final. Si no hay apariciones enlazadas, el informe lo indica: no se han realizado comparaciones y debes reconocer ese límite en el visionado.
 
@@ -298,3 +298,10 @@ En **Montaje → Mezcla**, abre el acabado de sonido: atenuación de música dur
 En **Subtítulos**, Apariencia y zona segura aplica un estilo común al visor y MP4. Dividir por palabras es manual y conserva los vínculos del guion. El SRT no incluye apariencia.
 
 En **Montaje → Ajustes del plano → Acabado**, abre **Scopes y comparación entre planos**. Elige referencia e instantes y captura muestras antes de leer forma de onda, parada RGB o histograma. Tras cambiar color o instante, captura de nuevo. Las notas de continuidad sitúan personajes y objetos; no certifican su identidad. Consulta [Séptima entrega](SEVENTH-DELIVERY.md).
+
+
+## Continuidad temporal · octava entrega
+
+Abre **Continuidad**, elige tres o cinco instantes por plano y analiza. Las miniaturas distinguen pares entre planos e intervalos dentro de la toma; selecciona Rostro, Vestuario u Objetos. Ajusta zona e instante por muestra y vuelve a analizar. **Lo previsto en el guion** mantiene la acción, el diálogo y el estado del personaje junto a las imágenes.
+
+**Analizar cambios** conserva las revisiones de apariciones idénticas y vuelve a analizar las afectadas. Revisa todos sus intervalos, añade una nota cuando haya diferencias o incertidumbre y confirma el alcance antes de exportar. Un informe nuevo siempre necesita confirmación final. Los originales y los informes anteriores se conservan. Consulta [Octava entrega y límites del análisis local](EIGHTH-DELIVERY.md).

@@ -35,7 +35,7 @@ async function fixture(mode='success') {
   const state=async()=>(await fetch(base+'/api/continuity')).json();
   async function wait(id:string){for(let n=0;n<1000;n++){const job=app.store.jobs.find(item=>item.id===id)!;if(['completed','failed','cancelled'].includes(job.status))return job;await new Promise(done=>setTimeout(done,20));}throw new Error('Timeout');}
   async function audit(){const response=await request('/api/continuity/analyze',{projectId:project.id});assert.equal(response.status,202);const job=await wait((await response.json()).job.id);assert.equal(job.status,'completed',job.message);return(await state()).report;}
-  async function approve(report:any){for(const comparison of report.comparisons)assert.equal((await request('/api/continuity/review',{projectId:project.id,reportId:report.id,fingerprint:report.fingerprint,comparisonId:comparison.id,decision:'reviewed',note:'Revisado visualmente.'},'PUT')).status,200);assert.equal((await request('/api/continuity/review',{projectId:project.id,reportId:report.id,fingerprint:report.fingerprint,note:'Revisadas las limitaciones y la reproducción.'},'PUT')).status,200);}
+  async function approve(report:any){for(const comparison of report.comparisons)assert.equal((await request('/api/continuity/review',{projectId:project.id,reportId:report.id,fingerprint:report.fingerprint,comparisonId:comparison.id,decision:'reviewed',allSamplesReviewed:true,note:'Revisado visualmente.'},'PUT')).status,200);assert.equal((await request('/api/continuity/review',{projectId:project.id,reportId:report.id,fingerprint:report.fingerprint,note:'Revisadas las limitaciones y la reproducción.'},'PUT')).status,200);}
   return{...app,directory,dataDirectory,publicDirectory,base,calls,request,state,wait,audit,approve,close:async()=>{await app.close();server.closeAllConnections();await new Promise<void>(done=>server.close(()=>done()));await rm(directory,{recursive:true,force:true});}};
 }
 
@@ -159,4 +159,43 @@ test('remembering an alternative take keeps a review current until that source i
   f.store.project.scenes[0].videoAssetId='alternative';assert.equal((await f.state()).stale,true);
   const response=await f.request('/api/export',{format:'mp4',resolution:'2160p',requireContinuityReview:true,continuityReportId:report.id,continuityFingerprint:report.fingerprint});assert.equal(response.status,409);
  }finally{await f.close();}
+});
+
+test('multi-frame video analyses retain only unchanged appearance reviews and require a new final acknowledgement', {timeout:30000}, async()=>{
+ const f=await fixture();try{
+  const path=join(f.dataDirectory,'media','temporal.mp4');const made=await runProcess('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=160x100:r=24:d=1','-c:v','libx264',path]);assert.equal(made.code,0,made.stderr);
+  const original=sha(await readFile(path));f.store.project.assets.push({id:'temporal',name:'Temporal original',type:'video',url:'/api/media/temporal.mp4',mime:'video/mp4',size:(await readFile(path)).length});f.store.project.scenes.forEach(s=>{s.videoAssetId='temporal';s.look='original';s.color=undefined});
+  const first=await f.audit();assert.equal(first.samplingVersion,2);assert.deepEqual(first.summary,{analyzed:2,reused:0,frames:9,intervals:12});assert.deepEqual(first.comparisons.map((c:any)=>c.intervals.length),[7,5]);
+  assert.equal((await f.request('/api/continuity/review',{projectId:f.store.project.id,reportId:first.id,fingerprint:first.fingerprint,comparisonId:'pair-0',decision:'reviewed',note:'Missing explicit review.'},'PUT')).status,400);
+  await f.approve(first);const calls=()=>readFile(f.calls,'utf8').then(s=>s.trim().split('\n').map(l=>JSON.parse(l)));assert.equal((await calls()).length,12);
+  const cached=await f.audit();assert.deepEqual(cached.summary,{analyzed:0,reused:2,frames:9,intervals:12});assert.ok(cached.comparisons.every((c:any)=>c.decision&&c.reusedFrom===first.id));assert.equal(cached.acknowledgement,undefined);assert.equal(visualReviewReady(cached),false);assert.equal((await calls()).length,12);assert.equal((await fetch(f.base+cached.comparisons[0].intervals[1].left.url)).status,200);
+  f.store.project.scenes[2].color={saturation:.3};const partial=await f.audit();assert.equal(partial.summary.reused,1);assert.equal(partial.summary.analyzed,1);assert.ok(partial.comparisons[0].decision);assert.equal(partial.comparisons[1].decision,undefined);assert.equal((await calls()).length,17);
+  const settings={sampleCount:3,regions:[{sceneId:f.store.project.scenes[2].id,characterId:'elena',category:'object',sample:'end',rect:{x:.2,y:.2,width:.4,height:.4}}],sampleTimes:[{sceneId:f.store.project.scenes[2].id,sample:'end',time:.8}]};
+  const changed=await f.request('/api/continuity/analyze',{projectId:f.store.project.id,settings});assert.equal(changed.status,202);assert.equal((await f.wait((await changed.json()).job.id)).status,'completed');const selected=(await f.state()).report;assert.equal(selected.summary.reused,1);assert.equal((await calls()).length,22);const end=selected.comparisons[1].intervals.find((i:any)=>i.kind==='between'&&i.right.moment==='end');assert.equal(end.right.time,19/24);const records=await calls();assert.ok(records.slice(-5).some(r=>r.regions.object?.right?.x===.2));
+  const force=await f.request('/api/continuity/analyze',{projectId:f.store.project.id,settings,force:true});assert.equal(force.status,202);assert.equal((await f.wait((await force.json()).job.id)).status,'completed');const forced=(await f.state()).report;assert.equal(forced.summary.reused,0);assert.equal(forced.summary.analyzed,2);assert.ok(forced.comparisons.every((c:any)=>!c.decision));assert.equal(sha(await readFile(path)),original);
+ }finally{await f.close()}
+});
+
+test('five samples include internal-only video appearances and missing cached thumbnails are recomputed', {timeout:30000}, async()=>{
+ const f=await fixture();try{
+  const path=join(f.dataDirectory,'media','single.mp4');const made=await runProcess('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=160x100:r=24:d=1','-c:v','libx264',path]);assert.equal(made.code,0,made.stderr);
+  f.store.project.scenes=f.store.project.scenes.slice(0,1);f.store.project.assets.push({id:'single',name:'Single original',type:'video',url:'/api/media/single.mp4',mime:'video/mp4',size:(await readFile(path)).length});f.store.project.scenes[0].videoAssetId='single';
+  const queued=await f.request('/api/continuity/analyze',{projectId:f.store.project.id,settings:{sampleCount:5,regions:[],sampleTimes:[]}});assert.equal(queued.status,202);assert.equal((await f.wait((await queued.json()).job.id)).status,'completed');const first=(await f.state()).report;assert.equal(first.comparisons.length,1);assert.equal(first.summary.frames,5);assert.equal(first.summary.intervals,4);assert.ok(first.comparisons[0].intervals.every((i:any)=>i.kind==='within'));
+  const missing=first.comparisons[0].intervals[0].left.url.split('/').at(-1);await rm(join(f.dataDirectory,'continuity',f.store.project.id,first.id,missing));const again=await f.audit();assert.equal(again.summary.analyzed,1);assert.equal(again.summary.reused,0);assert.equal(again.summary.frames,5);
+ }finally{await f.close()}
+});
+
+test('supporting reference bytes and narrative context invalidate retained reviews for the affected character',async()=>{
+ const f=await fixture();try{
+  f.store.project.characters[0].referenceAssetIds=[f.store.project.scenes[0].assetId!];f.store.project.story={sequences:[{id:'seq',title:'Acto primero'}],scenes:[{id:'story',sequenceId:'seq',title:'La sala',setting:'Noche',notes:'La luz permanece'}]};f.store.project.scenes.forEach(s=>s.storySceneId='story');
+  const first=await f.audit();await f.approve(first);f.store.project.story.scenes[0].setting='Amanecer';assert.equal((await f.state()).stale,true);const context=await f.audit();assert.equal(context.summary.reused,0);assert.ok(context.comparisons.every((c:any)=>!c.decision));await f.approve(context);
+  await writeFile(join(f.publicDirectory,'demo','scene-01.png'),await sharp({create:{width:160,height:100,channels:3,background:'#123456'}}).png().toBuffer());assert.equal((await f.state()).stale,true);const changed=await f.audit();assert.equal(changed.summary.reused,0);assert.ok(changed.comparisons.every((c:any)=>!c.decision));
+ }finally{await f.close()}
+});
+
+test('one-frame video coverage records its single sample without inventing temporal evidence',async()=>{
+ const f=await fixture();try{
+  const path=join(f.dataDirectory,'media','one.mp4');const made=await runProcess('ffmpeg',['-v','error','-f','lavfi','-i','color=c=red:s=160x100:r=24','-frames:v','1','-c:v','libx264',path]);assert.equal(made.code,0,made.stderr);
+  f.store.project.scenes=f.store.project.scenes.slice(0,1);f.store.project.assets.push({id:'one',name:'One frame',type:'video',url:'/api/media/one.mp4',mime:'video/mp4',size:(await readFile(path)).length});f.store.project.scenes[0].videoAssetId='one';const r=await f.audit();assert.equal(r.summary.frames,1);assert.equal(r.summary.intervals,0);assert.equal(r.comparisons[0].coverage.left.unique,1);assert.ok(r.comparisons[0].checks.every((c:any)=>c.status==='insufficient'));assert.equal(visualReviewReady(r),false);
+ }finally{await f.close()}
 });

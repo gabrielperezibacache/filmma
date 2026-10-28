@@ -12,6 +12,12 @@ El flujo integrado lee la fuente seleccionada de cada plano, que puede ser el or
 
 Una alerta puede deberse a un cambio real, pero también a la luz, el ángulo, una oclusión o una zona mal seleccionada. El análisis cubre los fotogramas y zonas elegidos, no toda la duración de los clips ni los efectos de la composición final.
 
+## Muestreo integrado y decisiones
+
+La [octava entrega](EIGHTH-DELIVERY.md) solicita tres o cinco momentos de cada aparición y construye intervalos entre planos y dentro de cada toma. Cada muestra conserva tiempo y zonas propios. El resumen de cada aspecto mantiene la peor señal observada, sin promediar avisos. Una imagen fija o un final de fuente agotado no aportan evolución adicional por repetir la misma posición de fotograma.
+
+Las huellas del archivo, referencias, guion, escena narrativa, personaje, color, tiempos y zonas permiten reutilizar sólo análisis y decisiones que siguen vigentes. Una aparición afectada necesita revisión nueva; un informe nuevo siempre exige confirmar de nuevo el alcance final. El análisis completo forzado conserva los informes anteriores y calcula uno nuevo sin copiar sus decisiones. No modifica el guion ni los originales.
+
 ## Resultados y medidas
 
 Los resultados son `possible-change` (posible diferencia), `no-obvious-change` (sin diferencia marcada en esta muestra) e `insufficient` (evidencia insuficiente o no concluyente). Un fallo del motor, un recorte menor de 40 × 40 píxeles útiles o una zona prácticamente uniforme nunca se convierten en un resultado positivo.
