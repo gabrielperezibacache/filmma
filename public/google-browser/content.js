@@ -17,8 +17,8 @@
     } while (Date.now() < end); throw Error('DOM_CHANGED'); }
     function checkHuman() { if (location.hostname === 'accounts.google.com')
         throw Error('AUTH'); if ([...document.querySelectorAll('iframe')].some(e => visible(e) && /recaptcha|captcha/.test(e.src)))
-        throw Error('HUMAN'); const alerts = [...document.querySelectorAll('[role="alert"],[role="dialog"]')].filter(visible).map(e => norm(e.textContent)).join(' '); if (/captcha|verify you|verifica que|terminos del servicio|terms of service/.test(alerts))
-        throw Error('HUMAN'); if (/limite|quota|credits|creditos|upgrade|suscrib|comprar/.test(alerts))
+        throw Error('HUMAN'); const alerts = [...document.querySelectorAll('[role="alert"],[role="dialog"]')].filter(visible).map(e => norm(e.textContent)).join(' '); if (/captcha|verify you|verifica que|terminos del servicio|terms of service|derechos para usar esta imagen|crear contenido a partir de imagenes y archivos/.test(alerts))
+        throw Error('HUMAN'); if (/limite alcanzado|quota exceeded|insufficient credits|no tienes suficientes|sin creditos|upgrade required|comprar creditos/.test(alerts))
         throw Error('QUOTA'); }
     function editor() { const matches = [...document.querySelectorAll('textarea,[contenteditable="true"][role="textbox"],[contenteditable="true"][aria-label]')].filter(visible); if (matches.length !== 1)
         return null; return matches[0]; }
@@ -33,15 +33,36 @@
             throw Error('DOM_CHANGED');
         element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
     } }
+    async function prepareFlow(run) {
+        await waitFor(()=>document.querySelector('flow-base-prompt-box'));
+        const settings=[...document.querySelectorAll('flow-base-prompt-box button[aria-label="Ajustes"],flow-base-prompt-box button[aria-label="Settings"]')].filter(visible);
+        if(settings.length!==1)throw Error('DOM_CHANGED');settings[0].click();
+        const groupFor=pattern=>[...document.querySelectorAll('mat-button-toggle-group')].filter(visible).filter(e=>pattern.test(norm(e.parentElement?.getAttribute('aria-label')||e.parentElement?.textContent)));
+        const outputs=await waitFor(()=>{const matches=groupFor(/numero de salidas predeterminado de generacion de video|default.*video.*outputs/);return matches.length===1?matches[0]:null});
+        const single=[...outputs.querySelectorAll('[role="radio"]')].filter(e=>norm(e.textContent)==='x1');if(single.length!==1)throw Error('UNSUPPORTED');single[0].click();
+        const aspect=groupFor(/relacion de aspecto predeterminada de generacion de video|default.*video.*aspect/);if(aspect.length!==1)throw Error('UNSUPPORTED');
+        const ratio=[...aspect[0].querySelectorAll('[role="radio"]')].filter(e=>norm(e.textContent).endsWith(run.format));if(ratio.length!==1)throw Error('UNSUPPORTED');ratio[0].click();
+        if(single[0].getAttribute('aria-checked')!=='true'||ratio[0].getAttribute('aria-checked')!=='true')throw Error('UNSUPPORTED');
+        oneButton(/^(guardar|save)$/).click();await waitFor(editor);
+    }
     async function upload(refs, provider) { if (!refs.length)
-        return; let input = [...document.querySelectorAll('input[type="file"]')].find(e => /image/.test(e.accept)); if (!input) {
+        return;
+        if(provider==='flow'){
+            // Current Flow uses a native picker followed by Add to prompt. Keep
+            // this explicit hand-off; it never accepts rights dialogs or infers
+            // a reference from a library upload that is absent from the prompt.
+            const ack=await chrome.runtime.sendMessage({type:'references'});if(!ack?.ok)throw Error('DISCONNECTED');
+            await waitFor(()=>[...document.querySelectorAll('flow-base-prompt-box button[aria-label="Ingrediente"],flow-base-prompt-box button[aria-label="Ingredient"]')].filter(visible).length===refs.length&&refs.every(ref=>[...document.querySelectorAll('[role="group"][aria-label]')].filter(visible).some(e=>norm(e.getAttribute('aria-label'))===norm(ref.name))),180000);
+            return;
+        }
+        let input = [...document.querySelectorAll('input[type="file"]')].find(e => /image/.test(e.accept)||provider==='gemini'&&!e.accept&&e.multiple); if (!input) {
         oneButton(provider === 'gemini' ? /^(subida de archivos|upload files|add files)$/i : /^(anadir|añadir|add|subir|upload|agregar|insertar referencia).*$/i).click();
         input = await waitFor(() => [...document.querySelectorAll('input[type="file"]')].find(e => /image/.test(e.accept) || e.multiple));
     } if (!input.multiple && refs.length > 1)
         throw Error('UNSUPPORTED'); const transfer = new DataTransfer(); for (const ref of refs) {
         const text = atob(ref.base64), bytes = Uint8Array.from(text, c => c.charCodeAt(0));
         transfer.items.add(new File([bytes], ref.name, { type: ref.mime }));
-    } input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); await sleep(1500); await waitFor(() => !document.querySelector('[role="progressbar"]')); await waitFor(() => refs.every(ref => [...document.querySelectorAll('[aria-label],[title],img[alt]')].filter(visible).some(e => norm([e.getAttribute('aria-label'), e.getAttribute('title'), e.getAttribute('alt')].join(' ')).includes(norm(ref.name))))); }
+    } input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); await sleep(1500); await waitFor(() => !document.querySelector('[role="progressbar"]')); await waitFor(() => provider==='gemini'?([...document.querySelectorAll('img[alt="attachment"]')].filter(visible).filter(e=>e.complete&&e.naturalWidth>0).length===refs.length):refs.every(ref => [...document.querySelectorAll('[aria-label],[title],img[alt]')].filter(visible).some(e => norm([e.getAttribute('aria-label'), e.getAttribute('title'), e.getAttribute('alt')].join(' ')).includes(norm(ref.name))))); }
     async function prepare(run) {
         if (run.provider === 'gemini') {
             if (!buttons().some(e => /desmarcar videos|deselect videos|remove videos/.test(label(e)))) {
@@ -52,8 +73,8 @@
                     throw Error('DOM_CHANGED');
                 tool[0].click();
             }
-            if (!buttons().some(e => /desmarcar videos|deselect videos|remove videos/.test(label(e))))
-                throw Error('UNSUPPORTED');
+            await waitFor(()=>buttons().some(e=>/desmarcar videos|deselect videos|remove videos/.test(label(e))));
+            const aspects=buttons().filter(e=>/relacion de aspecto|aspect ratio/.test(label(e)));if(aspects.length!==1||!label(aspects[0]).includes(norm(run.format)))throw Error('UNSUPPORTED');
         }
         else {
             if (!/\/project\//.test(location.pathname)) {
@@ -61,17 +82,14 @@
                 create.click();
                 await waitFor(() => /\/project\//.test(location.pathname));
             }
-            // Flow can create multiple variants per request. Never submit without an
-            // explicit single-result indication on the visible generation controls.
-            if (!buttons().some(e => /^x?1$|^1x$|^1 resultado$|^1 output$/.test(label(e))))
-                throw Error('UNSUPPORTED');
+            await prepareFlow(run);
         }
         if ([...document.querySelectorAll('video')].some(e => visible(e) && e.currentSrc))
             throw Error('DOM_CHANGED');
         await upload(run.references, run.provider);
         setPrompt(await waitFor(editor), run.prompt);
         const submit = await waitFor(() => { try {
-            return oneButton(/^(enviar|send|generar|generate|crear video|create video|submit)$/);
+            return oneButton(/^(enviar|enviar mensaje|send|send message|generar|generate|crear video|create video|submit|iniciar generacion|start generation)$/);
         }
         catch {
             return null;
@@ -88,7 +106,7 @@
         if (!/^(blob:|https:)/.test(url))
             throw Error('DOWNLOAD');
         const source = new URL(url);
-        if (source.protocol === 'blob:' ? source.origin !== location.origin : source.origin !== location.origin && !source.hostname.endsWith('.googleusercontent.com'))
+        if (source.protocol === 'blob:' ? source.origin !== location.origin : source.origin !== location.origin && !source.hostname.endsWith('.googleusercontent.com')&&source.hostname!=='contribution.usercontent.google.com')
             throw Error('DOWNLOAD');
         let response;
         try {
@@ -136,6 +154,10 @@
     }
     async function watch() { const until = Date.now() + 20 * 60 * 1000; let last = 0; while (Date.now() < until) {
         checkHuman();
+        if(location.hostname==='flow.google.com'){
+            if([...document.querySelectorAll('[role="radio"]')].filter(visible).some(e=>/^(aprobar|approve)$/.test(label(e))&&e.getAttribute('aria-disabled')!=='true'))throw Error('HUMAN');
+            if(buttons().some(e=>/^(abrir video en el editor|open video in editor|descargar contenido multimedia|download media)$/.test(label(e))))throw Error('MANUAL_DOWNLOAD');
+        }
         const videos = [...document.querySelectorAll('video')].filter(visible).filter(e => e.currentSrc && e.readyState >= 2);
         if (videos.length > 1)
             throw Error('DOM_CHANGED');
@@ -159,7 +181,7 @@
         await watch();
     }
     catch (e) {
-        await chrome.runtime.sendMessage({ type: 'attention', code: ['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'UNSUPPORTED'].includes(e.message) ? e.message : 'DOM_CHANGED' }).catch(() => { });
+        await chrome.runtime.sendMessage({ type: 'attention', code: ['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'UNSUPPORTED','MANUAL_DOWNLOAD'].includes(e.message) ? e.message : 'DOM_CHANGED' }).catch(() => { });
     }
     finally {
         running = false;

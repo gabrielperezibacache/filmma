@@ -2,26 +2,32 @@
 
 Filmma incorpora un flujo asistido para usar la suscripción en **Gemini o Flow**. La generación y descarga se realizan manualmente en Google. No se guardan contraseñas, cookies ni claves API de Google en Filmma. La versión 0.14 añade un puente experimental de Chrome para operar la interfaz de la suscripción; no es una API oficial.
 
-## Puente experimental de Chrome (0.14)
+## Puente experimental de Chrome (0.14 · extensión 0.1.2)
 
-El puente se instala desde **Configuración → Conexiones**. La extensión contiene cinco archivos y su [código completo](../public/google-browser/) forma parte del repositorio. No pide permisos de cookies, historial o debugger. Sí necesita acceso a Gemini, Flow, sus medios visibles y Filmma local, almacenamiento de su token local y avisos periódicos. Abre sus propias pestañas sin solicitar el permiso amplio `tabs`.
+El puente se instala desde **Configuración → Conexiones**. La extensión contiene cinco archivos y su [código completo](../public/google-browser/) forma parte del repositorio. No pide permisos de cookies, historial o debugger. Sí necesita acceso a Gemini, Flow, sus medios visibles y Filmma local, almacenamiento de su token local y avisos periódicos. Abre sus propias pestañas sin solicitar el permiso amplio `tabs`. El acceso multimedia incluye el dominio exacto `contribution.usercontent.google.com`, observado en el reproductor de Gemini; no se solicita acceso general a `google.com`.
 
 1. Descarga la extensión, descomprime el ZIP y abre `chrome://extensions` en Chrome.
 2. Activa Modo desarrollador, elige **Cargar descomprimida** y selecciona la carpeta `Filmma-Google-Bridge`. Autoriza únicamente si has revisado esos permisos. No se publica una extensión en la Chrome Web Store en esta entrega.
-3. En Filmma crea un código de enlace; en las opciones de la extensión, elige el puerto de tu estudio y pega el código de nueve dígitos. Caduca en dos minutos. El enlace guarda una capacidad local; tu sesión de Google permanece en Chrome.
+3. En Filmma crea un código de enlace; en las opciones de la extensión, elige el puerto de tu estudio y pega el código de nueve dígitos. Caduca en dos minutos. El enlace guarda una capacidad local; tu sesión de Google permanece en Chrome. «Comprobar enlace» verifica el token contra el estudio real y muestra el puerto: no deduce éxito de una configuración guardada.
 4. Prepara un plano desde Dirección. El botón **Generar con mi cuota en Chrome** inicia un único trabajo. Chrome puede tardar hasta treinta segundos en recogerlo.
 5. El puente prepara una pestaña propia, el prompt y las imágenes. Si no puede establecer inequívocamente el modo de video y un resultado, se detiene. Las duraciones y opciones deben estar disponibles en tu cuenta.
-6. La descarga conserva un archivo original y verifica una copia de importación mediante FFprobe, decodificación y SHA256. Si cambió el contexto o la selección del plano, queda como alternativa. Los archivos descargados y los parciales permanecen en `data/google-browser/downloads/`.
+6. En Gemini, el puente intenta conservar el archivo original y verifica una copia de importación mediante FFprobe, decodificación y SHA256. Si cambió el contexto o la selección del plano, queda como alternativa. Los archivos descargados y los parciales permanecen en `data/google-browser/downloads/`.
 
 Se registra la orden antes de pulsar Generar. Un reinicio, desconexión o doble clic no provoca un reenvío automático. Una toma pendiente puede recuperarse desde su pestaña sin volver a generar. **Detener el puente no garantiza cancelar una solicitud que Google ya recibió.** Ante login, CAPTCHA, acuerdos, cuota o interfaz desconocida, requiere intervención humana; no compra créditos ni cambia de plan.
 
 El máximo de referencias del puente es 16 MB por imagen y 32 MB en total; el paquete manual mantiene su límite de 20 MB por imagen y 50 MB en total. Los videos admitidos conservan el límite de 15 segundos, 4K y 60 fps.
 
+Flow usa actualmente un agente y un editor sin un elemento de video accesible al puente. La subida exige **Añadir a petición**; confirma sólo la generación concreta, no «Aprobar siempre». La descarga en Flow sigue siendo asistida: **Descargar contenido multimedia → 720p Tamaño original** y después **Importar toma de Google**. No se presenta ese recorrido como descarga autónoma de la extensión.
+
 ### Estado de comprobación
 
-- Protocolo local y archivos: probado con clips técnicos; incluye emparejamiento privado, orígenes, reserva única bajo concurrencia, descarga por bloques, recuperación y continuidad.
-- Sesión real: se observó acceso a Gemini y la marca PRO en Flow. Esto no acredita una generación ni una descarga completa.
-- Generación real de Gemini y Flow a través del puente: autorizada por el usuario, pero no completada. Chrome dejó de estar disponible para el control de Codex y Filmma aún no recibió el enlace. No se presenta como verificada.
+- Protocolo local y archivos: pruebas con clips técnicos cubren enlace privado, orígenes, reserva única, descarga por bloques, recuperación y continuidad. No acreditan por sí mismas la sesión de Google.
+- **Prueba real del 28 de octubre de 2026:** se generó una toma por proveedor mediante los controles visibles de Chrome, usando un paquete inmutable de Filmma y la misma referencia ficticia de Elena. Se aceptaron los avisos de imágenes con autorización expresa del usuario. No se usó la API de pago ni se compraron créditos.
+- **Gemini:** original 1280×720, 24 fps, 240 fotogramas, 10 segundos de video (10,005 s de contenedor), una pista AAC. Se solicitaron 8 s; se conservó la salida nativa de 10 s.
+- **Flow:** Omni 1.1 Flash, una toma aprobada de 12 puntos de la suscripción. Original 1280×720, 24 fps, 192 fotogramas, 8 segundos de video (8,042667 s de contenedor), una pista AAC. Se eligió «720p Tamaño original».
+- Ambos MP4 se decodificaron completos, se copiaron sin cambios y se importaron mediante la interfaz de Filmma al proyecto aislado `qa-google-live-20261028`. SHA256 coincide entre Descargas, copia conservada y medio importado. Los dos planos conservan a Elena, la referencia y el prompt histórico. Se revisaron visualmente cinco fotogramas por toma; esto no certifica todos los detalles de todos los fotogramas.
+- **Límite pendiente:** la API local seguía mostrando `configured:false, connected:false` para la extensión. Las dos pruebas reales verifican el recorrido asistido con Chrome y la importación, no el enlace persistente ni la generación/descarga autónoma del puente. El control de navegador de Codex bloqueó las páginas internas de extensiones; ese ajuste requiere una acción manual en Chrome.
+- Evidencia local: `output/google-live/media-validation.json`, `originals/`, `*-submission.json`, `project-verified.json` y `continuity-contact-sheet.png`. No se publican cuentas, códigos de enlace ni URLs firmadas de medios.
 
 ## Recorrido manual
 

@@ -44,11 +44,13 @@ También puedes abrir la versión de desarrollo con `Abrir Filmma.command` o vis
 Filmma ofrece dos recorridos que conservan el mismo guion, referencias y procedencia:
 
 - **Asistido:** prepara un ZIP con el prompt y las imágenes elegidas; genera en Gemini o Flow y vuelve con el video descargado.
-- **Puente de Chrome —experimental—:** una extensión local opera los controles visibles de Google y devuelve el original a Filmma. Requiere instalar la extensión, autorizar sus permisos y enlazarla mediante un código local. La compatibilidad depende de la interfaz actual de Google; consulta el estado de las pruebas en [la guía de Google](docs/GOOGLE-AI-PRO.md).
+- **Puente de Chrome —experimental—:** una extensión local prepara el trabajo en Google y contempla la captura del video de Gemini. Requiere instalarla y enlazarla mediante un código local. El Flow actual necesita confirmar la toma y descargar «Tamaño original» de forma asistida. La prueba autónoma de la extensión sigue pendiente del enlace; consulta [el estado de las pruebas](docs/GOOGLE-AI-PRO.md).
 
 El puente **no usa la API de pago, no copia cookies ni contraseñas y no compra créditos**. Emplea el acceso y los límites de tu suscripción. No garantiza disponibilidad ni generaciones ilimitadas. Si aparece login, CAPTCHA, un acuerdo, falta de cuota o un control ambiguo, se detiene. Una solicitud ya enviada no se repite automáticamente.
 
 Cada toma conserva el contexto con el que se preparó. Si cambió el guion, un personaje o una referencia, el resultado queda como alternativa para revisar. Filmma comprueba el archivo, mide sus fotogramas y registra SHA256; esa comprobación no garantiza la identidad visual de un personaje ni certifica por sí sola la autoría externa.
+
+La prueba real del 28 de octubre de 2026 produjo e importó dos originales de **720p y 24 fps**: Gemini de **10 s / 240 fotogramas**, Flow de **8 s / 192 fotogramas**. Se usaron los controles visibles de Chrome, la misma referencia ficticia de Elena y un paquete de Filmma por plano. Se verificaron decodificación completa, SHA256, audio y vínculos; esto acredita el recorrido asistido, separado del enlace persistente de la extensión aún pendiente.
 
 ![Conexiones: enlace local de Chrome y acceso a Google AI Pro](docs/images/filmma-google.webp)
 

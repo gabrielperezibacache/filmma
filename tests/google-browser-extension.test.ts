@@ -11,7 +11,7 @@ async function worker(initial: Record<string, unknown> = {}) {
     }[] = [], tabs: string[] = [];
     let onMessage: any, onAlarm: any, failHeartbeat = false;
     const run = { id: 'run-1', lease: 'lease-1', provider: 'gemini', prompt: 'Un plano continuo', references: [], seconds: 8, format: '16:9' };
-    const fetch = async (url: string, options: any) => { const path = new URL(url).pathname, body = JSON.parse(options.body); requests.push({ url, body }); if (failHeartbeat && path.includes('/heartbeat/'))
+    const fetch = async (url: string, options: any) => { const path = new URL(url).pathname, body = options.body instanceof Uint8Array?'binary':options.body?JSON.parse(options.body):null; requests.push({ url, body }); if(url.startsWith('https://contribution.usercontent.google.com/'))return new Response(Uint8Array.from([1,2,3]),{status:200}); if (failHeartbeat && path.includes('/heartbeat/'))
         throw Error('offline'); return new Response(JSON.stringify(path.endsWith('/pair') ? { token: 'local-only-token' } : path.endsWith('/claim') ? { run } : path.includes('/heartbeat/') ? { active: true } : { ok: true }), { status: 200 }); };
     const chrome = {
         storage: { local: { get: async (keys: string | string[]) => Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map(k => [k, structuredClone(saved[k])])), set: async (values: any) => { Object.assign(saved, structuredClone(values)); }, remove: async (key: string) => { delete saved[key]; } } },
@@ -67,4 +67,19 @@ test('transient heartbeat failure keeps ownership and never claims another gener
     assert.deepEqual(w.saved.active, active);
     assert.equal(w.tabs.length, 0);
     assert.equal(w.requests.filter(r => r.url.endsWith('/claim')).length, 0);
+});
+
+test('options health check reports the actual studio without claiming a queued generation or returning its token',async()=>{
+ const active={run:{id:'run-1',lease:'lease-1',provider:'gemini'},tabId:99,submitted:true};
+ const w=await worker({connection:{endpoint,token:'local-only-token'},active});
+ const denied=await w.send({type:'status'},googleSender);assert.equal(denied.ok,false);assert.deepEqual(w.saved.active,active);
+ const health=await w.send({type:'status'},optionsSender);assert.equal(health.connected,true);assert.equal(health.endpoint,endpoint);assert(!JSON.stringify(health).includes('local-only-token'));assert.equal(w.tabs.length,0);assert.deepEqual(w.requests.map(x=>new URL(x.url).pathname),['/api/google-browser/bridge/ping']);
+});
+
+test('worker accepts only the exact Gemini media CDN observed in the player and streams it into the retained download',async()=>{
+ const w=await worker({connection:{endpoint,token:'local-only-token'},active:{run:{id:'run-1',lease:'lease-1',provider:'gemini'},tabId:99,submitted:true}});
+ assert.equal((await w.send({type:'media',url:'https://contribution.usercontent.google.com/download?filename=video.mp4'},googleSender)).ok,true);
+ assert.equal(w.requests.filter(r=>r.url.includes('/chunk/')).length,1);assert.equal(w.requests.filter(r=>r.url.endsWith('/finish/run-1')).length,1);
+ const other=await worker({connection:{endpoint,token:'local-only-token'},active:{run:{id:'run-1',lease:'lease-1',provider:'gemini'},tabId:99,submitted:true}});
+ assert.equal((await other.send({type:'media',url:'https://contribution.usercontent.google.com.evil.invalid/video.mp4'},googleSender)).ok,false);assert(!other.requests.some(r=>r.url.includes('evil.invalid')));
 });

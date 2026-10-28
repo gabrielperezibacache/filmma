@@ -46,7 +46,7 @@ const uuid = z.string().uuid(), extensionId = z.string().regex(/^[a-p]{32}$/), l
 const terminal = (r: BrowserRun) => ['completed', 'attention', 'cancelled'].includes(r.phase);
 const safePage = (value: string, provider: BrowserRun['provider']) => { const u = new URL(value); if (u.protocol !== 'https:' || u.hostname !== (provider === 'gemini' ? 'gemini.google.com' : 'flow.google.com') || u.username || u.password)
     throw fail('La pestaña no pertenece al proveedor elegido.', 400); return u.origin + u.pathname; };
-const errors: Record<string, string> = { AUTH: 'Inicia sesión en Google en la pestaña de Chrome y vuelve a preparar la toma.', QUOTA: 'Google indica que falta cuota o acceso. Revisa tu plan en Chrome; Filmma no compra créditos.', HUMAN: 'Google requiere una comprobación o una decisión humana. Continúa en Chrome; no se resuelve automáticamente.', DOM_CHANGED: 'Cambió la interfaz de Google o falta un control inequívoco. Revisa la pestaña; no se reenvía la generación.', DOWNLOAD: 'No se pudo completar la descarga. El resultado y los parciales se conservan; no generes otra toma para recuperarlo.', TIMED_OUT: 'La generación superó el tiempo de espera. Comprueba el resultado en Chrome; no se repite automáticamente.', DISCONNECTED: 'Chrome se desconectó. Los archivos y la pestaña de origen se conservan.', UNSUPPORTED: 'La configuración solicitada no se pudo establecer en Google. Revisa el formato o usa el flujo manual.' };
+const errors: Record<string, string> = { AUTH: 'Inicia sesión en Google en la pestaña de Chrome y vuelve a preparar la toma.', QUOTA: 'Google indica que falta cuota o acceso. Revisa tu plan en Chrome; Filmma no compra créditos.', HUMAN: 'Google requiere una comprobación o una decisión humana. Continúa en Chrome; no se resuelve automáticamente.', DOM_CHANGED: 'Cambió la interfaz de Google o falta un control inequívoco. Revisa la pestaña; no se reenvía la generación.', DOWNLOAD: 'No se pudo completar la descarga. El resultado y los parciales se conservan; no generes otra toma para recuperarlo.', TIMED_OUT: 'La generación superó el tiempo de espera. Comprueba el resultado en Chrome; no se repite automáticamente.', DISCONNECTED: 'Chrome se desconectó. Los archivos y la pestaña de origen se conservan.', MANUAL_DOWNLOAD:'Continúa en Flow: abre el video, descarga Tamaño original e impórtalo en este paquete. No generes otra toma.', UNSUPPORTED: 'La configuración solicitada no se pudo establecer en Google. Revisa el formato o usa el flujo manual.' };
 export async function registerGoogleBrowser(o: {
     app: Express;
     bridge: Router;
@@ -135,6 +135,7 @@ export async function registerGoogleBrowser(o: {
     bridge.post('/pair', route(async (req, res) => { const input = z.object({ code: z.string().regex(/^\d{9}$/), extensionId, version: z.string().max(30) }).strict().parse(req.body); if (input.extensionId !== req.get('X-Filmma-Extension'))
         throw fail('Identificador de extensión distinto.', 403); if (!pair || pair.expires < Date.now() || ++pair.attempts > 5 || input.code !== pair.code)
         throw fail('Código caducado o incorrecto. Crea otro código en Filmma.', 401); const token = randomBytes(32).toString('base64url'); pair = undefined; connection = { extensionId: input.extensionId, tokenSha256: digest(token), connectedAt: new Date().toISOString(), lastSeen: new Date().toISOString(), version: input.version }; await atomic(connectionPath, connection); res.json({ token, connection: 'paired' }); }));
+    bridge.post('/ping', route(async(req,res)=>{auth(req);res.json({ok:true,connected:true})}));
     bridge.post('/heartbeat/:id', route(async (req, res) => { auth(req); const r = get(req.params.id); res.json({ active: !terminal(r) }); }));
     bridge.post('/claim', route(async (req, res) => { auth(req); const r = [...runs.values()].find(r => r.phase === 'queued'); if (!r)
         return res.json({ run: null }); r.phase = 'opening'; r.message = phaseMessages.opening; r.lease = randomUUID(); try {
@@ -168,7 +169,7 @@ export async function registerGoogleBrowser(o: {
         await save(r);
         throw e;
     } }));
-    bridge.post('/event/:id', route(async (req, res) => { const r = leased(req), input = z.object({ phase: z.enum(['preparing', 'submitting', 'generating', 'attention']), pageUrl: z.string().max(2000).optional(), error: z.enum(['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'DISCONNECTED', 'UNSUPPORTED']).optional() }).strict().parse(req.body); if (input.pageUrl)
+    bridge.post('/event/:id', route(async (req, res) => { const r = leased(req), input = z.object({ phase: z.enum(['preparing', 'submitting', 'generating', 'attention']), step:z.literal('references').optional(), pageUrl: z.string().max(2000).optional(), error: z.enum(['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'DISCONNECTED', 'UNSUPPORTED','MANUAL_DOWNLOAD']).optional() }).strict().parse(req.body); if (input.pageUrl)
         r.pageUrl = safePage(input.pageUrl, r.provider); if (input.phase === 'submitting') {
         if (r.submittedAt || r.phase !== 'preparing' || busy.has(r.id))
             throw fail('Esta solicitud ya se envió o no está preparada.');
@@ -190,7 +191,7 @@ export async function registerGoogleBrowser(o: {
         }
     } if (input.phase === 'generating' && !r.submittedAt)
         throw fail('No hay un envío confirmado.'); if (input.phase === 'generating' && ['downloading', 'validating'].includes(r.phase))
-        return res.json({ ok: true }); r.phase = input.phase; r.message = input.phase === 'attention' ? errors[input.error ?? 'DOM_CHANGED'] : phaseMessages[input.phase]; await save(r); res.json({ ok: true }); }));
+        return res.json({ ok: true }); r.phase = input.phase; r.message = input.phase==='preparing'&&input.step==='references'?'Flow espera las referencias: abre esta pestaña, súbelas y pulsa Añadir a petición. El prompt se enviará después.':input.phase === 'attention' ? errors[input.error ?? 'DOM_CHANGED'] : phaseMessages[input.phase]; await save(r); res.json({ ok: true }); }));
     bridge.post('/chunk/:id', express.raw({ type: 'application/octet-stream', limit: '1mb' }), route(async (req, res) => { const r = leased(req); if (!r.submittedAt || !['generating', 'downloading'].includes(r.phase))
         throw fail('Esta toma no espera un video.'); if (busy.has(r.id))
         throw fail('Hay un bloque escribiéndose.'); const bytes = req.body as Buffer, offset = z.coerce.number().int().min(0).max(512 * 1024 ** 2).parse(req.query.offset); if (!Buffer.isBuffer(bytes) || !bytes.length || bytes.length > 1024 ** 2 || offset + bytes.length > 512 * 1024 ** 2)

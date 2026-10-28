@@ -78,6 +78,11 @@ finally {
 } }
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     (async () => {
+        if(message.type==='status'){
+            if(sender.id!==chrome.runtime.id||sender.url!==chrome.runtime.getURL('options.html'))throw Error('Consulta desde las opciones de Filmma.');
+            const {connection}=await state();if(!connection)return {ok:true,connected:false};
+            try{await api('/ping',{});return{ok:true,connected:true,endpoint:connection.endpoint}}catch(error){return{ok:false,connected:false,endpoint:connection.endpoint,error:String(error.message)}}
+        }
         if (message.type === 'pair') {
             if (sender.id !== chrome.runtime.id || sender.url !== chrome.runtime.getURL('options.html'))
                 throw Error('Enlaza desde las opciones de Filmma.');
@@ -89,8 +94,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 throw Error(result.error || 'Código rechazado.');
             await chrome.storage.local.set({ connection: { endpoint: message.endpoint, token: result.token } });
             await chrome.alarms.create('filmma', { periodInMinutes: .5 });
+            await api('/ping',{});
             await claim();
-            return { ok: true };
+            return { ok: true, endpoint:message.endpoint };
         }
         const { active } = await state();
         if (!providerSender(sender, active))
@@ -109,6 +115,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             await event(active, 'preparing', undefined, sender.url);
             return { ok: true, run: active.run };
         }
+        if(message.type==='references'){await api('/event/'+active.run.id,{phase:'preparing',step:'references',pageUrl:sender.url},active.run);return{ok:true}}
         if (message.type === 'submit') {
             if (active.submitted)
                 throw Error('No se reenvía una generación.');
@@ -141,17 +148,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         if (message.type === 'media') {
             const url = new URL(message.url);
-            if (url.protocol !== 'https:' || url.username || url.password || !((url.hostname.endsWith('.googleusercontent.com')) || url.hostname === (active.run.provider === 'gemini' ? 'gemini.google.com' : 'flow.google.com')))
+            if (url.protocol !== 'https:' || url.username || url.password || !((url.hostname.endsWith('.googleusercontent.com')||url.hostname==='contribution.usercontent.google.com') || url.hostname === (active.run.provider === 'gemini' ? 'gemini.google.com' : 'flow.google.com')))
                 throw Error('DOWNLOAD');
             await stream(active, await fetch(url.href, { credentials: 'include', redirect: 'error', signal: AbortSignal.timeout(180000) }));
             return { ok: true };
         }
         return { ok: false };
-    })().then(sendResponse, async (error) => { const { active } = await state(); if (active && message.type !== 'pair')
-        await attention(active, ['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'UNSUPPORTED'].includes(error.message) ? error.message : 'DISCONNECTED'); sendResponse({ ok: false, error: message.type === 'pair' ? String(error.message) : 'La automatización se detuvo. Revisa Filmma y la pestaña de Google.' }); });
+    })().then(sendResponse, async (error) => { const { active } = await state(); if (active && !['pair','status'].includes(message.type))
+        await attention(active, ['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'UNSUPPORTED','MANUAL_DOWNLOAD'].includes(error.message) ? error.message : 'DISCONNECTED'); sendResponse({ ok: false, error: ['pair','status'].includes(message.type) ? String(error.message) : 'La automatización se detuvo. Revisa Filmma y la pestaña de Google.' }); });
     return true;
 });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'filmma')
     void claim(); });
 chrome.runtime.onInstalled.addListener(() => { void chrome.runtime.openOptionsPage(); void chrome.alarms.create('filmma', { periodInMinutes: .5 }); });
 chrome.action.onClicked.addListener(() => void chrome.runtime.openOptionsPage());
+
+chrome.runtime.onStartup?.addListener(()=>{void chrome.alarms.create('filmma',{periodInMinutes:.5});void claim()});
