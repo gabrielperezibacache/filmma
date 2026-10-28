@@ -1,14 +1,14 @@
 # Google AI Pro en Filmma
 
-Filmma incorpora un flujo asistido para usar la suscripción en **Gemini o Flow**. La generación y descarga se realizan manualmente en Google. No se guardan contraseñas, cookies ni claves API de Google en Filmma. La versión 0.14 añade un puente experimental de Chrome para operar la interfaz de la suscripción; no es una API oficial.
+Filmma permite usar tu suscripción en **Gemini o Flow** mediante un flujo asistido o un puente experimental de Chrome. La versión 0.15 incorpora detección y enlace persistente desde la aplicación; Gemini recupera el original directamente y Flow puede requerir confirmar el guardado nativo. No se guardan contraseñas, cookies ni claves API de Google en Filmma. Este puente opera la interfaz de la suscripción y no es una API oficial.
 
-## Puente experimental de Chrome (0.14 · extensión 0.1.2)
+## Puente experimental de Chrome (0.15 · extensión 0.2.0)
 
 El puente se instala desde **Configuración → Conexiones**. La extensión contiene cinco archivos y su [código completo](../public/google-browser/) forma parte del repositorio. No pide permisos de cookies, historial o debugger. Sí necesita acceso a Gemini, Flow, sus medios visibles y Filmma local, almacenamiento de su token local y avisos periódicos. Abre sus propias pestañas sin solicitar el permiso amplio `tabs`. El acceso multimedia incluye el dominio exacto `contribution.usercontent.google.com`, observado en el reproductor de Gemini; no se solicita acceso general a `google.com`.
 
 1. Descarga la extensión, descomprime el ZIP y abre `chrome://extensions` en Chrome.
 2. Activa Modo desarrollador, elige **Cargar descomprimida** y selecciona la carpeta `Filmma-Google-Bridge`. Autoriza únicamente si has revisado esos permisos. No se publica una extensión en la Chrome Web Store en esta entrega.
-3. En Filmma crea un código de enlace; en las opciones de la extensión, elige el puerto de tu estudio y pega el código de nueve dígitos. Caduca en dos minutos. El enlace guarda una capacidad local; tu sesión de Google permanece en Chrome. «Comprobar enlace» verifica el token contra el estudio real y muestra el puerto: no deduce éxito de una configuración guardada.
+3. En Filmma pulsa **Detectar Chrome** y después **Enlazar este Chrome** cuando aparezca la extensión. La detección dura cinco minutos y el navegador suele aparecer en menos de treinta segundos. No necesitas copiar códigos; el enlace se conserva entre reinicios y sólo se muestra conectado después de confirmar el token. El código de nueve dígitos permanece como alternativa para instalaciones anteriores.
 4. Prepara un plano desde Dirección. El botón **Generar con mi cuota en Chrome** inicia un único trabajo. Chrome puede tardar hasta treinta segundos en recogerlo.
 5. El puente prepara una pestaña propia, el prompt y las imágenes. Si no puede establecer inequívocamente el modo de video y un resultado, se detiene. Las duraciones y opciones deben estar disponibles en tu cuenta.
 6. En Gemini, el puente intenta conservar el archivo original y verifica una copia de importación mediante FFprobe, decodificación y SHA256. Si cambió el contexto o la selección del plano, queda como alternativa. Los archivos descargados y los parciales permanecen en `data/google-browser/downloads/`.
@@ -17,7 +17,7 @@ Se registra la orden antes de pulsar Generar. Un reinicio, desconexión o doble 
 
 El máximo de referencias del puente es 16 MB por imagen y 32 MB en total; el paquete manual mantiene su límite de 20 MB por imagen y 50 MB en total. Los videos admitidos conservan el límite de 15 segundos, 4K y 60 fps.
 
-Flow usa actualmente un agente y un editor sin un elemento de video accesible al puente. La subida exige **Añadir a petición**; confirma sólo la generación concreta, no «Aprobar siempre». La descarga en Flow sigue siendo asistida: **Descargar contenido multimedia → 720p Tamaño original** y después **Importar toma de Google**. No se presenta ese recorrido como descarga autónoma de la extensión.
+Flow usa un agente y un editor sin un elemento de video accesible al puente. La subida sigue requiriendo **Añadir a petición** y la aprobación se hace por toma, evitando «Aprobar siempre». El puente puede pulsar **Descargar contenido multimedia → 720p Tamaño original** y esperar un único MP4 nuevo en Descargas para importarlo. Si Chrome pide dónde guardar, cambia el nombre o usa otra carpeta, hace falta completar ese paso o importar el archivo manualmente. La prueba real verificó esta recepción con confirmación nativa, manteniendo los pasos manuales de referencias y aprobación.
 
 ### Estado de comprobación
 
@@ -26,8 +26,11 @@ Flow usa actualmente un agente y un editor sin un elemento de video accesible al
 - **Gemini:** original 1280×720, 24 fps, 240 fotogramas, 10 segundos de video (10,005 s de contenedor), una pista AAC. Se solicitaron 8 s; se conservó la salida nativa de 10 s.
 - **Flow:** Omni 1.1 Flash, una toma aprobada de 12 puntos de la suscripción. Original 1280×720, 24 fps, 192 fotogramas, 8 segundos de video (8,042667 s de contenedor), una pista AAC. Se eligió «720p Tamaño original».
 - Ambos MP4 se decodificaron completos, se copiaron sin cambios y se importaron mediante la interfaz de Filmma al proyecto aislado `qa-google-live-20261028`. SHA256 coincide entre Descargas, copia conservada y medio importado. Los dos planos conservan a Elena, la referencia y el prompt histórico. Se revisaron visualmente cinco fotogramas por toma; esto no certifica todos los detalles de todos los fotogramas.
-- **Límite pendiente:** la API local seguía mostrando `configured:false, connected:false` para la extensión. Las dos pruebas reales verifican el recorrido asistido con Chrome y la importación, no el enlace persistente ni la generación/descarga autónoma del puente. El control de navegador de Codex bloqueó las páginas internas de extensiones; ese ajuste requiere una acción manual en Chrome.
-- Evidencia local: `output/google-live/media-validation.json`, `originals/`, `*-submission.json`, `project-verified.json` y `continuity-contact-sheet.png`. No se publican cuentas, códigos de enlace ni URLs firmadas de medios.
+- **Enlace persistente comprobado:** la extensión real 0.2.0 fue detectada y autorizada desde Filmma; confirmó `configured:true, connected:true`. Se verificó la reconexión después de reiniciar tanto QA como la instancia principal de puerto 4318. El usuario cargó manualmente la carpeta correcta, `public/google-browser` (la carpeta de pruebas `output/google-browser` no contiene el manifiesto).
+- **Recuperación real de Gemini:** el puente abrió su propia pestaña y conservó 3.295.446 bytes del resultado existente, con SHA256 idéntico al original. No se envió otra generación ni se cambió el plano seleccionado.
+- **Recuperación real de Flow con confirmación nativa:** Chrome mostró «Guardar como». Tras desbloquear el Mac se confirmó un nombre nuevo en Descargas y el puente recibió e importó automáticamente 3.031.716 bytes, con SHA256 idéntico al original. Se verificó la decodificación completa, 192 fotogramas y audio. El intento anterior agotado durante el bloqueo permanece registrado; no se borró ni se volvió a generar. Con esta configuración de Chrome hay que confirmar el guardado en menos de tres minutos.
+- **Alcance:** generación inicial asistida y recuperación de resultados existentes mediante la extensión real. Las referencias y la aprobación por toma de Flow siguen requiriendo intervención en Google; no se acredita una generación completamente autónoma de Flow.
+- Evidencia local: `output/google-live/media-validation.json`, `originals/`, `*-submission.json`, `project-verified.json` `continuity-contact-sheet.png`, `bridge-verification.json` y `production-bridge-verification.json`. No se publican cuentas, códigos de enlace ni URLs firmadas de medios.
 
 ## Recorrido manual
 

@@ -157,4 +157,4 @@ jobs:
           VERSION="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")').$GITHUB_RUN_NUMBER"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; fi
           node scripts/packaging/checksums.mjs
-          gh release create "v$VERSION" release/*.dmg release/*.zip release/*.exe release/SHA256SUMS.txt release/windows-smoke.json release/mac-runtime-smoke.json --title "Filmma $VERSION" --notes "macOS Apple Silicon + Windows x64. Instaladores sin firma de editor ni notarización. Incluyen multimedia y conservan proyectos y modelos externos. Windows: motores CUDA externos documentados; Metal y MLX requieren Mac."
+          gh release create "v$VERSION" release/*.dmg release/*.zip release/*.exe release/SHA256SUMS.txt release/windows-smoke.json release/mac-runtime-smoke.json --target "$GITHUB_SHA" --title "Filmma $VERSION" --notes "macOS Apple Silicon + Windows x64. Instaladores sin firma de editor ni notarización. Incluyen multimedia y conservan proyectos y modelos externos. Windows: motores CUDA externos documentados; Metal y MLX requieren Mac."

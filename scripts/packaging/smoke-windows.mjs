@@ -34,4 +34,4 @@ try{
  assert(manager.models.every(m=>!m.available),'Apple engines must not be reported ready on Windows');
  await writeFile('release/windows-smoke.json',JSON.stringify({version:state.version,platform:state.platform,architecture:state.architecture,nsisInstalled:true,installedAppStarted:true,ffmpegDecode:true,frames:24,pythonDoctor:true,memoryGB:system.runtime.hardware.memoryGB,modelAvailability:'Apple engines correctly unavailable; external CUDA recipes documented',gpuInferenceTested:false,testedAt:new Date().toISOString()},null,2));
  console.log('NSIS install + installed app + media roundtrip + Python model diagnosis verified');
-}finally{if(child?.pid)execFileSync('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{stdio:'ignore'});}
+}finally{if(child?.pid){try{execFileSync('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{stdio:'ignore'})}catch(error){let alive=false;try{process.kill(child.pid,0);alive=true}catch(probe){if(probe.code!=='ESRCH')throw probe}if(alive)throw error;console.log('Installed process already exited during teardown.')}}}

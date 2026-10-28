@@ -52,17 +52,21 @@ En Mac, el selector de residencia mantiene SSD streaming en 36 GB y permite un t
 Filmma ofrece dos recorridos que conservan el mismo guion, referencias y procedencia:
 
 - **Asistido:** prepara un ZIP con el prompt y las imágenes elegidas; genera en Gemini o Flow y vuelve con el video descargado.
-- **Puente de Chrome —experimental—:** una extensión local prepara el trabajo en Google y contempla la captura del video de Gemini. La extensión 0.2.0 permite detectarla y autorizarla desde Filmma; el enlace se conserva al reiniciar. El código sigue como alternativa. Flow mantiene su confirmación por toma y sus referencias mediante selector nativo; el puente incorpora la recepción acotada de «Tamaño original» desde Descargas, pendiente de verificación con la extensión real. La prueba autónoma de la extensión sigue pendiente del enlace; consulta [el estado de las pruebas](docs/GOOGLE-AI-PRO.md).
+- **Puente de Chrome —experimental—:** detecta y autoriza la extensión 0.2.0 desde Filmma, conservando el enlace entre reinicios. Se comprobaron la conexión real y la recuperación de originales de Gemini y Flow. Gemini descarga directamente; con la configuración actual de Chrome, Flow exige confirmar «Guardar». Sus referencias y su aprobación por toma mantienen la intervención en Google. Consulta [el estado y alcance de las pruebas](docs/GOOGLE-AI-PRO.md).
 
 El puente **no usa la API de pago, no copia cookies ni contraseñas y no compra créditos**. Emplea el acceso y los límites de tu suscripción. No garantiza disponibilidad ni generaciones ilimitadas. Si aparece login, CAPTCHA, un acuerdo, falta de cuota o un control ambiguo, se detiene. Una solicitud ya enviada no se repite automáticamente.
 
 Cada toma conserva el contexto con el que se preparó. Si cambió el guion, un personaje o una referencia, el resultado queda como alternativa para revisar. Filmma comprueba el archivo, mide sus fotogramas y registra SHA256; esa comprobación no garantiza la identidad visual de un personaje ni certifica por sí sola la autoría externa.
 
-La prueba real del 28 de octubre de 2026 produjo e importó dos originales de **720p y 24 fps**: Gemini de **10 s / 240 fotogramas**, Flow de **8 s / 192 fotogramas**. Se usaron los controles visibles de Chrome, la misma referencia ficticia de Elena y un paquete de Filmma por plano. Se verificaron decodificación completa, SHA256, audio y vínculos; esto acredita el recorrido asistido, separado del enlace persistente de la extensión aún pendiente.
+La prueba real del 28 de octubre de 2026 produjo e importó dos originales de **720p y 24 fps**: Gemini de **10 s / 240 fotogramas**, Flow de **8 s / 192 fotogramas**. Se usaron los controles visibles de Chrome, la misma referencia ficticia de Elena y un paquete de Filmma por plano. Se verificaron decodificación completa, SHA256, audio y vínculos; esto acredita el recorrido asistido. Después se comprobó el enlace persistente real, su reconexión tras reiniciar Filmma y la recuperación automática del original de Gemini, sin gastar otra generación. También se verificó la recepción de Flow, confirmando el diálogo nativo de guardado y conservando el mismo original. Las referencias y la aprobación de Flow mantienen su intervención en Google.
 
 ![Conexiones: enlace local de Chrome y acceso a Google AI Pro](docs/images/filmma-google.webp)
 
 ## Modelos, equipo y calidad
+
+![Memoria y compatibilidad: configuración segura para 36 GB y opciones para otros equipos](docs/images/filmma-models.webp)
+
+Consulta la [matriz de instalación local](docs/LOCAL_INSTALLATION.md): BF16 residente/SSD, ComfyUI con INT8 o GGUF, Diffusers con RAM y CUDA, y las limitaciones de MLX cuantizado. El formato de un componente pequeño no acredita que todo el modelo quepa en memoria.
 
 | Componente | Requisitos y alcance |
 | --- | --- |
@@ -112,7 +116,7 @@ npm run check
 node --import tsx --test --test-concurrency=2 tests/*.test.ts
 ```
 
-Las pruebas verifican edición, exportación, integridad, contexto narrativo, recuperación, conexiones y protocolos del puente con archivos técnicos y proveedores simulados. **No equivalen a haber generado un video real en Google o a haber ejecutado el instalador.** La compatibilidad de los servicios se registra con evidencias independientes.
+Las pruebas verifican edición, exportación, integridad, contexto narrativo, recuperación, conexiones y protocolos del puente con archivos técnicos y proveedores simulados. **No equivalen a haber generado un video real en Google o a haber ejecutado el instalador.** La compatibilidad de los servicios se registra con evidencias independientes. Las releases multiplataforma incluyen además `windows-smoke.json` (instalación NSIS y arranque real en CI) y `mac-runtime-smoke.json` (servidor empaquetado, Python y multimedia). Ninguna acredita inferencia CUDA en una GPU física de Windows.
 
 El workflow [Filmma for Mac](https://github.com/gabrielperezibacache/filmma/actions/workflows/macos-release.yml) compila el runtime multimedia portable, ejecuta la suite y publica DMG, ZIP y sumas SHA256. Los pesos, las credenciales y los proyectos privados no se suben al repositorio.
 
