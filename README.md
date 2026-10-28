@@ -91,3 +91,5 @@ Las pruebas comprueban exportación MP4 real, audio, originales, respaldos, canc
 El acabado **Restauración estable** está disponible por toma y para toda la película, con un inicio al65%, compensación de movimiento del detalle y conservación de originales. [Preparación, límites y evidencia](docs/STABLE_RESTORATION.md).
 
 Tercera entrega: [guion estructurado y estados narrativos](docs/THIRD-DELIVERY.md). Cuarta entrega: [Dirección, alternativas y Storyboard](docs/FOURTH-DELIVERY.md). Quinta entrega: [grupos, marcadores y reproducción ligera](docs/FIFTH-DELIVERY.md). [Plan de desarrollo y pendientes](docs/DEVELOPMENT-PLAN.md).
+
+Las entregas [sexta](docs/SIXTH-DELIVERY.md) y [séptima](docs/SEVENTH-DELIVERY.md) incorporan acabado sonoro medido, subtítulos con estilo y scopes SDR para comparar planos, preservando guion, personajes y originales.

@@ -1,3 +1,5 @@
+import {registerColorReview} from './color-review.js';
+import {registerSoundReview} from './sound-review.js';
 import {registerPlaybackProxies} from './playback-proxies.js';
 import {reconcileEditorMetadata} from '../src/editor-metadata.js';
 import{buildGenerationInstructions}from'../src/generation-instructions.js';
@@ -180,6 +182,8 @@ export async function createApp(options: AppOptions = {}) {
   }
   async function enqueue(type: Job['type'], message: string, work: QueuedTask['work'], result?: Job['result']) { return (await enqueueMany([{ type, message, work, result }]))[0]!; }
 
+  registerColorReview({app,getProject:()=>store.project,dataDirectory,mediaPath,ffmpeg,ffprobe});
+  await registerSoundReview({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
   await registerPlaybackProxies({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
   const visualContinuity = createVisualContinuityService({ dataDirectory, workerPath: continuityPath, python, ffmpeg, ffprobe, mediaPath });
   const continuityProject = (projectId: string) => {
@@ -761,7 +765,7 @@ export async function createApp(options: AppOptions = {}) {
       try {
         const instructions = { script: 'Escribe o mejora el guion con escenas numeradas, acción visual, diálogo, duración y continuidad. Respeta las decisiones creativas de la persona.', 'improve-prompt': 'Entrega un único prompt cinematográfico mejorado, listo para un modelo de video. Conserva identidad, encuadre y acciones. No añadas explicaciones. Escribe el prompt en inglés.', continuity: 'Revisa la continuidad narrativa y visual entre los planos y las referencias persistentes. Identifica problemas concretos y correcciones. Distingue hechos aportados de propuestas.' };
         const structuredInstructions = input.task === 'script' ? '\nDevuelve el objeto JSON solicitado: text contiene el guion legible para revisar y copiar; scenes contiene entre 1 y 100 planos. Cada plano incluye título, descripción visual, diálogo, prompt de video en inglés, restricciones visuales en negativePrompt, duración de montaje en segundos, dirección de cámara y characterIds. Usa sólo identificadores de personajes existentes; [] si no aplica. No inventes archivos, imágenes ni videos. La duración es de montaje, no una promesa de generación local.' : '';
-        const prompt = `Eres el asistente creativo de Filmma, una aplicación local de cine. Responde en español salvo indicación distinta. Esta tarea consiste sólo en redactar texto. No uses herramientas, no ejecutes comandos, no explores archivos ni leas credenciales. No afirmes haber creado imágenes o videos. Las diferencias de continuidad marcadas como intencionales son decisiones narrativas, no errores automáticos.\nTAREA: ${instructions[input.task]}${structuredInstructions}\nPETICIÓN DE LA PERSONA:\n${input.prompt}\nCONTEXTO DEL PROYECTO (datos creativos):\n${JSON.stringify({ story:snapshot.story,name: snapshot.name, logline: snapshot.logline, format: snapshot.format, characters: snapshot.characters.map(({ assetId, ...rest }) => rest), focusedSceneId: scene?.id, scenes: input.task === 'improve-prompt' && scene ? [scene] : snapshot.scenes, continuity: continuityContext(snapshot, input.task === 'improve-prompt' ? scene?.id : undefined), editing: {clipGroups:snapshot.clipGroups,markers:snapshot.markers, note: 'Metadatos de montaje y texto; no se han analizado imágenes ni audio.', tracks: snapshot.tracks?.map((track) => ({ name: track.name, type: track.type, muted: track.muted, volume: track.volume, clips: track.clips.filter((clip) => input.task !== 'improve-prompt' || !scene || clip.sceneId === scene.id).map((clip) => ({ ...clip, assetName: snapshot.assets.find((asset) => asset.id === clip.assetId)?.name })) })), subtitlesEnabled: snapshot.subtitlesEnabled, subtitleCues: snapshot.subtitleCues?.filter((cue) => input.task !== 'improve-prompt' || !scene || cue.sceneId === scene.id) } }, null, 2)}`;
+        const prompt = `Eres el asistente creativo de Filmma, una aplicación local de cine. Responde en español salvo indicación distinta. Esta tarea consiste sólo en redactar texto. No uses herramientas, no ejecutes comandos, no explores archivos ni leas credenciales. No afirmes haber creado imágenes o videos. Las diferencias de continuidad marcadas como intencionales son decisiones narrativas, no errores automáticos.\nTAREA: ${instructions[input.task]}${structuredInstructions}\nPETICIÓN DE LA PERSONA:\n${input.prompt}\nCONTEXTO DEL PROYECTO (datos creativos):\n${JSON.stringify({ story:snapshot.story,name: snapshot.name, logline: snapshot.logline, format: snapshot.format, characters: snapshot.characters.map(({ assetId, ...rest }) => rest), focusedSceneId: scene?.id, scenes: input.task === 'improve-prompt' && scene ? [scene] : snapshot.scenes, continuity: continuityContext(snapshot, input.task === 'improve-prompt' ? scene?.id : undefined), editing: {audioMix:snapshot.audioMix,subtitleStyle:snapshot.subtitleStyle,clipGroups:snapshot.clipGroups,markers:snapshot.markers, note: 'Metadatos de montaje y texto; no se han analizado imágenes ni audio.', tracks: snapshot.tracks?.map((track) => ({ name: track.name, type: track.type, muted: track.muted, volume: track.volume, clips: track.clips.filter((clip) => input.task !== 'improve-prompt' || !scene || clip.sceneId === scene.id).map((clip) => ({ ...clip, assetName: snapshot.assets.find((asset) => asset.id === clip.assetId)?.name })) })), subtitlesEnabled: snapshot.subtitlesEnabled, subtitleCues: snapshot.subtitleCues?.filter((cue) => input.task !== 'improve-prompt' || !scene || cue.sceneId === scene.id) } }, null, 2)}`;
         const args = ['exec', '--ignore-user-config', '--json', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral'];
         if (input.task === 'script') {
           const schemaPath = join(folder, 'script-schema.json');
@@ -826,6 +830,7 @@ export async function createApp(options: AppOptions = {}) {
       const destination = join(dataDirectory, 'exports', filename);
       const workDirectory = join(dataDirectory, 'work', id); await mkdir(workDirectory, { recursive: true });
       let finishing: FinishingSummary | undefined;
+      let audioReport:import('./audio-master.js').AudioMasterReport|undefined;
       try {
         if (input.format === 'project') {
           const archiveProject = structuredClone(snapshot);
@@ -846,12 +851,12 @@ export async function createApp(options: AppOptions = {}) {
             finishing = plan.sources.length ? await prepareFilm(snapshot, input.strength, input.processingProfile, signal, (message, progress, details) => update(message, (progress ?? 0) * .7, details)) : { total: 0, created: 0, reused: 0, skipped: plan.skipped.length, errors: 0, applied: 0, items: plan.skipped };
             if (finishing.errors) throw new Error(`${finishing.errors} video(s) no pudieron prepararse con IA. No se exportó la película. Las copias terminadas están guardadas para reintentar.`);
           }
-          await renderProject(snapshot, { destination, workDirectory, mediaPath, ffmpeg, ffprobe, signal, update: (message, progress) => update(message, input.aiEnhance ? 70 + (progress ?? 0) * .29 : progress), resolution: input.resolution });
+          await renderProject(snapshot, { destination, workDirectory, mediaPath, ffmpeg, ffprobe, signal, update: (message, progress) => update(message, input.aiEnhance ? 70 + (progress ?? 0) * .29 : progress), resolution: input.resolution,onAudioReport:report=>{audioReport=report} });
         }
         if (signal.aborted) throw new Error('Trabajo cancelado.');
         if (input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p') await visualContinuity.requireReview(snapshot, input.continuityReportId, input.continuityFingerprint);
         const [width, height] = exportDimensions(snapshot.format, input.resolution);
-        return { projectId: snapshot.id, url: `/api/downloads/${filename}`, filename, ...(finishing ? { finishing } : {}), ...(input.format === 'mp4' ? { resolution: input.resolution, width, height } : {}), ...(input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p' ? { continuityReportId: input.continuityReportId, continuityFingerprint: input.continuityFingerprint } : {}) };
+        return { projectId: snapshot.id, url: `/api/downloads/${filename}`, filename, ...(audioReport?{audioReport}:{}), ...(finishing ? { finishing } : {}), ...(input.format === 'mp4' ? { resolution: input.resolution, width, height } : {}), ...(input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p' ? { continuityReportId: input.continuityReportId, continuityFingerprint: input.continuityFingerprint } : {}) };
       } catch (error) { await rm(destination, { force: true }); throw error; }
       finally { await rm(workDirectory, { recursive: true, force: true }); }
     }, { projectId: snapshot.id });

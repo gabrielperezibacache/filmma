@@ -55,3 +55,13 @@ export function splitSubtitle(project:Project,id:string,globalSeconds:number,new
  if((project.subtitleCues?.length??0)>=MAX_SUBTITLE_CUES)throw new Error('Se alcanzó el límite de 1.000 subtítulos.');
  return{...project,subtitleCues:project.subtitleCues!.flatMap(c=>c.id===id?[{...c,end:cut},{...c,id:newId(),start:cut}]:[c])};
 }
+
+/** Manual word boundary at a user-chosen frame. No transcription/alignment claim. */
+export function splitSubtitleAtWord(project:Project,id:string,wordIndex:number,globalSeconds:number,newId:()=>string=()=>crypto.randomUUID()):Project{
+ const cue=project.subtitleCues?.find(c=>c.id===id),words=cue?.text.match(/\S+/g)??[];
+ if(!cue||!Number.isInteger(wordIndex)||wordIndex<1||wordIndex>=words.length)throw new Error('Elige una palabra posterior a la primera para dividir el texto.');
+ const matches=[...cue.text.matchAll(/\S+/g)],cut=matches[wordIndex]!.index!;
+ const next=splitSubtitle(project,id,globalSeconds,newId);
+ const originalIndex=next.subtitleCues!.findIndex(c=>c.id===id),right=next.subtitleCues![originalIndex+1]!;
+ return{...next,subtitleCues:next.subtitleCues!.map(c=>c.id===id?{...c,text:cue.text.slice(0,cut).trimEnd()}:c.id===right.id?{...c,text:cue.text.slice(cut)}:c)};
+}

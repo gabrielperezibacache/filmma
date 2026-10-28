@@ -1,3 +1,6 @@
+import {audioMixSettings,duckingWindows,duckingExpression} from '../src/sound-finishing.js';
+import {subtitleStyle,subtitlePalette,type SubtitleStyle} from '../src/subtitle-style.js';
+import {measureLoudness,normalizationFilter,masterReport,type AudioMasterReport} from './audio-master.js';
 import { basename, join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import sharp, { type OutputInfo } from 'sharp';
@@ -15,6 +18,8 @@ type RenderOptions = {
   destination: string; workDirectory: string; mediaPath: (asset: Asset) => Promise<string>;
   ffmpeg?: string; ffprobe?: string; signal: AbortSignal; update: (message: string, progress?: number) => void;
   resolution?: ExportResolution;
+  audioOnly?:boolean;
+  onAudioReport?:(report:AudioMasterReport)=>void;
   /** Small output sizes are useful for exact renderer tests; the API uses resolution. */
   dimensions?: [number, number];
 };
@@ -34,7 +39,7 @@ function speedAudioFilters(value?: number) {
   return result;
 }
 
-function colorFilters(color?: ColorAdjustments) {
+export function colorFilters(color?: ColorAdjustments) {
   const matrix = colorMatrix(color), identity = colorMatrix();
   if (matrix.every((coefficient, index) => coefficient === identity[index])) return [];
   const channels = ['r', 'g', 'b'];
@@ -85,19 +90,20 @@ export function audioFilters(settings: ClipAudio | undefined, duration: number, 
 
 /** Text is passed only through escaped Pango markup, never a command or filter.
  * All words remain visible: unusually dense cues reduce font size to fit. */
-export async function subtitleCard(text: string, width: number, height: number) {
-  const plateWidth = Math.floor(width * .86), padding = Math.max(4, Math.round(width * .008));
-  let fontSize = Math.max(8, Math.round(width * .025));
+export async function subtitleCard(text: string, width: number, height: number, style?:SubtitleStyle) {
+  const settings=subtitleStyle({subtitleStyle:style}),palette=subtitlePalette[settings.preset];
+  const plateWidth = Math.floor(width * (1-settings.safeMargin/50)), padding = Math.max(4, Math.round(width * .008));
+  let fontSize = Math.max(8, Math.round(width * settings.size/100));
   let rendered: { data: Buffer; info: OutputInfo } | undefined;
   if (text.length > 20000) throw new Error('Hay demasiados subtítulos superpuestos para mostrarlos. Separa sus tiempos antes de exportar.');
   while (fontSize >= 6) {
-    rendered = await sharp({ text: { text: `<span foreground="white">${xml(text)}</span>`, font: `Arial Bold ${fontSize}`, width: plateWidth - padding * 2, align: 'centre', rgba: true, spacing: Math.max(0, Math.round(fontSize * .25)), wrap: 'word-char' } }).png().toBuffer({ resolveWithObject: true });
-    if (rendered.info.height + padding * 2 <= height * .85) break;
+    rendered = await sharp({ text: { text: `<span foreground="${palette.text}">${xml(text)}</span>`, font: `Arial Bold ${fontSize}`, width: plateWidth - padding * 2, align: 'centre', rgba: true, spacing: Math.max(0, Math.round(fontSize * .25)), wrap: 'word-char' } }).png().toBuffer({ resolveWithObject: true });
+    if (rendered.info.height + padding * 2 <= height * (1-settings.safeMargin/50)) break;
     fontSize -= 1;
   }
-  if (!rendered || rendered.info.height + padding * 2 > height * .85) throw new Error('El texto superpuesto no cabe en pantalla. Divide el subtítulo o separa sus tiempos.');
-  const plateHeight = rendered.info.height + padding * 2, top = height - Math.round(height * .06) - plateHeight;
-  const plate = await sharp({ create: { width: plateWidth, height: plateHeight, channels: 4, background: { r: 0, g: 0, b: 0, alpha: .72 } } }).composite([{ input: rendered.data, left: Math.floor((plateWidth - rendered.info.width) / 2), top: padding }]).png().toBuffer();
+  if (!rendered || rendered.info.height + padding * 2 > height * (1-settings.safeMargin/50)) throw new Error('El texto superpuesto no cabe en pantalla. Divide el subtítulo o separa sus tiempos.');
+  const plateHeight = rendered.info.height + padding * 2, top = settings.position==='top'?Math.round(height * settings.safeMargin/100):height - Math.round(height * settings.safeMargin/100) - plateHeight;
+  const plate = await sharp({ create: { width: plateWidth, height: plateHeight, channels: 4, background: {r:parseInt(palette.plate.slice(1,3),16),g:parseInt(palette.plate.slice(3,5),16),b:parseInt(palette.plate.slice(5,7),16),alpha:palette.alpha} } }).composite([{ input: rendered.data, left: Math.floor((plateWidth - rendered.info.width) / 2), top: padding }]).png().toBuffer();
   return sharp({ create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).composite([{ input: plate, left: Math.floor((width - plateWidth) / 2), top }]).png().toBuffer();
 }
 
@@ -106,6 +112,7 @@ export async function renderProject(project: Project, options: RenderOptions) {
   const ffmpeg = options.ffmpeg ?? 'ffmpeg', ffprobe = options.ffprobe ?? 'ffprobe';
   const layout = buildTimeline(project), fps = layout.fps, total = layout.totalSeconds;
   const transitions = resolveSceneTransitions(project);
+  const mixSettings=audioMixSettings(project),duckWindows=duckingWindows(project);
   // MOV preserves a rational frame clock and sample-accurate float PCM. A 1 ms
   // container time base would accumulate rounding across many 24 fps cuts.
   // Preserve decoded picture samples between montage, transitions and layer
@@ -122,6 +129,7 @@ export async function renderProject(project: Project, options: RenderOptions) {
     check();
     const result = await runProcess(ffmpeg, ['-y', '-hide_banner', '-loglevel', 'error', '-threads', '2', '-filter_complex_threads', '2', ...args], { signal, cwd: work, timeoutMs: 60 * 60 * 1000 });
     if (result.code !== 0) throw new Error(`${message}: ${result.stderr.slice(-1800)}`);
+    return result;
   };
   const graphFile = async (filters: string[]) => { const path = file('filters', 'txt'); await writeFile(path, filters.join(';\n')); return path; };
   const probe = async (path: string): Promise<MediaInfo> => {
@@ -234,9 +242,9 @@ export async function renderProject(project: Project, options: RenderOptions) {
 
   const visual: VisualSource[] = [], audio: AudioSource[] = [];
   const extras = resolveTimelineClips(project);
-  async function audioClip(asset: Asset, frames: number, trimFrames: number, logicalDuration: number, settings: ClipAudio | undefined, gain: number, speed = 1) {
+  async function audioClip(asset: Asset, frames: number, trimFrames: number, logicalDuration: number, settings: ClipAudio | undefined, gain: number, speed = 1,duckStart?:number) {
     const path = await mediaPath(asset), info = await probe(path), output = file('sound', 'w64');
-    await encode([...soundInput(path, info, trimFrames / fps, settings?.muted ? 0 : (settings?.volume ?? 1) * gain), '-map', '0:a:0', '-af', [...speedAudioFilters(speed), ...audioFilters(settings, logicalDuration, gain, fps), 'apad', `atrim=end_sample=${frames * 48000 / fps}`, 'asetpts=PTS-STARTPTS'].join(','), '-t', number(frames / fps), '-c:a', 'pcm_f32le', '-f', 'w64', output], `No se pudo preparar el audio de «${asset.name}»`);
+    await encode([...soundInput(path, info, trimFrames / fps, settings?.muted ? 0 : (settings?.volume ?? 1) * gain), '-map', '0:a:0', '-af', [...speedAudioFilters(speed), ...audioFilters(settings, logicalDuration, gain, fps), ...(duckStart!==undefined&&mixSettings.ducking?[`volume='${duckingExpression(duckWindows,mixSettings,duckStart)}':eval=frame`]:[]), 'apad', `atrim=end_sample=${frames * 48000 / fps}`, 'asetpts=PTS-STARTPTS'].join(','), '-t', number(frames / fps), '-c:a', 'pcm_f32le', '-f', 'w64', output], `No se pudo preparar el audio de «${asset.name}»`);
     return output;
   }
   for (const [index, item] of extras.entries()) {
@@ -248,10 +256,10 @@ export async function renderProject(project: Project, options: RenderOptions) {
       const path = await visualClip(asset, durationFrames, sourceStartFrame / fps, logicalDuration, clip, gain, 'original', 'cut', {}, { color: clip.color, speed: clip.speed, alpha: true });
       visual.push({ path, startFrame, endFrame, opacity: clip.opacity ?? 1, clip });
       if (audible) audio.push({ path, startFrame });
-    } else if (audible) audio.push({ path: await audioClip(asset, durationFrames, sourceStartFrame, logicalDuration, clip, gain, clip.speed), startFrame });
+    } else if (audible) audio.push({ path: await audioClip(asset, durationFrames, sourceStartFrame, logicalDuration, clip, gain, clip.speed, !clip.dialogueLineId&&mixSettings.musicTrackIds.includes(track.id)?startFrame/fps:undefined), startFrame });
   }
   const soundtrack = project.audioAssetId && assets.get(project.audioAssetId);
-  if (soundtrack && !project.audioMuted && (project.audioVolume ?? .5) > 0) audio.push({ path: await audioClip(soundtrack, layout.totalFrames, 0, total, undefined, clamp(project.audioVolume ?? .5, 2)), startFrame: 0 });
+  if (soundtrack && !project.audioMuted && (project.audioVolume ?? .5) > 0) audio.push({ path: await audioClip(soundtrack, layout.totalFrames, 0, total, undefined, clamp(project.audioVolume ?? .5, 2),1,0), startFrame: 0 });
 
   // Process a bounded number of streams at once, including projects with hundreds
   // of clips. Float PCM intermediates retain headroom until the final limiter.
@@ -269,6 +277,35 @@ export async function renderProject(project: Project, options: RenderOptions) {
     mixedAudio = output;
   }
 
+  let report:AudioMasterReport|undefined;
+  let normalization:string|undefined;
+  let measured:Awaited<ReturnType<typeof measureLoudness>>|undefined;
+  if(mixSettings.normalize||options.audioOnly){
+    update('Midiendo sonoridad integrada y pico real de la mezcla…',74);
+    measured=await measureLoudness(mixedAudio,mixSettings,ffmpeg,signal);
+    normalization=normalizationFilter(measured,mixSettings);
+  }
+  let masterSource=mixedAudio,masterFilters='alimiter=limit=0.95:level=false:latency=true',method:AudioMasterReport['method']='unchanged',finalGainDb=0;
+  if(normalization){
+    update('Normalizando la mezcla y comprobando el nivel obtenido…',76);
+    masterSource=file('normalized','w64');
+    const result=await encode(['-loglevel','info','-i',mixedAudio,'-map','0:a:0','-vn','-af',`${normalization},apad,atrim=end_sample=${Math.round(layout.totalFrames*48000/fps)}`,'-t',number(total),'-c:a','pcm_f32le','-ar','48000','-ac','2','-f','w64',masterSource],'No se pudo normalizar la copia de la mezcla');
+    method=result.stderr.includes('"normalization_type" : "linear"')?'linear':'dynamic';
+    const normalized=await measureLoudness(masterSource,mixSettings,ffmpeg,signal);
+    // One bounded gain refinement compensates short/high-LRA programme offsets.
+    // It never exceeds the measured true-peak headroom (including 0.2 dB reserve).
+    if(normalized.integratedLufs!==null&&normalized.truePeakDb!==null){
+      const wanted=mixSettings.targetLufs-normalized.integratedLufs,headroom=mixSettings.truePeakDb-.2-normalized.truePeakDb;
+      finalGainDb=Math.max(-24,Math.min(12,wanted,headroom));
+    }
+    masterFilters=`volume=${number(10**(finalGainDb/20))}`;
+  }else if(measured?.integratedLufs===null)method='silence';
+  if(options.audioOnly){
+    await encode(['-i',masterSource,'-map','0:a:0','-vn','-af',`${masterFilters},apad,atrim=end_sample=${Math.round(layout.totalFrames*48000/fps)}`,'-t',number(total),'-c:a','pcm_s16le','-ar','48000','-ac','2',destination],'No se pudo crear la escucha medida');
+    const after=await measureLoudness(destination,mixSettings,ffmpeg,signal);
+    report=masterReport(measured!,after,mixSettings,method,finalGainDb);
+    options.onAudioReport?.(report);return report;
+  }
   const cues = resolveSubtitleCues(project);
   if (cues.length) {
     update('Componiendo los subtítulos editados…', 78);
@@ -279,7 +316,7 @@ export async function renderProject(project: Project, options: RenderOptions) {
       check(); const start = boundaries[index]!, end = boundaries[index + 1]!;
       const text = cues.filter((cue) => cue.startFrame <= start && cue.endFrame > start).map((cue) => cue.cue.text).join('\n');
       let path = cards.get(text);
-      if (!path) { path = file('subtitle', 'png'); await writeFile(path, text ? await subtitleCard(text, width, height) : blank); cards.set(text, path); }
+      if (!path) { path = file('subtitle', 'png'); await writeFile(path, text ? await subtitleCard(text, width, height,project.subtitleStyle) : blank); cards.set(text, path); }
       entries.push(`file '${basename(path)}'\noption framerate ${fps}\nduration ${number((end - start) / fps)}`);
     }
     const lastText = cues.filter((cue) => cue.startFrame < layout.totalFrames && cue.endFrame === layout.totalFrames).map((cue) => cue.cue.text).join('\n');
@@ -319,11 +356,13 @@ export async function renderProject(project: Project, options: RenderOptions) {
     picture = output;
   }
   update('Guardando la película y verificando resolución y duración…', 96);
-  await encode(['-i', picture, '-i', mixedAudio, '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'libx264', '-preset', 'fast', '-crf', '16', '-pix_fmt', 'yuv420p', '-af', `alimiter=limit=0.95:level=false:latency=true,apad,atrim=end_sample=${layout.totalFrames * 48000 / fps}`, '-t', number(total), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', ...movieClock, '-movflags', '+faststart', destination], 'No se pudo guardar la película');
+  await encode(['-i', picture, '-i', masterSource, '-map', '0:v:0', '-map', '1:a:0', '-c:v', 'libx264', '-preset', 'fast', '-crf', '16', '-pix_fmt', 'yuv420p', '-af', `${masterFilters},apad,atrim=end_sample=${Math.round(layout.totalFrames * 48000 / fps)}`, '-t', number(total), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-ac', '2', ...movieClock, '-movflags', '+faststart', destination], 'No se pudo guardar la película');
+  if(measured){const after=await measureLoudness(destination,mixSettings,ffmpeg,signal);report=masterReport(measured,after,mixSettings,method,finalGainDb);options.onAudioReport?.(report);}
   const verified = await runProcess(ffprobe, ['-v', 'error', '-select_streams', 'v:0', '-count_frames', '-show_entries', 'stream=nb_read_frames,width,height,avg_frame_rate:format=duration', '-of', 'json', destination], { signal, timeoutMs: 5 * 60 * 1000 });
   const data = verified.code === 0 ? parseJsonOutput(verified.stdout) : {}, frames = Number(data.streams?.[0]?.nb_read_frames), duration = Number(data.format?.duration);
   if (Number(data.streams?.[0]?.width) !== width || Number(data.streams?.[0]?.height) !== height) throw new Error('La resolución exportada no coincide con la elegida. El archivo no se entregó.');
   const [rateNumerator, rateDenominator = 1] = String(data.streams?.[0]?.avg_frame_rate ?? '').split('/').map(Number);
   if (!Number.isFinite(rateNumerator) || !rateDenominator || Math.abs(rateNumerator! / rateDenominator - fps) > .00001) throw new Error('Los fps exportados no coinciden con los elegidos. El archivo no se entregó.');
   if (frames !== layout.totalFrames || !Number.isFinite(duration) || Math.abs(duration - total) > .12) throw new Error('La duración exportada no coincide con los fotogramas del montaje. El archivo no se entregó.');
+  return report;
 }

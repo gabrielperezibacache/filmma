@@ -1,0 +1,9 @@
+import {useState} from 'react';
+import type {Project,SubtitleCue} from '../types';
+import {splitSubtitleAtWord} from '../subtitle-editing';
+import {tr} from '../i18n';
+export default function SubtitleWordSplit({project,cue,playhead,onUpdate}:{project:Project;cue:SubtitleCue;playhead:number;onUpdate:(fn:(p:Project)=>Project)=>void}){
+ const [word,setWord]=useState(1),[error,setError]=useState('');const words=cue.text.match(/\S+/g)??[];
+ if(words.length<2)return null;
+ return <details className="subtitle-appearance"><summary>{tr('Dividir el texto por palabras','Split text at a word')}</summary><p>{tr('Sitúa el cabezal dentro del subtítulo y elige la primera palabra del siguiente tramo. Conservamos personaje, voz y guion. Es un ajuste manual; no se ha transcrito el audio.','Place the playhead inside this caption and choose the first word of the next segment. Character, voice and script are retained. This is manual timing; no audio was transcribed.')}</p><label className="se-text-field"><span>{tr('El segundo tramo comienza en','The second segment starts at')}</span><select value={Math.min(word,words.length-1)} onChange={e=>{setWord(+e.target.value);setError('')}}>{words.slice(1).map((text,i)=><option key={i} value={i+1}>{i+2}. {text}</option>)}</select></label><button className="quiet-button" onClick={()=>{try{const next=splitSubtitleAtWord(project,cue.id,Math.min(word,words.length-1),playhead);onUpdate(current=>{if(JSON.stringify(current.subtitleCues)!==JSON.stringify(project.subtitleCues)||current.id!==project.id||current.fps!==project.fps||JSON.stringify(current.scenes)!==JSON.stringify(project.scenes))return current;return{...current,subtitleCues:next.subtitleCues}});setError('')}catch(e){setError((e as Error).message)}}}>{tr('Dividir texto y tiempo en el cabezal','Split text and timing at playhead')}</button>{error&&<p role="alert">{error}</p>}</details>;
+}

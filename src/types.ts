@@ -1,3 +1,5 @@
+import type {AudioMix} from './sound-finishing';
+import type {SubtitleStyle} from './subtitle-style';
 import type { ProjectFormat } from './export-resolution';
 import type { Cinematography } from './cinematography';
 export type EnhancementPreset = 'clean'|'upscale'|'ai-4k';
@@ -41,6 +43,6 @@ export type ShotPlanning = {opening?:string;closing?:string;notes?:string;altern
 export type Scene = {planning?:ShotPlanning;storySceneId?:string;id:string;title:string;description:string;dialogue:string;prompt:string;negativePrompt:string;duration:number;seed:number;camera:string;cinematography?:Cinematography;characterIds:string[];continuity?:Record<string,ContinuityOverride>;assetId?:string;endAssetId?:string;videoAssetId?:string;takeAssetIds?:string[];look?:'original'|'noir'|'warm';transition?:'cut'|'fade'|'dissolve'|'dip';transitionDuration?:number;trimStart?:number;clearVideoAsset?:boolean;audio?:ClipAudio;color?:ColorAdjustments;speed?:number};
 export type ClipGroup={id:string;name:string;clipIds:string[]};
 export type TimelineMarker={id:string;sceneId:string;offset:number;title:string;kind:'edit'|'continuity'|'dialogue'|'note';note:string;characterId?:string};
-export type Project = { clipGroups?:ClipGroup[];markers?:TimelineMarker[];story?:StoryStructure;id:string;name:string;logline:string;format:ProjectFormat;fps:number;aiFinishing?:AiFinishing;scenes:Scene[];characters:Character[];assets:Asset[];updatedAt:string;audioAssetId?:string;audioVolume?:number;audioMuted?:boolean;tracks?:EditorTrack[];dialogueLines?:DialogueLine[];subtitleCues?:SubtitleCue[];subtitlesEnabled?:boolean};
+export type Project = { audioMix?:AudioMix;subtitleStyle?:SubtitleStyle; clipGroups?:ClipGroup[];markers?:TimelineMarker[];story?:StoryStructure;id:string;name:string;logline:string;format:ProjectFormat;fps:number;aiFinishing?:AiFinishing;scenes:Scene[];characters:Character[];assets:Asset[];updatedAt:string;audioAssetId?:string;audioVolume?:number;audioMuted?:boolean;tracks?:EditorTrack[];dialogueLines?:DialogueLine[];subtitleCues?:SubtitleCue[];subtitlesEnabled?:boolean};
 export type Job = {id:string;type:string;status:'queued'|'running'|'completed'|'failed'|'cancelled';progress:number;message:string;createdAt:string;result?:{text?:string;assetId?:string;originalAssetId?:string;projectId?:string;finishing?:FinishingSummary;url?:string;proposal?:{projectId:string;scenes:Scene[]};[key:string]:unknown}};
 export type SystemInfo = {platform?:string;arch?:string;memoryGB?:number;ffmpeg?:{available:boolean;version?:string};codex?:{available:boolean;authenticated:boolean;message?:string};runtime?:Record<string,any>;localOnly?:boolean;dataDirectory?:string};

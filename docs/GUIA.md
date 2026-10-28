@@ -289,3 +289,12 @@ El movimiento conserva los planos de referencia. Una intervención de voz comple
 Abre **Marcadores** o pulsa **M** fuera de un campo: título, tipo, nota, tiempo local y personaje quedan unidos al plano. Al reordenar lo siguen; si un recorte deja la señal fuera, se conserva con aviso. Puedes abrirla desde la regla y descargar su CSV. **Proyecto completo** guarda todo y conserva los vínculos al reimportar.
 
 **Reproducción del visor → Preparar copias ligeras** crea una caché local de hasta 1280 px por lado y precarga el siguiente video. Selecciona **Fluida** para usar copias disponibles y **Original** para revisar detalle/color. Sin copia válida se usa el original. El acabado, análisis de continuidad y exportación conservan las fuentes seleccionadas; el ZIP no incluye esta caché. Consulta [alcance y verificaciones](FIFTH-DELIVERY.md).
+
+
+## Sonido y color de la película
+
+En **Montaje → Mezcla**, abre el acabado de sonido: atenuación de música durante voces colocadas, objetivo de sonoridad, medición y escucha WAV. La normalización afecta a la copia de entrega; el visor permite revisar la atenuación. Los originales y las voces permanecen completos. Consulta [Sexta entrega](SIXTH-DELIVERY.md).
+
+En **Subtítulos**, Apariencia y zona segura aplica un estilo común al visor y MP4. Dividir por palabras es manual y conserva los vínculos del guion. El SRT no incluye apariencia.
+
+En **Montaje → Ajustes del plano → Acabado**, abre **Scopes y comparación entre planos**. Elige referencia e instantes y captura muestras antes de leer forma de onda, parada RGB o histograma. Tras cambiar color o instante, captura de nuevo. Las notas de continuidad sitúan personajes y objetos; no certifican su identidad. Consulta [Séptima entrega](SEVENTH-DELIVERY.md).

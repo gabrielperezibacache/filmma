@@ -1,0 +1,4 @@
+.job-audio-report{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);min-width:0;color:var(--text);font-size:12px}
+.job-audio-report h4{font-size:13px;font-weight:500;margin:0 0 8px}.job-audio-report p{margin:8px 0;line-height:1.7;color:var(--muted);max-width:72ch}.job-audio-report .job-audio-warning{color:var(--text)}
+.job-audio-report dl{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0}.job-audio-report dt{font-size:11px;color:var(--muted)}.job-audio-report dd{margin:5px 0 0;font-size:13px;font-variant-numeric:tabular-nums}.job-audio-report small{display:block;line-height:1.7;color:var(--muted);max-width:74ch;font-size:11px}
+@media(max-width:760px){.job-audio-report dl{display:grid;grid-template-columns:1fr 1fr;gap:16px}.job-audio-report dl>div:first-child{grid-column:1 / -1}}

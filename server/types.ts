@@ -94,6 +94,8 @@ export const characterSchema = z.object({
 export const clipGroupSchema=z.object({id,name:text(120).min(1),clipIds:z.array(id).min(2).max(500)}).strict();
 export const markerSchema=z.object({id,sceneId:id,offset:seconds,title:text(120).min(1),kind:z.enum(['edit','continuity','dialogue','note']),note:text(2000),characterId:id.optional()}).strict();
 export const projectSchema = z.object({
+  audioMix:z.object({normalize:z.boolean(),targetLufs:z.number().min(-24).max(-9),truePeakDb:z.number().min(-3).max(-1),ducking:z.boolean(),reductionDb:z.number().min(3).max(30),attack:z.number().min(.05).max(2),release:z.number().min(.1).max(3),musicTrackIds:z.array(id).max(8)}).strict().optional(),
+  subtitleStyle:z.object({preset:z.enum(['classic','paper','amber']),size:z.number().min(1.5).max(5),position:z.enum(['bottom','top']),safeMargin:z.number().min(5).max(20)}).strict().optional(),
   clipGroups:z.array(clipGroupSchema).max(100).optional(),markers:z.array(markerSchema).max(1000).optional(),
   story:storyStructureSchema.optional(),
   id, name: text(250), logline: text(), format: z.enum(PROJECT_FORMATS).default(DEFAULT_PROJECT_FORMAT),
@@ -121,6 +123,7 @@ export function validateEditingReferences(project: Project) {
   const tracks = project.tracks ?? [], clips = tracks.flatMap((track) => track.clips), cues = project.subtitleCues ?? [];
   const fail = (message: string): never => { throw Object.assign(new Error(message), { status: 400 }); };
   for (const group of [tracks, clips, cues, project.dialogueLines??[],project.clipGroups??[],project.markers??[]]) if (new Set(group.map((item) => item.id)).size !== group.length) fail('Los identificadores de pistas, clips y subtítulos deben ser únicos en su grupo.');
+  if(project.audioMix&&(new Set(project.audioMix.musicTrackIds).size!==project.audioMix.musicTrackIds.length||project.audioMix.musicTrackIds.some(id=>!tracks.some(t=>t.id===id&&t.type==='audio'))))fail('Las pistas de música deben ser pistas de audio existentes y únicas.');
   const scenes = new Set(project.scenes.map((scene) => scene.id)), characters = new Set(project.characters.map((character) => character.id));
   const grouped=new Set<string>(),clipIds=new Set(clips.map(c=>c.id));for(const group of project.clipGroups??[])for(const key of group.clipIds){if(!clipIds.has(key)||grouped.has(key))fail('Cada clip de grupo debe existir y pertenecer a un solo grupo.');grouped.add(key)}
   for(const marker of project.markers??[]){if(!scenes.has(marker.sceneId)||marker.characterId&&!characters.has(marker.characterId))fail('El marcador debe conservar un plano y personaje existentes.');}
@@ -161,7 +164,7 @@ export function validateEditingReferences(project: Project) {
   }
 }
 export type Job = {
-  id: string; type: 'generate' | 'export' | 'codex' | 'runtime' | 'enhance' | 'continuity' | 'speech' | 'lipsync' | 'proxy';
+  id: string; type: 'generate' | 'export' | 'codex' | 'runtime' | 'enhance' | 'continuity' | 'speech' | 'lipsync' | 'proxy' | 'audio';
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
   progress: number; message: string; createdAt: string; updatedAt: string;
   result?: { qualityReportId?:string;clientRequestId?:string;lineId?:string;stale?:boolean; sceneId?:string;seed?:number;variantIndex?:number;variantCount?:number;continuityReportId?:string;continuityFingerprint?:string; text?: string; assetId?: string; originalAssetId?:string; projectId?:string; finishing?:FinishingSummary; url?: string; filename?: string; proposal?: { projectId: string; scenes: Project['scenes'] } };

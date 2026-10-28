@@ -1,3 +1,4 @@
+import ColorReview from './ColorReview';
 import {aiProcessingLabel} from '../ai-processing';
 import {useEffect,useState} from 'react';
 import {Gauge,ImageUpscale,LoaderCircle,Palette,Undo2} from 'lucide-react';
@@ -7,8 +8,9 @@ import EnhancementReview from './EnhancementReview';
 import ColorControls from './ColorControls';
 import './finishing.css';
 
-type Props={project:Project;scene:Scene;asset?:Asset;jobs:Job[];bypass:boolean;onBypass:(value:boolean)=>void;onChange:(patch:Partial<Scene>)=>void;onEnhance:(assetId:string,preset:EnhancementPreset,strength?:number,processingProfile?:'conservative'|'restore'|'temporal')=>Promise<void>;onJob:(job:Job)=>void;onPause:()=>void;busy:boolean};
-export default function SceneFinishing({project,scene,asset,jobs,bypass,onBypass,onChange,onEnhance,onJob,onPause,busy}:Props) {
+type Props={project:Project;scene:Scene;asset?:Asset;jobs:Job[];bypass:boolean;onBypass:(value:boolean)=>void;onChange:(patch:Partial<Scene>)=>void;onEnhance:(assetId:string,preset:EnhancementPreset,strength?:number,processingProfile?:'conservative'|'restore'|'temporal')=>Promise<void>;onJob:(job:Job)=>void;onPause:()=>void;onSave:()=>Promise<void>;busy:boolean};
+export default function SceneFinishing({project,scene,asset,jobs,bypass,onBypass,onChange,onEnhance,onJob,onPause,onSave,busy}:Props) {
+  const [colorReview,setColorReview]=useState(false);
   const [reviewId,setReviewId]=useState<string|null>(null);
   useEffect(()=>setReviewId(null),[scene.id]);
   const review=project.assets.find(item=>item.id===reviewId);
@@ -21,6 +23,7 @@ export default function SceneFinishing({project,scene,asset,jobs,bypass,onBypass
   return <div className="scene-finishing">
     <div className="finishing-heading"><Palette size={17}/><h3>El acabado del plano</h3></div>
     <p>Estos ajustes acompañan a «{scene.title}» al reordenarlo. {characters.length?`Elementos: ${characters.map(item=>item.name).join(', ')}.`:'El guion y la duración del montaje se conservan.'}</p>
+    <button className="quiet-button" onClick={()=>{onPause();setColorReview(true)}}>Scopes y comparación entre planos</button>
     <ColorControls color={scene.color} onChange={color=>onChange({color})}/>
     <div className="finishing-actions"><button className="quiet-button" aria-pressed={bypass} onClick={()=>onBypass(!bypass)}>{bypass?'Ver color editado':'Comparar sin corrección'}</button>
     <button className="text-button" disabled={!previous} onClick={()=>onChange({color:{...previous?.color},look:previous?.look})}>Copiar color del plano anterior</button></div>
@@ -37,6 +40,7 @@ export default function SceneFinishing({project,scene,asset,jobs,bypass,onBypass
     {!!versions.length&&<div className="enhancement-versions"><h4>Versiones de esta toma</h4>{versions.map(version=><div key={version.id}><span>{version.enhancement?.preset==='ai-4k'?aiProcessingLabel(version.enhancement.profile)+' · '+Math.round((version.enhancement.strength??.35)*100)+' %':version.enhancement?.preset==='upscale'?'Reescalada':'Limpieza'}<small>{version.enhancement?.width} × {version.enhancement?.height}</small></span><button className="text-button" onClick={()=>{onPause();setReviewId(version.id)}}>Comparar</button><button className="text-button" disabled={asset?.id===version.id} onClick={()=>onChange({videoAssetId:version.id})}>{asset?.id===version.id?'En uso':'Usar versión'}</button></div>)}</div>}
     {asset?.enhancement&&original&&<button className="text-button" onClick={()=>onChange({videoAssetId:original.id})}><Undo2 size={14}/>Usar original</button>}
     </section>
+    {colorReview&&<ColorReview project={project} sceneId={scene.id} onChange={onChange} onSave={onSave} onClose={()=>setColorReview(false)}/>}
     {review&&original&&<EnhancementReview key={review.id} original={original} version={review} characters={characters.map(item=>item.name)} applied={asset?.id===review.id} onApply={()=>onChange({videoAssetId:review.id})} onClose={()=>setReviewId(null)}/>}
   </div>;
 }
