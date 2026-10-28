@@ -1,4 +1,4 @@
-import {t} from '../i18n';
+import {t,tr} from '../i18n';
 import {useId} from 'react';
 import type {Project} from '../types';
 import {DEFAULT_PROJECT_FORMAT, DEFAULT_PROJECT_FPS, PROJECT_FORMATS, PROJECT_FRAME_RATES} from '../export-resolution';
@@ -9,6 +9,7 @@ type Props = {
   fps: number;
   onChange: (patch: Partial<Pick<Project, 'format' | 'fps'>>) => void;
   compact?: boolean;
+  source?: 'local'|'google';
 };
 
 const formatLabels: Record<Project['format'], string> = {
@@ -20,7 +21,7 @@ const formatLabels: Record<Project['format'], string> = {
   '2.39:1': '2.39:1 · panorámico',
 };
 
-export default function ProjectOutputSettings({format, fps, onChange, compact = false}: Props) {
+export default function ProjectOutputSettings({format, fps, onChange, compact = false,source='local'}: Props) {
   const id = useId();
   const recommended = format === DEFAULT_PROJECT_FORMAT && fps === DEFAULT_PROJECT_FPS;
   return <div className={`project-output-settings${compact ? ' is-compact' : ''}`}>
@@ -37,7 +38,7 @@ export default function ProjectOutputSettings({format, fps, onChange, compact = 
           if (next && next !== fps) onChange({fps: next});
         }}>{PROJECT_FRAME_RATES.map(value => <option key={value} value={value}>{value} fps{value === DEFAULT_PROJECT_FPS ? ' · recomendado' : ''}</option>)}</select></label>
       </div>
-      <p id={`${id}-cadence`} className="project-output-help">MiniMax y LTX generan a 24 fps. La exportación adapta los fotogramas a la cadencia elegida, sin cambiar la velocidad de la toma.</p>
+      <p id={`${id}-cadence`} className="project-output-help">{source==='google'?tr('Se conserva la cadencia nativa del video de Google. Sólo la exportación adapta los fps del montaje.','The Google video keeps its native frame rate. Only export adapts the edit frame rate.'):'MiniMax y LTX generan a 24 fps. La exportación adapta los fotogramas a la cadencia elegida, sin cambiar la velocidad de la toma.'}</p>
       {!recommended && <button type="button" className="project-output-reset" onClick={() => onChange({format: DEFAULT_PROJECT_FORMAT, fps: DEFAULT_PROJECT_FPS})}>Usar recomendados: 16:9 y 24 fps</button>}
     </fieldset>
   </div>;

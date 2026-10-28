@@ -28,11 +28,11 @@ export function listSceneTakes(project: Project, sceneId: string): SceneTake[] {
     const originalAsset = originalFor(asset, assets);
     if (!originalAsset) return asset.id === scene.videoAssetId ? [{ asset, originalAsset: asset, generation: asset.generation, selected: true, isDerivative: !!asset.enhancement }] : [];
     const generation = originalAsset.generation;
-    if (!(generation?.projectId === project.id && generation.sceneId === sceneId) && !(originalAsset.lipSync?.projectId === project.id && originalAsset.lipSync.sceneId === sceneId) && originalAsset.id !== selectedFamily && !rememberedFamilies.has(originalAsset.id)) return [];
+    if (!(generation?.projectId === project.id && generation.sceneId === sceneId) && !(originalAsset.googleVideo?.projectId===project.id&&originalAsset.googleVideo.sceneId===sceneId) && !(originalAsset.lipSync?.projectId === project.id && originalAsset.lipSync.sceneId === sceneId) && originalAsset.id !== selectedFamily && !rememberedFamilies.has(originalAsset.id)) return [];
     return [{ asset, originalAsset, generation, selected: asset.id === scene.videoAssetId, isDerivative: asset.id !== originalAsset.id }];
   }).sort((left, right) => {
     // Keep each original next to its derivatives; newest take families first.
-    const date = (right.generation?.createdAt ?? '').localeCompare(left.generation?.createdAt ?? '');
+    const date = (right.generation?.createdAt ?? right.originalAsset.googleVideo?.importedAt ?? '').localeCompare(left.generation?.createdAt ?? left.originalAsset.googleVideo?.importedAt ?? '');
     if (date) return date;
     if (left.originalAsset.id === right.originalAsset.id) return Number(left.isDerivative) - Number(right.isDerivative);
     return project.assets.indexOf(right.originalAsset) - project.assets.indexOf(left.originalAsset);

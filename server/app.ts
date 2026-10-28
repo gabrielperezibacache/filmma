@@ -1,3 +1,4 @@
+import {registerGoogleVideo} from './google-video.js';
 import{registerLibrary,libraryFileHash,uploadFileName}from'./library.js';
 import {reconcileVisualSettings} from '../src/visual-sampling.js';
 import {registerColorReview} from './color-review.js';
@@ -186,6 +187,7 @@ export async function createApp(options: AppOptions = {}) {
   async function enqueue(type: Job['type'], message: string, work: QueuedTask['work'], result?: Job['result'],context?:Job['context']) { return (await enqueueMany([{ type, message, work, result,context }]))[0]!; }
 
   await registerLibrary({app,store,dataDirectory,mediaPath,detectMedia,enqueue});
+  await registerGoogleVideo({app,store,dataDirectory,ffmpeg,ffprobe,mediaPath,detectMedia});
   registerColorReview({app,getProject:()=>store.project,dataDirectory,mediaPath,ffmpeg,ffprobe});
   await registerSoundReview({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
   await registerPlaybackProxies({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});

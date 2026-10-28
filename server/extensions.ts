@@ -204,6 +204,12 @@ export async function importProjectArchive(archivePath: string, context: Omit<Ex
         continuity: generation.continuity && Object.fromEntries(Object.entries(generation.continuity).map(([id, state]) => [characterIds.get(id) ?? id, state])),
       };
     }
+    for(const asset of project.assets)if(asset.googleVideo&&asset.googleVideo.projectId===rawProject.data.id){
+      const meta=asset.googleVideo;
+      const copy=replacements.get(rawProject.data.assets.find(a=>a.googleVideo?.requestId===meta.requestId)?.id??'');
+      if(!copy||await enhancementSha256(copy.path)!==meta.outputSha256)throw fail('El video de Google no coincide con su huella de integridad.');
+      asset.googleVideo={...meta,projectId:project.id,sceneId:sceneIds.get(meta.sceneId)??meta.sceneId,characterIds:meta.characterIds.map(id=>characterIds.get(id)??id),referenceAssetIds:meta.referenceAssetIds.map(id=>remap(id)??id),referenceSha256:Object.fromEntries(Object.entries(meta.referenceSha256).map(([id,sha])=>[remap(id)??id,sha]))};
+    }
     const remapDialogueSnapshot = <T extends {voice:CharacterVoice;characterId?:string;characterSnapshot?:{referenceAssetId?:string}}>(snapshot:T):T=>({...snapshot,voice:remapVoice(snapshot.voice)!,characterId:snapshot.characterId?characterIds.get(snapshot.characterId)??snapshot.characterId:undefined,characterSnapshot:snapshot.characterSnapshot?{...snapshot.characterSnapshot,referenceAssetId:remap(snapshot.characterSnapshot.referenceAssetId)}:undefined});
     for(const asset of project.assets){
       if(asset.voiceReference){const meta=asset.voiceReference;asset.voiceReference={...meta,projectId:project.id,characterId:characterIds.get(meta.characterId)??meta.characterId,sourceAssetId:remap(meta.sourceAssetId)!};}

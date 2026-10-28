@@ -51,7 +51,7 @@ export function projectSavePayload(snapshot:Project,base:Project|null):Project {
  return {...snapshot,library:undefined,
   // Generation provenance is immutable and retained by the server. Do not resend
   // every historical prompt on each edit; keep it in local state and undo history.
-  assets:snapshot.assets.map(({generation: _generation,speech: _speech,lipSync: _lipSync,voiceReference: _voiceReference,...asset})=>asset),
+  assets:snapshot.assets.map(({googleVideo: _googleVideo,generation: _generation,speech: _speech,lipSync: _lipSync,voiceReference: _voiceReference,...asset})=>asset),
   scenes:snapshot.scenes.map(scene=>({...scene,preserveVideoAsset:same&&scene.videoAssetId===base?.scenes.find(item=>item.id===scene.id)?.videoAssetId})),
   tracks:snapshot.tracks?.map(track=>({...track,clips:track.clips.map(clip=>({...clip,preserveAsset:same&&clip.assetId===base?.tracks?.find(item=>item.id===track.id)?.clips.find(item=>item.id===clip.id)?.assetId}))}))};
 }

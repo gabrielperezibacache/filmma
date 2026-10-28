@@ -117,10 +117,13 @@ test('HTTP errors, unexpected media, malformed PCM and network exceptions remain
 test('timeouts and caller cancellation abort cloud requests without output or retry', async () => {
   for (const cancel of [false, true]) {
     let providerAborted = false;
-    const f = await fixture(({ options }) => options.method === 'POST' ? new Promise<Response>((_done, reject) => { options.signal!.addEventListener('abort', () => { providerAborted = true; reject(new Error(KEY)); }, { once: true }); }) : undefined, cancel ? 500 : 20);
+    let markDispatched!:()=>void; const dispatched=new Promise<void>(resolve=>{markDispatched=resolve});
+    const f = await fixture(({ options }) => options.method === 'POST' ? new Promise<Response>((_done, reject) => { markDispatched(); options.signal!.addEventListener('abort', () => { providerAborted = true; reject(new Error(KEY)); }, { once: true }); }) : undefined, cancel ? 500 : 20);
     try {
       await f.provider.connect(KEY); const controller = new AbortController(), pending = f.provider.synthesize({ ...f.input, signal: controller.signal });
-      if (cancel) setTimeout(() => controller.abort(), 10);
+      // Start caller cancellation after dispatch: file reads before the request may
+      // exceed 10 ms under the complete media suite without being a provider fault.
+      if (cancel) { await dispatched; controller.abort(); }
       await assert.rejects(pending, cancel ? /cancelado/ : /tardó demasiado/); assert(providerAborted); await assert.rejects(stat(f.input.outputPath), { code: 'ENOENT' });
       assert.equal(f.calls.filter(c => c.options.method === 'POST').length, 1);
     } finally { await f.close(); }

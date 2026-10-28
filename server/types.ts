@@ -1,3 +1,4 @@
+import {googleVideoProvenanceSchema} from './google-video.js';
 import { z } from 'zod';
 import { CINEMA_VALUES, HISTORICAL_CONTEXT_LIMITS, HISTORICAL_MODES } from '../src/cinematography.js';
 import type { FinishingSummary } from './film-finishing.js';
@@ -56,7 +57,7 @@ export const lipSyncProvenanceSchema=z.object({projectId:id,sceneId:id,lineId:id
 export const assetSchema = z.object({
   id, name: text(250), type: z.enum(['image', 'video', 'audio']), url: localUrl,
   mime: text(100), size: z.number().int().nonnegative(),
-  voiceReference:voiceReferenceSchema.optional(), generation: generationProvenanceSchema.optional(), speech:speechProvenanceSchema.optional(), lipSync:lipSyncProvenanceSchema.optional(),
+  googleVideo:googleVideoProvenanceSchema.optional(), voiceReference:voiceReferenceSchema.optional(), generation: generationProvenanceSchema.optional(), speech:speechProvenanceSchema.optional(), lipSync:lipSyncProvenanceSchema.optional(),
   enhancement: z.object({sourceAssetId:id,preset:z.enum(['clean','upscale','ai-4k']),method:z.enum(['ffmpeg-lanczos','realesrgan-ncnn']),createdAt:text(100),width:z.number().int().positive().max(16384),height:z.number().int().positive().max(16384),duration:z.number().positive().max(86400),fps:z.number().positive().max(240),
     model:text(100).optional(),version:text(100).optional(),modelSha256:z.string().regex(/^[a-f0-9]{64}$/i).optional(),sourceSha256:z.string().regex(/^[a-f0-9]{64}$/i).optional(),outputSha256:z.string().regex(/^[a-f0-9]{64}$/i).optional(),strength:z.number().min(.15).max(.85).optional(),profile:aiProcessingProfileSchema.optional(),tile:z.number().int().positive().max(1024).optional(),temporalMode:text(150).optional(),
     metrics:z.object({wallSeconds:z.number().nonnegative().optional(),secondsPerFrame:z.number().nonnegative().optional(),peakChildRssBytes:z.number().nonnegative().optional(),peakWorkerRssBytes:z.number().nonnegative().optional(),memoryNote:text(500).optional(),qualityNote:text(500).optional(),maxRgbDifferenceBeforeEncoding:z.number().nonnegative().max(255).optional(),meanRgbDifferenceBeforeEncoding:z.number().nonnegative().max(255).optional(),temporal:temporalEnhancementMetricsSchema.optional()}).optional(),
@@ -167,7 +168,7 @@ export function validateEditingReferences(project: Project) {
 }
 export type Job = {
   context?:{projectId?:string;projectName?:string;sceneId?:string;sceneTitle?:string;assetId?:string;assetName?:string};
-  id: string; type: 'generate' | 'export' | 'codex' | 'runtime' | 'enhance' | 'continuity' | 'speech' | 'lipsync' | 'proxy' | 'audio' | 'library';
+  id: string; type: 'generate' | 'export' | 'codex' | 'runtime' | 'enhance' | 'continuity' | 'speech' | 'lipsync' | 'proxy' | 'audio' | 'library' | 'google-video';
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
   progress: number; message: string; createdAt: string; updatedAt: string;
   result?: { qualityReportId?:string;clientRequestId?:string;lineId?:string;stale?:boolean; sceneId?:string;seed?:number;variantIndex?:number;variantCount?:number;continuityReportId?:string;continuityFingerprint?:string; text?: string; assetId?: string; originalAssetId?:string; projectId?:string; finishing?:FinishingSummary; url?: string; filename?: string; proposal?: { projectId: string; scenes: Project['scenes'] } };
