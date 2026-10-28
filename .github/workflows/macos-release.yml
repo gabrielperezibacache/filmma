@@ -33,19 +33,34 @@ jobs:
           fi
           npm version "$VERSION" --no-git-tag-version --allow-same-version
           echo "FILMMA_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Reuse checksum-verified media runtime
+        id: media
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/packaging/reuse-media.mjs
       - name: Portable media runtime and sources
+        if: steps.media.outputs.reused != 'true'
         run: |
           python3 scripts/packaging/build-media-runtime.py
           mkdir -p build/sources
           git clone --filter=blob:none --no-checkout https://code.videolan.org/videolan/x264.git build/sources/x264
           git -C build/sources/x264 archive --format=tar.gz --output=../x264-b35605a.tar.gz b35605ace3ddf7c1a5d67a2eb553f034aef41d55
           git -C build/sources/x264 show b35605ace3ddf7c1a5d67a2eb553f034aef41d55:COPYING > build/sources/x264-COPYING.txt
+      - name: Portable Python and media path
+        run: |
           uv python install 3.12
           echo "$GITHUB_WORKSPACE/build/media-runtime/bin" >> "$GITHUB_PATH"
+      - name: Test runtime memory and locks
+        run: |
+          python3 -m unittest discover -s runtime/tests -p 'test_runtime.py'
+          python3 -m unittest discover -s runtime/tests -p 'test_residency.py'
+          python3 -m unittest discover -s runtime/tests -p 'test_portable_lock.py'
       - name: Test with bounded render concurrency
         run: node --import tsx --test --test-concurrency=2 tests/*.test.ts
       - name: Build Mac installer
         run: npm run desktop:build
+      - name: Smoke test packaged Mac runtime
+        run: node scripts/packaging/smoke-mac.mjs
       - run: npm run release:checksums
       - uses: actions/upload-artifact@v4
         with:
@@ -54,6 +69,7 @@ jobs:
             release/*.dmg
             release/*.zip
             release/SHA256SUMS.txt
+            release/mac-runtime-smoke.json
   windows:
     runs-on: windows-2025
     steps:
@@ -84,9 +100,30 @@ jobs:
           fi
           npm version "$VERSION" --no-git-tag-version --allow-same-version
           echo "FILMMA_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - uses: actions/cache/restore@v4
+        id: codec-cache
+        with:
+          path: |
+            build/media-runtime
+            build/sources
+          key: windows-codecs-${{ hashFiles('scripts/packaging/build-media-windows.sh', 'desktop/media-runtime.json') }}
+      - name: Reuse checksum-verified media runtime
+        if: steps.codec-cache.outputs.cache-hit != 'true'
+        id: media
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/packaging/reuse-media.mjs
       - name: Build portable media runtime from verified sources
+        if: steps.media.outputs.reused != 'true' && steps.codec-cache.outputs.cache-hit != 'true'
         shell: msys2 {0}
         run: bash scripts/packaging/build-media-windows.sh
+      - uses: actions/cache/save@v4
+        if: steps.codec-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            build/media-runtime
+            build/sources
+          key: windows-codecs-${{ hashFiles('scripts/packaging/build-media-windows.sh', 'desktop/media-runtime.json') }}
       - name: Install portable Python
         run: uv python install 3.12
       - name: Build Windows installer
@@ -120,4 +157,4 @@ jobs:
           VERSION="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")').$GITHUB_RUN_NUMBER"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; fi
           node scripts/packaging/checksums.mjs
-          gh release create "v$VERSION" release/*.dmg release/*.zip release/*.exe release/SHA256SUMS.txt release/windows-smoke.json --title "Filmma $VERSION" --notes "macOS Apple Silicon + Windows x64. Instaladores sin firma de editor ni notarización. Incluyen multimedia y conservan proyectos y modelos externos. Windows: motores CUDA externos documentados; Metal y MLX requieren Mac."
+          gh release create "v$VERSION" release/*.dmg release/*.zip release/*.exe release/SHA256SUMS.txt release/windows-smoke.json release/mac-runtime-smoke.json --title "Filmma $VERSION" --notes "macOS Apple Silicon + Windows x64. Instaladores sin firma de editor ni notarización. Incluyen multimedia y conservan proyectos y modelos externos. Windows: motores CUDA externos documentados; Metal y MLX requieren Mac."

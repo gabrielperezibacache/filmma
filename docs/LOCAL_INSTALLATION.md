@@ -9,6 +9,8 @@ Revisión de documentación oficial: **28 de octubre de 2026**. Filmma conserva 
 | Mac Apple Silicon, 32–48 GiB | H3 Metal BF16 con SSD streaming; pruebas cortas | Integrado; probado en M4 Max 36 GB |
 | Mac Apple Silicon, 64 GiB | SSD como inicio; RAM residente para una prueba breve, vigilando presión | Selector integrado; RAM residente pendiente de validación en ese equipo |
 | Mac Apple Silicon, 96–128+ GiB | Transformador residente en RAM; comenzar con el perfil breve | Integrado; automático desde 96 GiB, todavía requiere prueba local |
+| Windows/Linux NVIDIA, 64+ GiB RAM y 24–32 GiB VRAM | ComfyUI H3 pruned INT8 ConvRot + codificador cuantizado | Opción externa más compacta; comprobar CUDA y workflow |
+| Windows/Linux NVIDIA, 48+ GiB RAM y 12–16 GiB VRAM | ComfyUI H3 GGUF Q4 + codificador cuantizado | Experimental; margen de Filmma, no mínimo oficial |
 | Windows/Linux NVIDIA, 96+ GiB RAM y 24–32 GiB VRAM | Diffusers, INT8 y offload por bloques desde RAM | Receta externa; no motor integrado ni inferencia comprobada por Filmma |
 | Windows/Linux NVIDIA, 96+ GiB RAM y 12–16 GiB VRAM | Misma receta, VAE también descargado de GPU, lienzo pequeño | Experimental y mucho más lento; receta externa |
 | Windows/Linux NVIDIA, 192+ GiB RAM y GPU 80 GiB | Diffusers BF16 con offload de componentes | Receta externa; 192 GiB es margen de planificación de Filmma |
@@ -68,6 +70,16 @@ python -m pip install 'git+https://github.com/huggingface/diffusers.git@40e551a4
 Después abre la receta oficial de **Memory → consumer card** enlazada arriba, elige **un solo workflow** (`t2va`, `fl2va` o `ref2va`) y una carpeta nueva para la caché (`HF_HOME=/ruta/con/espacio/filmma-h3-diffusers`). El formato Diffusers no es intercambiable con la vista FL2VA/Ref2VA del motor Metal: **no sobrescribas el SSD actual**. La primera carga descarga componentes y puede tener un pico de RAM superior a su tamaño cuantizado. Revisa la licencia, espacio, RAM de WSL y compatibilidad de TorchAO antes de ejecutarla. La revisión de Diffusers está fijada; registra con `pip freeze` las versiones realmente resueltas y prueba antes de actualizarlas.
 
 No se proporciona una descarga INT4/GGUF como si estuviera verificada: el adaptador h3.c integrado usa BF16 y estas variantes requieren un motor y una prueba propios. INT8 puede cambiar detalle e identidad; usa las mismas referencias y compara varios fotogramas antes de dar la toma por buena.
+
+## Variantes cuantizadas más compactas
+
+**ComfyUI es la primera alternativa externa que evaluaría en un PC de consumo.** Instala la distribución oficial correspondiente al equipo y actualiza sus plantillas; abre el workflow MiniMax H3 de la [guía oficial de Comfy](https://docs.comfy.org/tutorials/video/minimax/minimax-h3). Descarga cada componente desde [Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3): DiT a `models/diffusion_models`, codificador a `models/text_encoders` y ambos VAE a `models/vae`, siguiendo los nombres de la plantilla. Para CUDA 13 compatible, Comfy-Org prioriza INT8 ConvRot frente a FP8 scaled. Elige **FL2VA** para imagen inicial/final o **Ref2VA** para referencias ordenadas; conserva ambos modos separados.
+
+Para menos VRAM, el [índice de integraciones del repositorio de MiniMax](https://github.com/MiniMax-AI/awesome-minimax-h3-integration#recipes-vram) recoge GGUF Q4 con un codificador cuantizado y nodos adicionales. Es un índice comunitario, no una certificación. Las cifras de tamaño son **por componente**; el nodo, el codificador, los VAE y las activaciones también consumen memoria. Filmma propone 48 GiB RAM/12 GiB VRAM como reserva conservadora para explorar esta ruta; no afirma que sea un mínimo medido ni garantiza compatibilidad. Evita instalar nodos desconocidos sin revisar su código; guarda el workflow y las revisiones realmente usadas con cada prueba.
+
+En Mac existe [PipeNetwork/minimax-h3-mlx](https://github.com/PipeNetwork/minimax-h3-mlx): publica DiT de 4/6/8 bits, pero su codificador aún ronda 50 GB en BF16. La cifra de 11,5 GB residente de 4 bits **no describe todo el pipeline**. El propio proyecto distingue el recorrido de texto probado de la ruta de keyframes todavía sin prueba completa. Por eso no lo activo como reemplazo para tu Mac de 36 GB ni para continuidad de personajes. Es una alternativa de investigación para Macs de más memoria. Los tiempos publicados por sus autores no se extrapolan al M4 Max.
+
+Las variantes pruned/GGUF, INT8 de Diffusers y el BF16 de h3.c son formatos diferentes. Ninguna se instala encima del directorio actual. Guarda las descargas nuevas en una carpeta independiente, respeta la licencia y valida un plano breve con las referencias originales antes de invertir en una toma larga.
 
 ## Otros equipos y regreso al guion
 

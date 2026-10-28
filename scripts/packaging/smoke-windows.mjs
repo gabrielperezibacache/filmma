@@ -10,6 +10,7 @@ const destination=join(work,'installed');
 execFileSync(resolve('release',installer),['/S',`/D=${destination}`],{timeout:180000});
 const exe=join(destination,'Filmma.exe');await access(exe);
 const resources=join(destination,'resources'),bin=join(resources,'bin');
+execFileSync(join(resources,'python/python.exe'),['-m','unittest','discover','-s','runtime/tests','-p','test_portable_lock.py'],{stdio:'inherit'});
 const movie=join(work,'original.mp4');
 execFileSync(join(bin,'ffmpeg.exe'),['-v','error','-f','lavfi','-i','testsrc2=size=320x180:rate=24:duration=1','-c:v','libx264','-threads','2',movie]);
 const media=JSON.parse(execFileSync(join(bin,'ffprobe.exe'),['-v','error','-count_frames','-show_streams','-of','json',movie],{encoding:'utf8'}));

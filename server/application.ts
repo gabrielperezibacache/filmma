@@ -81,7 +81,7 @@ export async function registerApplicationRoutes(options:{app:Express;root:string
   idle();const {id}=z.object({id:z.string().regex(/^[0-9]+$/)}).strict().parse(req.body);const directory=join(dataDirectory,'application-updates',id),record=JSON.parse(await readFile(join(directory,'verified.json'),'utf8'));
   if(basename(record.filename)!==record.filename||!installerPattern(process.platform,process.arch)?.test(record.filename))throw fail('El instalador guardado no es válido.');
   const path=resolve(directory,record.filename),info=await lstat(path);if(!info.isFile()||info.isSymbolicLink()||await sha(path)!==record.sha256)throw fail('El instalador cambió. Descárgalo de nuevo.');
-  if(options.opener)await options.opener(path);else{const r=await runProcess(process.platform==='win32'?path:'open',process.platform==='win32'?[]:[path],{timeoutMs:process.platform==='win32'?600000:10000});if(r.code!==0)throw fail('No se pudo abrir el instalador.')}res.json({ok:true});
+  if(options.opener)await options.opener(path);else if(process.platform==='win32'){await new Promise<void>((done,reject)=>{const installer=spawn(path,[],{detached:true,stdio:'ignore',shell:false});installer.once('error',reject);installer.once('spawn',()=>{installer.unref();done()})})}else{const r=await runProcess('open',[path],{timeoutMs:10000});if(r.code!==0)throw fail('No se pudo abrir el instalador.')}res.json({ok:true});
  }));
  return{preferences:prefs,metadata};
 }

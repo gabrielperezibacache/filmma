@@ -12,4 +12,4 @@ def residency_plan(hardware, requested='auto', profile='conservative'):
         raise ValueError('RAM residente requiere Apple Silicon con al menos 64 GiB y el perfil breve. Se recomiendan 96 GiB. Los perfiles largos/HD conservan SSD streaming y sus límites de memoria.')
     return {'requested': requested, 'effective': mode, 'ssdStreaming': mode == 'ssd',
             'ramEligible': eligible, 'minimumRamGB': 64, 'recommendedRamGB': 96,
-            'note': 'El transformador permanece residente; el codificador y la carga inicial aún leen el disco. No garantiza cero intercambio del sistema.'}
+            'note': ('El transformador permanece residente; el codificador y la carga inicial aún leen el disco. No garantiza cero intercambio del sistema.' if mode == 'ram' else 'Pesos BF16 por bloques desde el SSD; se conservan los límites de memoria y las referencias.')}

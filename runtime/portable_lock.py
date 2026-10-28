@@ -8,8 +8,7 @@ else:
 def acquire(handle, blocking=False):
     if os.name != 'nt':
         return fcntl.flock(handle, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
-    handle.seek(0)
-    if not handle.read(1):
+    if os.fstat(handle.fileno()).st_size == 0:
         handle.write('0')
         handle.flush()
     handle.seek(0)
