@@ -1,6 +1,6 @@
 """Build portable FFmpeg/FFprobe for the Mac installer; no machine-wide install."""
 from pathlib import Path
-import hashlib,json,os,shutil,subprocess,urllib.request
+import hashlib,json,os,shutil,subprocess
 ROOT=Path(__file__).resolve().parents[2]
 WORK=Path(os.environ.get('FILMMA_MEDIA_BUILD','/private/tmp/filmma-media-runtime-arm64'));PREFIX=WORK/'prefix'
 VERSION='8.1.2'
@@ -8,7 +8,17 @@ WORK.mkdir(parents=True,exist_ok=True)
 archive=WORK/f'ffmpeg-{VERSION}.tar.xz'
 cached=ROOT/'build/media-runtime'/archive.name
 if not archive.exists() and cached.exists():shutil.copyfile(cached,archive)
-if not archive.exists():urllib.request.urlretrieve(f'https://ffmpeg.org/releases/ffmpeg-{VERSION}.tar.xz',archive)
+if not archive.exists():
+ # macOS runners can reset Python/OpenSSL TLS before the HTTP request. Use
+ # system curl with bounded retries, HTTPS-only redirects and an atomic file.
+ # The pinned source receipt below remains mandatory before tar or make.
+ partial=archive.with_name(archive.name+'.part')
+ for host in ('ffmpeg.org','www.ffmpeg.org'):
+  result=subprocess.run(['curl','--fail','--location','--silent','--show-error','--proto','=https','--proto-redir','=https','--retry','3','--retry-all-errors','--connect-timeout','20','--max-time','90','--retry-max-time','120','--output',str(partial),f'https://{host}/releases/ffmpeg-{VERSION}.tar.xz'],timeout=240)
+  if result.returncode==0:
+   partial.replace(archive)
+   break
+ else:raise RuntimeError('FFmpeg source download failed from both official HTTPS hosts; no source was extracted.')
 digest=hashlib.sha256(archive.read_bytes()).hexdigest()
 receipt=ROOT/'desktop/media-runtime.json'
 if receipt.exists():assert json.loads(receipt.read_text())['sourceSha256']==digest
