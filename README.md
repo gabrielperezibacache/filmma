@@ -96,3 +96,6 @@ Las entregas [sexta](docs/SIXTH-DELIVERY.md) y [séptima](docs/SEVENTH-DELIVERY.
 
 
 La [octava entrega](docs/EIGHTH-DELIVERY.md) amplía Continuidad con tres o cinco instantes por plano, comparaciones internas y entre apariciones, zonas por muestra y reutilización de revisiones vigentes. Apple Vision local aporta señales de rostro, vestuario y objetos con revisión humana; conserva fuentes, guion y personajes.
+
+
+La [novena entrega](docs/NINTH-DELIVERY.md) añade organización de biblioteca con etiquetas y favoritos, procedencia y usos vinculados al guion/personajes, comprobación SHA256 y reconexión exclusiva de copias idénticas. Actividad incorpora filtros, contexto y acceso a resolver fallos conservando originales y resultados.

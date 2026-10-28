@@ -11,19 +11,24 @@ export function sameProjectContent(a:Project,b:Project){
 export function mergeProjectMedia(local:Project, remote:Project, base:Project, allowClips=true):Project {
  if(local.id!==remote.id||local.id!==base.id)return local;
  const extra=remote.assets.filter(asset=>!local.assets.some(item=>item.id===asset.id));
- let changed=extra.length>0;
+ const libraryChanged=JSON.stringify(local.library)!==JSON.stringify(remote.library);
+ let changed=extra.length>0||libraryChanged;
  const scenes=local.scenes.map(scene=>{
   const previous=base.scenes.find(item=>item.id===scene.id), next=remote.scenes.find(item=>item.id===scene.id);
   const takeAssetIds=[...new Set([...(scene.takeAssetIds??[]),...(next?.takeAssetIds??[])])];
   const remembered=takeAssetIds.length!==(scene.takeAssetIds??[]).length?{takeAssetIds}:{};
   if('takeAssetIds' in remembered)changed=true;
+  const references:Partial<Project['scenes'][number]>={};
+  if(allowClips&&previous&&next)for(const field of ['assetId','endAssetId']as const)if(scene[field]===previous[field]&&scene[field]!==next[field]){references[field]=next[field];changed=true}
+
   if(allowClips&&previous&&next&&!scene.clearVideoAsset&&scene.videoAssetId===previous.videoAssetId&&scene.videoAssetId!==next.videoAssetId){
-   changed=true;return {...scene,...remembered,videoAssetId:next.videoAssetId,
+   changed=true;return {...scene,...references,...remembered,videoAssetId:next.videoAssetId,
     ...((scene.trimStart??0)===(previous.trimStart??0)?{trimStart:next.trimStart}:{}),
     ...((scene.speed??1)===(previous.speed??1)?{speed:next.speed}:{})};
   }
-  return 'takeAssetIds' in remembered?{...scene,...remembered}:scene;
+  return 'takeAssetIds' in remembered||Object.keys(references).length?{...scene,...references,...remembered}:scene;
  });
+ const characters=local.characters.map(character=>{const previous=base.characters.find(c=>c.id===character.id),next=remote.characters.find(c=>c.id===character.id);if(!allowClips||!previous||!next)return character;const patch:Partial<Project['characters'][number]>={};for(const field of ['assetId','referenceAssetIds']as const)if(JSON.stringify(character[field])===JSON.stringify(previous[field])&&JSON.stringify(character[field])!==JSON.stringify(next[field])){Object.assign(patch,{[field]:next[field]});changed=true}return Object.keys(patch).length?{...character,...patch}:character});
  const tracks=local.tracks?.map(track=>{
   const oldTrack=base.tracks?.find(item=>item.id===track.id),newTrack=remote.tracks?.find(item=>item.id===track.id);
   if(!allowClips||!oldTrack||!newTrack)return track;
@@ -37,13 +42,13 @@ export function mergeProjectMedia(local:Project, remote:Project, base:Project, a
   });
   return changedTrack?{...track,clips}:track;
  });
- return changed?{...local,assets:[...local.assets,...extra],scenes,tracks}:local;
+ return changed?{...local,assets:[...local.assets,...extra],library:remote.library,scenes,characters,tracks}:local;
 }
 
 /** Tell the server which selections this edit did not intentionally replace. */
 export function projectSavePayload(snapshot:Project,base:Project|null):Project {
  const same=base?.id===snapshot.id;
- return {...snapshot,
+ return {...snapshot,library:undefined,
   // Generation provenance is immutable and retained by the server. Do not resend
   // every historical prompt on each edit; keep it in local state and undo history.
   assets:snapshot.assets.map(({generation: _generation,speech: _speech,lipSync: _lipSync,voiceReference: _voiceReference,...asset})=>asset),

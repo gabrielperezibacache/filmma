@@ -1,3 +1,4 @@
+import{registerLibrary,libraryFileHash,uploadFileName}from'./library.js';
 import {reconcileVisualSettings} from '../src/visual-sampling.js';
 import {registerColorReview} from './color-review.js';
 import {registerSoundReview} from './sound-review.js';
@@ -168,21 +169,23 @@ export async function createApp(options: AppOptions = {}) {
       }
     } finally { working[lane] = false; }
   }
-  async function enqueueMany(entries: { type: Job['type']; message: string; work: QueuedTask['work']; result?: Job['result'] }[]) {
+  async function enqueueMany(entries: { type: Job['type']; message: string; work: QueuedTask['work']; result?: Job['result'];context?:Job['context'] }[]) {
     if (closing) throw Object.assign(new Error('Filmma está cerrando. Vuelve a abrirlo antes de crear trabajos.'), { status: 409 });
     if (entries.length + queues.work.length + queues.runtime.length + queues.continuity.length + running.size > 20) throw Object.assign(new Error('La secuencia supera los 20 trabajos disponibles en la cola. Espera a que termine un trabajo o genera menos planos.'), { status: 409 });
     // Reserve all slots synchronously: a batch cannot be partly accepted by another request.
-    const jobs = entries.map(({ type, message, work, result }) => {
+    const jobs = entries.map(({ type, message, work, result,context:providedContext }) => {
       const lane: QueueLane = type === 'runtime' ? 'runtime' : type === 'continuity' ? 'continuity' : 'work';
-      const job: Job = { id: randomUUID(), type, status: 'queued', progress: 0, message, createdAt: now(), updatedAt: now(), ...(result ? { result } : {}) };
+      const projectId=result?.projectId,context=providedContext??(projectId?{projectId,projectName:store.project.id===projectId?store.project.name:undefined,sceneId:result?.sceneId,sceneTitle:store.project.id===projectId?store.project.scenes.find(s=>s.id===result?.sceneId)?.title:undefined,assetId:result?.originalAssetId??result?.assetId,assetName:store.project.id===projectId?store.project.assets.find(a=>a.id===(result?.originalAssetId??result?.assetId))?.name:undefined}:undefined);
+      const job: Job = { context,id: randomUUID(), type, status: 'queued', progress: 0, message, createdAt: now(), updatedAt: now(), ...(result ? { result } : {}) };
       queues[lane].push({ job, work }); return job;
     });
     store.jobs.push(...jobs); store.jobs = store.jobs.slice(-300); await store.save();
     for (const lane of ['work', 'runtime', 'continuity'] as const) setImmediate(() => void drain(lane).catch((error) => console.error('Error de cola:', errorMessage(error))));
     return jobs;
   }
-  async function enqueue(type: Job['type'], message: string, work: QueuedTask['work'], result?: Job['result']) { return (await enqueueMany([{ type, message, work, result }]))[0]!; }
+  async function enqueue(type: Job['type'], message: string, work: QueuedTask['work'], result?: Job['result'],context?:Job['context']) { return (await enqueueMany([{ type, message, work, result,context }]))[0]!; }
 
+  await registerLibrary({app,store,dataDirectory,mediaPath,detectMedia,enqueue});
   registerColorReview({app,getProject:()=>store.project,dataDirectory,mediaPath,ffmpeg,ffprobe});
   await registerSoundReview({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
   await registerPlaybackProxies({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
@@ -282,8 +285,9 @@ export async function createApp(options: AppOptions = {}) {
     if (id === store.project.id) return res.json({ project: store.project });
     const project = await previousProject(id);
     if (!project) return res.status(404).json({ error: 'No se encontró un respaldo válido de ese proyecto.' });
-    try { await Promise.all(project.assets.map(mediaPath)); }
-    catch { return res.status(409).json({ error: 'El respaldo tiene archivos que ya no están disponibles. Se ha conservado el proyecto abierto.' }); }
+    const options=z.object({allowMissing:z.boolean().optional()}).strict().parse(req.body??{}),missingAssets:string[]=[];
+    for(const asset of project.assets)try{await mediaPath(asset)}catch{missingAssets.push(asset.id)}
+    if(missingAssets.length&&!options.allowMissing)return res.status(409).json({error:'El respaldo tiene archivos no disponibles. Usa Abrir para reconectar en Mis películas; se conserva el proyecto actual.',missingAssets});
     await backupProject(store.project);
     store.project = project; await store.save();
     res.json({ project: store.project });
@@ -296,6 +300,7 @@ export async function createApp(options: AppOptions = {}) {
     const previous = changingProject ? await previousProject(input.id) : store.project;
     const known = new Map([...store.project.assets, ...(previous?.assets ?? [])].map((asset) => [asset.id, asset]));
     for (const asset of input.assets) { const existing = known.get(asset.id); if (!existing || existing.url !== asset.url || existing.type !== asset.type) return res.status(400).json({ error: 'El proyecto contiene un recurso desconocido. Importa el archivo primero.' }); }
+    input.library=previous?.library;
     input.assets = (previous?.assets ?? input.assets.map((asset) => known.get(asset.id)!)).map((asset) => ({ ...asset, name: input.assets.find((item) => item.id === asset.id)?.name ?? asset.name }));
     const characters = new Set(input.characters.map((item) => item.id));
     const changedClipSelections: string[] = [];
@@ -356,12 +361,13 @@ export async function createApp(options: AppOptions = {}) {
         if (!media) throw Object.assign(new Error(`Formato no admitido: ${file.originalname}. Usa imágenes, videos o audio; los SVG no se aceptan como archivos subidos.`), { status: 400 });
         const id = randomUUID(); const filename = `${id}.${media.extension}`; const destination = join(dataDirectory, 'media', filename);
         await rename(file.path, destination); createdPaths.push(destination);
-        assets.push({ id, name: basename(file.originalname).slice(0, 250), type: media.type, url: `/api/media/${filename}`, mime: media.mime, size: file.size });
+        assets.push({ id, name: uploadFileName(file.originalname), type: media.type, url: `/api/media/${filename}`, mime: media.mime, size: file.size });
       }
       assertDestination();
       const target=store.project,previousUpdatedAt=target.updatedAt;
+      const priorLibrary=target.library;const entries={...target.library};for(let n=0;n<assets.length;n++){const asset=assets[n]!;const checked=await libraryFileHash(join(dataDirectory,'media',basename(asset.url)));entries[asset.id]={tags:[],favorite:false,sha256:checked.sha256,fileSize:checked.size,observedAt:now(),imported:{name:uploadFileName(files[n]!.originalname),at:now()}}}assertDestination();if(store.project!==target)throw Object.assign(new Error('El proyecto cambió durante la importación. Vuelve a importar en la película elegida.'),{status:409});target.library=entries;
       target.assets.push(...assets); target.updatedAt = now();
-      try{await store.save();}catch(error){const createdIds=new Set(assets.map(asset=>asset.id));target.assets=target.assets.filter(asset=>!createdIds.has(asset.id));target.updatedAt=previousUpdatedAt;throw error;}
+      try{await store.save();}catch(error){const createdIds=new Set(assets.map(asset=>asset.id));target.assets=target.assets.filter(asset=>!createdIds.has(asset.id));target.library=priorLibrary;target.updatedAt=previousUpdatedAt;throw error;}
       res.status(201).json({ assets });
     } catch (error) {
       await Promise.all(createdPaths.map((path) => rm(path, { force: true })));
@@ -750,9 +756,9 @@ export async function createApp(options: AppOptions = {}) {
         if (target.assets.length >= 2000) throw new Error('La biblioteca alcanzó 2000 recursos. Conserva la copia original y organiza el proyecto antes de reintentar.');
         target.assets.push(derivative); target.updatedAt = now();
         if (target === store.project) await store.save(); else await backupProject(target);
-        return { assetId: id, url: derivative.url, text: `Copia verificada: ${metadata.width} × ${metadata.height}, ${metadata.frames} fotogramas, ${metadata.duration.toFixed(3)} s. Original conservado. ${input.preset === 'ai-4k' ? `Detalle con IA local, perfil ${input.processingProfile === 'restore' ? 'restauración con color conservado' : 'conservador'}; revisa rostro y vestuario antes de aplicar la versión.` : 'Reescalado y filtros locales; no reconstrucción mediante IA.'}` };
+        return {projectId:snapshot.id,originalAssetId:source.id, assetId: id, url: derivative.url, text: `Copia verificada: ${metadata.width} × ${metadata.height}, ${metadata.frames} fotogramas, ${metadata.duration.toFixed(3)} s. Original conservado. ${input.preset === 'ai-4k' ? `Detalle con IA local, perfil ${input.processingProfile === 'restore' ? 'restauración con color conservado' : 'conservador'}; revisa rostro y vestuario antes de aplicar la versión.` : 'Reescalado y filtros locales; no reconstrucción mediante IA.'}` };
       } catch (error) { await rm(destination, { force: true }); throw error; }
-    });
+    },undefined,{projectId:snapshot.id,projectName:snapshot.name,assetId:source.id,assetName:source.name});
     res.status(202).json({ job });
   }));
 
@@ -799,7 +805,7 @@ export async function createApp(options: AppOptions = {}) {
         if (error instanceof SyntaxError || error instanceof z.ZodError) throw new Error('Codex devolvió una propuesta incompleta o con formato inválido. El guion actual se conserva; puedes volver a intentarlo.');
         throw error;
       } finally { await rm(folder, { recursive: true, force: true }); }
-    });
+    },undefined,{projectId:snapshot.id,projectName:snapshot.name,sceneId:scene?.id,sceneTitle:scene?.title});
     res.status(202).json({ job });
   }));
 

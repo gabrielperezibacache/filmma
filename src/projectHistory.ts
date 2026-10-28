@@ -19,7 +19,7 @@ export function restoreHistorySnapshot(current: Project, expected: Project, targ
     const takeAssetIds=[...new Set([...(scene.takeAssetIds??[]),...(live?.takeAssetIds??[])])];
     return { ...scene, ...(takeAssetIds.length?{takeAssetIds}:{}), videoAssetId, clearVideoAsset: !videoAssetId && (!!pendingClear || !!live?.videoAssetId || (edited && !!from?.videoAssetId)) };
   });
-  return { ...target, assets, scenes, updatedAt: new Date().toISOString() };
+  return { ...target,...(target.library||current.library?{library:{...target.library,...current.library}}:{}), assets, scenes, updatedAt: new Date().toISOString() };
 }
 
 export function recordHistory(history: ProjectHistory, before: Project, after: Project, group?: string, time = Date.now()): ProjectHistory {

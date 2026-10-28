@@ -12,6 +12,7 @@ El plan original agrupa proyectos, flujo guiado, guion, personajes, dirección, 
 | Sexta | Sonoridad medida, normalización local, atenuación de música ligada a voces y apariencia/división manual de subtítulos | [Sexta entrega](SIXTH-DELIVERY.md). El visor no simula la normalización del máster; los tiempos por palabras son manuales. |
 | Séptima | Scopes SDR de muestras, comparación entre planos y contexto de continuidad junto al color | [Séptima entrega](SEVENTH-DELIVERY.md). Muestras reducidas, sin capas ni certificación HDR o identidad. |
 | Octava | Tres/cinco instantes por plano, intervalos internos, comparación por aspecto y revisión selectiva | [Octava entrega](EIGHTH-DELIVERY.md). Señales locales heurísticas; no reconocimiento de identidad ni análisis exhaustivo. |
+| Novena | Biblioteca con etiquetas, favoritos, usos, procedencia, integridad y reconexión exacta; actividad con contexto y filtros | [Novena entrega](NINTH-DELIVERY.md). Sin huella conocida no se inventa identidad de archivo; no se reintenta inferencia automáticamente. |
 
 ## Apartados pendientes del plan original
 
@@ -20,7 +21,7 @@ El plan original agrupa proyectos, flujo guiado, guion, personajes, dirección, 
 - Sonido y subtítulos avanzados: comparación de interpretaciones y alineación fonética automática. La normalización, atenuación, estilos, zonas seguras y división manual por palabras están entregados. Una transcripción real debe distinguirse del texto preparado desde el guion.
 - Color y acabado avanzados: evaluación de LUT y gestión de color HDR; pruebas temporales de restauración y reescalado sobre varios fotogramas. Los scopes SDR de muestras y la comparación entre planos están entregados.
 - Continuidad visual avanzada: seguimiento de regiones con movimiento y oclusiones, comparación contextual ampliada y evaluación sobre secuencias reales. El muestreo múltiple y la revisión selectiva están entregados; no acreditan reconocimiento de identidad.
-- Biblioteca/actividad: etiquetas, favoritos, procedencia, reconexión de originales trasladados y recuperación de trabajos.
+- Biblioteca/actividad avanzadas: colecciones y organización masiva, localización asistida de copias en carpetas elegidas y recuperación revisable de trabajos compatibles. Etiquetas, favoritos, procedencia, reconexión exacta y diagnóstico contextual están entregados.
 - Exportación: perfiles de cine/publicidad/redes, evaluación de másteres y aceleración real del Mac.
 - Aplicación Mac: revisión integral de idiomas y accesibilidad, recuperación de actualizaciones fallidas y notarización con una identidad Apple disponible.
 - Motores/calidad y Codex: afinar perfiles con pruebas reproducibles, ampliar propuestas revisables y evaluar herramientas avanzadas sólo cuando el adaptador local las admita.

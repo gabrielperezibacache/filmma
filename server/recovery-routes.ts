@@ -26,7 +26,7 @@ export function registerRecoveryRoutes(o:{app:Express;store:Store;getJobs:()=>{s
   for(const asset of point.project.assets)try{await o.mediaPath(asset)}catch{throw fail('Hay un original no disponible. Reconecta su disco antes de recuperar; la película actual se conserva.');}
   const current=structuredClone(store.project),known=new Map(current.assets.map(a=>[a.id,a]));
   for(const asset of point.project.assets){const live=known.get(asset.id);if(live&&(live.url!==asset.url||live.type!==asset.type))throw fail('Un recurso cambió de identidad. La película actual se conserva.');}
-  const restored={...point.project,assets:[...current.assets,...point.project.assets.filter(a=>!known.has(a.id))],updatedAt:new Date().toISOString()};validateEditingReferences(restored);
+  const restored={...point.project,...(point.project.library||current.library?{library:{...point.project.library,...current.library}}:{}),assets:[...current.assets,...point.project.assets.filter(a=>!known.has(a.id))],updatedAt:new Date().toISOString()};validateEditingReferences(restored);
   assertCurrent();await store.checkpoint('Estado anterior a la recuperación','before-restore');assertCurrent();
   assertCurrent();store.project=restored;o.onRestore();
   try{await store.save({reason:'restored',label:point.label||'Versión recuperada',force:true})}catch(error){if(store.project===restored)store.project=current;throw error}

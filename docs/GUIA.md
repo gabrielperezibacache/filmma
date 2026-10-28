@@ -305,3 +305,12 @@ En **Montaje → Ajustes del plano → Acabado**, abre **Scopes y comparación e
 Abre **Continuidad**, elige tres o cinco instantes por plano y analiza. Las miniaturas distinguen pares entre planos e intervalos dentro de la toma; selecciona Rostro, Vestuario u Objetos. Ajusta zona e instante por muestra y vuelve a analizar. **Lo previsto en el guion** mantiene la acción, el diálogo y el estado del personaje junto a las imágenes.
 
 **Analizar cambios** conserva las revisiones de apariciones idénticas y vuelve a analizar las afectadas. Revisa todos sus intervalos, añade una nota cuando haya diferencias o incertidumbre y confirma el alcance antes de exportar. Un informe nuevo siempre necesita confirmación final. Los originales y los informes anteriores se conservan. Consulta [Octava entrega y límites del análisis local](EIGHTH-DELIVERY.md).
+
+
+## Material y actividad · novena entrega
+
+En **Archivos**, busca por nombre, etiqueta, plano o personaje. Marca favoritos y abre una ficha para guardar etiquetas, seguir la procedencia y consultar **Dónde se usa**. Los accesos conservan el plano o personaje relacionado. Las etiquetas no cambian la continuidad aprobada.
+
+Pulsa **Comprobar archivos** para registrar o verificar sus huellas locales. Si falta una copia interna y hay huella conocida, elige **Original para reconectar**: sólo se acepta una copia idéntica y nunca se sobrescribe material existente. Para entrar en un proyecto con ausencias, usa **Mis películas → Abrir para reconectar**. Importar ya conserva una copia propia; mover el archivo externo no elimina esa copia.
+
+En **Actividad**, filtra por película, estado o proceso. Los trabajos con fallo ofrecen su contexto para resolverlos; el diagnóstico completo y los resultados están en el desplegable. Los registros antiguos sin película se conservan en **Todo el estudio**. Consulta [Novena entrega, pasos y límites](NINTH-DELIVERY.md).
