@@ -1,3 +1,4 @@
+import {reconcileEditorMetadata} from './editor-metadata';
 import type { Asset, ClipAudio, EditorTrack, Project, TimelineClip } from './types';
 import {removeDialogueLine} from './dialogue-removal';
 import { buildTimeline } from './timeline';
@@ -45,11 +46,12 @@ export function removeSceneAttachments(project: Project, sceneId: string): Proje
   // before removing the narrative line, so embedded dialogue cannot be orphaned.
   project=(project.dialogueLines??[]).filter(line=>line.sceneId===sceneId).reduce((p,line)=>removeDialogueLine(p,line.id),project);
   const removedLines=new Set((project.dialogueLines??[]).filter(line=>line.sceneId===sceneId).map(line=>line.id));
-  return { ...project,
+  return reconcileEditorMetadata({ ...project,
+    markers:project.markers?.filter(m=>m.sceneId!==sceneId),
     tracks: project.tracks?.map((track) => ({ ...track, clips: track.clips.filter((clip) => clip.sceneId !== sceneId && !removedLines.has(clip.dialogueLineId??'')) })),
     subtitleCues: project.subtitleCues?.filter((cue) => cue.sceneId !== sceneId),
     dialogueLines: project.dialogueLines?.filter(line => line.sceneId !== sceneId),
-  };
+  });
 }
 
 function attachmentId(id: string, sceneId: string, used: Set<string>) {
@@ -71,9 +73,15 @@ export function duplicateSceneAttachments(project: Project, sourceSceneId: strin
   const lineIds=new Set((project.dialogueLines??[]).map(line=>line.id));
   const lineMap=new Map(sourceLines.map(line=>[line.id,attachmentId(line.id,newSceneId,lineIds)]));
   const used = new Set([...(project.tracks ?? []).flatMap((track) => track.clips.map((clip) => clip.id)), ...(project.subtitleCues ?? []).map((cue) => cue.id)]);
+  const clipMap=new Map(clips.filter(c=>c.sceneId===sourceSceneId).map(c=>[c.id,attachmentId(c.id,newSceneId,used)]));
+  const markerIds=new Set(project.markers?.map(m=>m.id)??[]),groupIds=new Set(project.clipGroups?.map(g=>g.id)??[]);
+  const copiedGroups=(project.clipGroups??[]).flatMap(g=>{const ids=g.clipIds.filter(id=>clipMap.has(id)).map(id=>clipMap.get(id)!);return ids.length>=2?[{...g,id:attachmentId(g.id,newSceneId,groupIds),clipIds:ids}]:[]});
+  if((project.clipGroups?.length??0)+copiedGroups.length>100||(project.markers?.length??0)+(project.markers?.filter(m=>m.sceneId===sourceSceneId).length??0)>1000)throw Error('La copia superaría el límite de grupos o marcadores.');
   return { ...project,
+    ...(project.clipGroups?{clipGroups:[...project.clipGroups,...copiedGroups]}:{}),
+    ...(project.markers?{markers:[...project.markers,...project.markers.filter(m=>m.sceneId===sourceSceneId).map(m=>({...m,id:attachmentId(m.id,newSceneId,markerIds),sceneId:newSceneId}))]}:{}),
     dialogueLines: project.dialogueLines ? [...project.dialogueLines,...sourceLines.map(line=>({...line,id:lineMap.get(line.id)!,sceneId:newSceneId}))] : undefined,
-    tracks: project.tracks?.map((track) => ({ ...track, clips: [...track.clips, ...track.clips.filter((clip) => clip.sceneId === sourceSceneId).map((clip) => ({ ...clip, id: attachmentId(clip.id, newSceneId, used), sceneId: newSceneId, dialogueLineId: clip.dialogueLineId ? lineMap.get(clip.dialogueLineId)??clip.dialogueLineId : undefined }))] })),
+    tracks: project.tracks?.map((track) => ({ ...track, clips: [...track.clips, ...track.clips.filter((clip) => clip.sceneId === sourceSceneId).map((clip) => ({ ...clip, id: clipMap.get(clip.id)!, sceneId: newSceneId, dialogueLineId: clip.dialogueLineId ? lineMap.get(clip.dialogueLineId)??clip.dialogueLineId : undefined }))] })),
     subtitleCues: project.subtitleCues ? [...project.subtitleCues, ...project.subtitleCues.filter((cue) => cue.sceneId === sourceSceneId).map((cue) => ({ ...cue, id: cue.id.startsWith('dialogue-') && lineMap.has(cue.id.slice(9)) ? `dialogue-${lineMap.get(cue.id.slice(9))}` : attachmentId(cue.id, newSceneId, used), sceneId: newSceneId,dialogueLineId:cue.dialogueLineId?lineMap.get(cue.dialogueLineId)??cue.dialogueLineId:undefined }))] : undefined,
   };
 }

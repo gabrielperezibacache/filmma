@@ -182,3 +182,15 @@ Cada plano admite hasta seis alternativas nombradas. La comparación presenta la
 Storyboard distingue «Inicio editado» y «Último instante editado» de las intenciones escritas; cada muestra conserva fuente e instante. Las parejas se muestran en paralelo y se apilan en móvil. Una imagen fija aparece una sola vez como «Imagen de referencia». Planificación, escena, acción, diálogo, personajes y continuidad siguen una lectura editorial continua, con acceso a «Planificar este plano». La hoja imprimible HTML se identifica como copia independiente con imágenes; la lista CSV conserva el contexto escrito y las fuentes. Los originales permanecen en la biblioteca.
 
 La [revisión independiente de acabado](output/qa/fourth-delivery/finish-review.md), sobre fuentes y nueve recortes r2 de escritorio y móvil, registra **SHIP**, sin incidencias materiales. Este registro conserva ese alcance: documenta decisiones visibles y no acredita ejecución del motor ni equivalencia visual de personajes.
+
+### Selección, grupos, marcadores y reproducción del visor
+
+La quinta entrega prolonga la cinemateca de grafito, marfil y salvia: serif editorial en títulos, sans en acciones y monoespaciada en tiempos. El visor y el transporte conservan su presencia en escritorio; «Ver visor» mantiene el acceso en móvil. Una barra breve de selección precede las pistas y las operaciones del conjunto quedan debajo. Formularios y acciones se apilan en móvil, con etiquetas persistentes, foco salvia y controles táctiles.
+
+«Seleccionar varios» permite alternar clips por toque; ⌘/Ctrl y Mayús ofrecen selección y rango con teclado y ratón. El recuento expresa el estado. Los grupos nombrados reúnen clips de pistas adicionales y se distinguen de la organización narrativa de V1. El movimiento conjunto conserva los planos de referencia; recortes y campos del inspector afectan al clip activo. Una pista bloqueada impide aplicar operaciones parciales. Los avisos de voces fragmentadas o ambiguas piden revisar sus tiempos sin reescribir el guion ni retirar sus vínculos.
+
+«Marcadores» reúne título, tipo, tiempo dentro del plano, personaje u objeto y nota. La lista identifica plano y tiempo; las señales acompañan al plano al reordenar el guion y conservan avisos cuando quedan fuera de tramo. Tipo y tiempo comparten fila en escritorio y se apilan en móvil. Una señal de continuidad indica qué revisar, sin corregir ni aprobar el material.
+
+«Reproducción del visor» permite preparar copias H.264 de hasta 1280 px por lado, muestra disponibilidad y dimensiones y vuelve al original cuando falta una copia. Las copias sirven al visor; exportación y análisis conservan las fuentes originales seleccionadas. Los contadores describen el video actual, sin acreditar FPS sostenidos ni memoria unificada.
+
+La [revisión independiente de acabado](output/qa/fifth-delivery/finish-review.md), sobre fuentes, diez capturas r2 y tres complementarias de escritorio y móvil, registra **SHIP**, con cobertura complementaria resuelta. Este registro conserva ese alcance y no acredita identidad facial ni fluidez sostenida de una película completa.

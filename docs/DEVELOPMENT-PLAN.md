@@ -7,13 +7,14 @@ El plan original agrupa proyectos, flujo guiado, guion, personajes, dirección, 
 | Primera | Recuperación, recorrido guiado, recomendaciones de adaptadores y comparación de calidad nativa | [Primera entrega](FIRST-DELIVERY.md). La toma HD larga MiniMax sigue limitada por memoria; más píxeles no garantizan mejor geometría. |
 | Segunda | Montaje con visor persistente, división/duplicación y bloqueo de pistas, mezcla y subtítulos ligados al guion | [Segunda entrega](SECOND-DELIVERY.md). La escucha aislada afecta al visor; no es normalización LUFS. |
 | Tercera | Secuencias y escenas narrativas, repercusiones sobre la continuidad, estados por elemento y referencias de apoyo | [Tercera entrega](THIRD-DELIVERY.md). El análisis es editorial y de vigencia; no demuestra identidad facial. |
-
 | Cuarta | Planificación de inicio/final, notas de rodaje, alternativas revisables, instrucciones finales y storyboard con muestras temporales | [Cuarta entrega](FOURTH-DELIVERY.md). Es planificación y consulta; no certifica identidad visual ni genera ángulos nuevos. |
+
+| Quinta | Selección múltiple y grupos de clips adicionales, marcadores por plano y copias ligeras para el visor | [Quinta entrega](FIFTH-DELIVERY.md). Exportación y continuidad usan las fuentes originales; los contadores no certifican FPS sostenidos. |
 
 ## Apartados pendientes del plan original
 
 - Dirección y storyboard avanzados: anotaciones espaciales sobre la imagen, representación de movimientos y nuevas vistas generadas sólo cuando el adaptador las admita. La planificación textual y las muestras del montaje están entregadas.
-- Editor: selección múltiple, agrupación, marcadores y copias ligeras para reproducción.
+- Editor avanzado: selección y reorganización conjunta de varios planos de V1, más herramientas de organización espacial y evaluación de reproducción sobre proyectos largos. Los grupos de clips adicionales, marcadores y copias ligeras están entregados.
 - Sonido y subtítulos: normalización medida, atenuación de música durante diálogos, comparación de interpretaciones, ajuste por palabras, estilos y zonas seguras. Una transcripción real debe distinguirse del texto preparado desde el guion.
 - Color y acabado: scopes, comparación entre planos y evaluación de LUT; pruebas temporales de restauración y reescalado sobre varios fotogramas.
 - Continuidad visual: varios instantes por plano y revisión selectiva de las apariciones afectadas, conservando los límites del reconocimiento local.

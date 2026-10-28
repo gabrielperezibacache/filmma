@@ -1,3 +1,4 @@
+import {MarkerPins} from './EditorMarkers';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, AudioLines, ChevronLeft, ChevronRight, Copy, Film, Image, Keyboard, Maximize2, Minus, Plus, Redo2, Scissors, SkipBack, SkipForward, Trash2, Undo2, Video, X } from 'lucide-react';
@@ -12,7 +13,7 @@ import {playbackSpeed} from '../visual-effects';
 import {trimProjectScene} from '../scene-trim';
 
 export type TimelineEditorProps = {
-  project: Project;
+  project: Project;onMarker?:(id:string)=>void;
   selectedSceneId: string;
   playhead: number;
   playing?: boolean;
@@ -48,7 +49,7 @@ function ClipImage({ asset, fallback, selected, trimStart }: { asset?: Asset; fa
   return <span className="tl-clip-placeholder">{asset?.type === 'video' ? <Video size={20} /> : <Image size={20} />}</span>;
 }
 
-export default function TimelineEditor({ project, selectedSceneId, playhead, playing = false, disabled = false, onSeek, onTrimScene, onUpdateProject, onSelectScene, onReorderScene, onSplitScene, onDuplicateScene, onDeleteScene, onAddScene, onManageAudio, onRemoveAudio, onUndo, onRedo, canUndo = false, canRedo = false }: TimelineEditorProps) {
+export default function TimelineEditor({ project,onMarker, selectedSceneId, playhead, playing = false, disabled = false, onSeek, onTrimScene, onUpdateProject, onSelectScene, onReorderScene, onSplitScene, onDuplicateScene, onDeleteScene, onAddScene, onManageAudio, onRemoveAudio, onUndo, onRedo, canUndo = false, canRedo = false }: TimelineEditorProps) {
   const [trimGhost,setTrimGhost]=useState<{id:string;edge:'start'|'end';delta:number}|null>(null);
   const trimGesture=useRef<{id:string;edge:'start'|'end';pointer:number;x:number;scroll:number;scale:number;snapshot:Project;delta:number}|null>(null);
   const layout = useMemo(() => buildTimeline(project), [project.scenes, project.fps]);
@@ -230,7 +231,7 @@ export default function TimelineEditor({ project, selectedSceneId, playhead, pla
         if (scrollAnimation.current != null) return;
         scrollAnimation.current = requestAnimationFrame(() => { scrollAnimation.current = null; const node = scrollRef.current; if (node) setViewport({ width: node.clientWidth, left: node.scrollLeft }); });
       }}>
-        <div className="tl-canvas" style={{ width: contentWidth }}>
+        <div className="tl-canvas" style={{ width: contentWidth }}><MarkerPins project={project} pps={pixelsPerSecond} onMarker={onMarker}/>
           <div className="tl-ruler" role="slider" tabIndex={disabled || !layout.totalFrames ? -1 : 0} aria-label="Posición del cabezal en el montaje" aria-valuemin={0} aria-valuemax={layout.totalFrames} aria-valuenow={frame} aria-valuetext={`${tc(frame)}, ${segmentAtFrame(layout, frame)?.scene.title ?? 'sin planos'}`} aria-disabled={disabled || !layout.totalFrames} aria-orientation="horizontal" onKeyDown={rulerKey} onPointerDown={(event) => {
             if (disabled || !layout.totalFrames || event.button !== 0) return;
             scrubPointer.current = event.pointerId; event.currentTarget.setPointerCapture(event.pointerId); event.currentTarget.focus(); seekPointer(event);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { AudioLines, RotateCcw } from 'lucide-react';
 import type { Asset, ClipAudio } from '../types';
 import { sampleWaveform, waveformCache } from '../audio-waveform';
@@ -6,7 +6,7 @@ import type { WaveformData } from '../audio-waveform';
 import './audio-waveform.css';
 
 export type AudioWaveformProps = { asset: Asset; trimStart: number; duration: number; logicalDuration?: number; audio?: ClipAudio; trackGain?: number; fps: number; speed?: number; compact?: boolean };
-export default function AudioWaveform({ asset, trimStart, duration, logicalDuration = duration, audio = {}, trackGain = 1, fps, speed = 1, compact = false }: AudioWaveformProps) {
+function AudioWaveform({ asset, trimStart, duration, logicalDuration = duration, audio = {}, trackGain = 1, fps, speed = 1, compact = false }: AudioWaveformProps) {
   const [data, setData] = useState<WaveformData | null>(null), [error, setError] = useState(''), [retry, setRetry] = useState(0), [width, setWidth] = useState(250);
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -29,3 +29,5 @@ export default function AudioWaveform({ asset, trimStart, duration, logicalDurat
     {!compact && data?.hasAudio && !silent && !muted && <span className="waveform-caption">Audio original · entrada {trimStart.toFixed(2)} s · {duration.toFixed(2)} s visibles{speed !== 1 ? ` · ${speed}×` : ''}</span>}
   </div>;
 }
+
+export default memo(AudioWaveform);

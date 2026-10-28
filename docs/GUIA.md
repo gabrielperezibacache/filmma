@@ -278,3 +278,14 @@ En Dirección, escribe **Inicio previsto**, **Final previsto** y **Notas de roda
 **Instrucciones finales de generación** muestra el texto compartido con el servidor, el modo y las imágenes utilizadas. Permite copiar, descargar TXT y comparar con el plano anterior. La imagen final sólo actúa como ancla en MiniMax H3 y perfiles compatibles; el texto de final previsto es una intención independiente.
 
 Desde Storyboard, **Planificar este plano** vuelve al campo de inicio. La hoja HTML incluye muestras y planificación y se imprime como PDF; el CSV tiene 24 campos. Guarda **Proyecto completo** para conservar también las alternativas y los originales. Consulta [alcance y verificación de la cuarta entrega](FOURTH-DELIVERY.md).
+
+
+## Selección, grupos y marcadores · quinta entrega
+
+En **Montaje → Pistas**, usa ⌘/Ctrl + clic para alternar, Mayús para un rango o **Seleccionar varios** para tocar clips. Un grupo se selecciona entero. Sus acciones aparecen debajo de la línea de tiempo: mover por fotogramas, dividir, duplicar, retirar y agrupar con nombre. Los recortes y campos del inspector sólo afectan al clip activo. Un conjunto con una pista bloqueada no se edita parcialmente. Deshacer recupera clips y grupos; los archivos originales nunca se eliminan con estas acciones.
+
+El movimiento conserva los planos de referencia. Una intervención de voz completa y coherente ajusta su entrada y subtítulos vinculados sin cambiar sus palabras. Si hay otros fragmentos o copias en tiempos distintos, se conservan los tiempos editoriales y aparece un aviso para revisar Voces. Los planos principales siguen usando la estructura narrativa del guion.
+
+Abre **Marcadores** o pulsa **M** fuera de un campo: título, tipo, nota, tiempo local y personaje quedan unidos al plano. Al reordenar lo siguen; si un recorte deja la señal fuera, se conserva con aviso. Puedes abrirla desde la regla y descargar su CSV. **Proyecto completo** guarda todo y conserva los vínculos al reimportar.
+
+**Reproducción del visor → Preparar copias ligeras** crea una caché local de hasta 1280 px por lado y precarga el siguiente video. Selecciona **Fluida** para usar copias disponibles y **Original** para revisar detalle/color. Sin copia válida se usa el original. El acabado, análisis de continuidad y exportación conservan las fuentes seleccionadas; el ZIP no incluye esta caché. Consulta [alcance y verificaciones](FIFTH-DELIVERY.md).

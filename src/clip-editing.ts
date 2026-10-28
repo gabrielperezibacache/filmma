@@ -23,7 +23,7 @@ export function splitTimelineClip(project:Project,trackId:string,clipId:string,s
  const envelope=c.envelope??{offset:0,duration};
  const left={...c,duration:delta,envelope};
  const right={...c,id:newId(),offset:c.offset+delta,duration:duration-delta,trimStart:item.asset.type==='image'?0:c.trimStart+delta*playbackSpeed(c.speed),envelope:{...envelope,offset:envelope.offset+delta},keyframes:freshKeys({...c,keyframes:rebaseLayerKeyframes(c,delta)},newId)};
- return{...project,tracks:project.tracks!.map(t=>t.id!==trackId?t:{...t,clips:t.clips.flatMap(x=>x.id===clipId?[left,right]:[x])})};
+ return{...project,...(project.clipGroups?{clipGroups:project.clipGroups.map(g=>g.clipIds.includes(clipId)?{...g,clipIds:[...g.clipIds,right.id]}:g)}:{}),tracks:project.tracks!.map(t=>t.id!==trackId?t:{...t,clips:t.clips.flatMap(x=>x.id===clipId?[left,right]:[x])})};
 }
 
 /** A deliberate copy at the playhead; overlaps are allowed, originals are shared.

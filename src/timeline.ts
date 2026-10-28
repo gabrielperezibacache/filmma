@@ -58,7 +58,7 @@ export function splitProjectScene(project: Project, sceneId: string, offsetSecon
   }
   if (subtitleCues.length > 1000) throw new Error('Dividir el plano superaría los 1.000 subtítulos.');
   const dialogueLines=project.dialogueLines?.map(line=>line.sceneId===sceneId&&Math.round(line.offset*project.fps)>=firstFrames?{...line,sceneId:newId,offset:(Math.round(line.offset*project.fps)-firstFrames)/project.fps}:line);
-  return { ...project, dialogueLines, scenes: [...project.scenes.slice(0, index), first, second, ...project.scenes.slice(index + 1)], tracks, subtitleCues,
+  return { ...project, ...(project.markers?{markers:project.markers.map(m=>m.sceneId===sceneId&&Math.round(m.offset*project.fps)>=firstFrames?{...m,sceneId:newId,offset:(Math.round(m.offset*project.fps)-firstFrames)/project.fps}:m)}:{}), dialogueLines, scenes: [...project.scenes.slice(0, index), first, second, ...project.scenes.slice(index + 1)], tracks, subtitleCues,
     ...(project.subtitleCues === undefined ? { subtitlesEnabled: project.subtitlesEnabled ?? false } : {}),
   };
 }

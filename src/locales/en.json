@@ -1409,5 +1409,11 @@
   " · {0} sin miniatura": " · {0} without a thumbnail",
   "La toma seleccionada no está disponible": "The selected take is unavailable",
   "Intención": "Intention",
-  "Restricciones": "Constraints"
+  "Restricciones": "Constraints",
+  "Marcadores": "Markers",
+  "señales": "cues",
+  "Copias ligeras de reproducción": "Lightweight playback copies",
+  "Abrir marcador {0}": "Open marker {0}",
+  "señal": "cue",
+  "Pistas": "Tracks"
 }
