@@ -1,4 +1,5 @@
 import type {Project} from './types';
+import {googleVideoContext} from './google-video';
 
 /** A timestamp or object-key ordering is not an edit. Evaluate this only after
  * earlier queued saves settle, so undoing a pending edit is still persisted. */
@@ -21,7 +22,9 @@ export function mergeProjectMedia(local:Project, remote:Project, base:Project, a
   const references:Partial<Project['scenes'][number]>={};
   if(allowClips&&previous&&next)for(const field of ['assetId','endAssetId']as const)if(scene[field]===previous[field]&&scene[field]!==next[field]){references[field]=next[field];changed=true}
 
-  if(allowClips&&previous&&next&&!scene.clearVideoAsset&&scene.videoAssetId===previous.videoAssetId&&scene.videoAssetId!==next.videoAssetId){
+  const google=remote.assets.find(a=>a.id===next?.videoAssetId)?.googleVideo;
+  const contextMatches=!google||!!previous&&!google.contextChanged&&googleVideoContext(local,scene,google.requestedSeconds,google.referenceAssetIds)===googleVideoContext(base,previous,google.requestedSeconds,google.referenceAssetIds);
+  if(contextMatches&&allowClips&&previous&&next&&!scene.clearVideoAsset&&scene.videoAssetId===previous.videoAssetId&&scene.videoAssetId!==next.videoAssetId){
    changed=true;return {...scene,...references,...remembered,videoAssetId:next.videoAssetId,
     ...((scene.trimStart??0)===(previous.trimStart??0)?{trimStart:next.trimStart}:{}),
     ...((scene.speed??1)===(previous.speed??1)?{speed:next.speed}:{})};

@@ -93,3 +93,14 @@ test('imported alternatives stay discoverable through selection, background poll
  assert.equal(undone.scenes[0]!.videoAssetId,'old');assert.equal(undone.scenes[0]!.trimStart,.5);assert.equal(undone.scenes[0]!.speed,1.5);
  assert.equal(listSceneTakes(undone,undone.scenes[0]!.id).length,2);
 });
+
+test('a completed Google take remains an alternative when local script or character continuity changed during polling',()=>{
+ const base=createSeedProject();base.scenes[0]!.videoAssetId='old';
+ const remote=structuredClone(base);remote.scenes[0]!.videoAssetId='google';remote.scenes[0]!.takeAssetIds=['old','google'];
+ remote.assets.push({id:'google',name:'Google take',type:'video',url:'/api/media/google.mp4',mime:'video/mp4',size:100,googleVideo:{requestedSeconds:8,referenceAssetIds:[],contextChanged:false} as any});
+ assert.equal(mergeProjectMedia(base,remote,base).scenes[0]!.videoAssetId,'google');
+ const local=structuredClone(base);local.scenes[0]!.dialogue='Diálogo cambiado antes del guardado.';
+ const merged=mergeProjectMedia(local,remote,base);assert.equal(merged.scenes[0]!.videoAssetId,'old');assert(merged.scenes[0]!.takeAssetIds?.includes('google'));assert(merged.assets.some(a=>a.id==='google'));
+ const continuity=structuredClone(base);continuity.characters[0]!.description+=' Con otro vestuario.';
+ assert.equal(mergeProjectMedia(continuity,remote,base).scenes[0]!.videoAssetId,'old');
+});

@@ -168,7 +168,7 @@ export function validateEditingReferences(project: Project) {
 }
 export type Job = {
   context?:{projectId?:string;projectName?:string;sceneId?:string;sceneTitle?:string;assetId?:string;assetName?:string};
-  id: string; type: 'generate' | 'export' | 'codex' | 'runtime' | 'enhance' | 'continuity' | 'speech' | 'lipsync' | 'proxy' | 'audio' | 'library' | 'google-video';
+  id: string; type: 'generate' | 'export' | 'codex' | 'runtime' | 'enhance' | 'continuity' | 'speech' | 'lipsync' | 'proxy' | 'audio' | 'library' | 'google-video' | 'google-browser';
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
   progress: number; message: string; createdAt: string; updatedAt: string;
   result?: { qualityReportId?:string;clientRequestId?:string;lineId?:string;stale?:boolean; sceneId?:string;seed?:number;variantIndex?:number;variantCount?:number;continuityReportId?:string;continuityFingerprint?:string; text?: string; assetId?: string; originalAssetId?:string; projectId?:string; finishing?:FinishingSummary; url?: string; filename?: string; proposal?: { projectId: string; scenes: Project['scenes'] } };

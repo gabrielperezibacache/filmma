@@ -1,9 +1,9 @@
 import type {Asset,Project,Scene} from './types';
 import {buildGenerationInstructions} from './generation-instructions';
 
-export const GOOGLE_VIDEO_LINKS={gemini:'https://gemini.google.com/app',flow:'https://labs.google/fx/tools/flow',plans:'https://ai.google.dev/gemini-api/docs/google-ai-plans',help:'https://support.google.com/gemini/answer/16126339?hl=es'} as const;
+export const GOOGLE_VIDEO_LINKS={gemini:'https://gemini.google.com/app',flow:'https://flow.google.com/',plans:'https://ai.google.dev/gemini-api/docs/google-ai-plans',help:'https://support.google.com/gemini/answer/16126339?hl=es'} as const;
 export type GoogleVideoProvider='gemini'|'flow';
-export type GoogleVideoProvenance={provider:GoogleVideoProvider;workflow:'subscription-handoff';verification:'user-imported';requestId:string;projectId:string;sceneId:string;sceneTitle:string;createdAt:string;importedAt:string;prompt:string;requestedSeconds:number;requestedFormat:string;characterIds:string[];referenceAssetIds:string[];referenceSha256:Record<string,string>;contextFingerprint:string;outputSha256:string;contextChanged:boolean;media:{width:number;height:number;duration:number;fps:number;frames:number;audioTracks:number}};
+export type GoogleVideoProvenance={provider:GoogleVideoProvider;workflow:'subscription-handoff'|'subscription-browser';verification:'user-imported'|'browser-observed';browser?:{automationId:string;pageUrl:string};requestId:string;projectId:string;sceneId:string;sceneTitle:string;createdAt:string;importedAt:string;prompt:string;requestedSeconds:number;requestedFormat:string;characterIds:string[];referenceAssetIds:string[];referenceSha256:Record<string,string>;contextFingerprint:string;outputSha256:string;contextChanged:boolean;media:{width:number;height:number;duration:number;fps:number;frames:number;audioTracks:number}};
 export type GoogleVideoRequest=Omit<GoogleVideoProvenance,'importedAt'|'outputSha256'|'contextChanged'|'media'|'verification'> & {id:string;packageUrl:string;importedAssetId?:string;stale:boolean;references:{id:string;name:string;sha256:string;role:string}[]};
 export function googleReferenceCandidates(project:Project,scene:Scene){
  const ids=[scene.assetId,scene.endAssetId,...scene.characterIds.flatMap(id=>{const c=project.characters.find(c=>c.id===id);return c?[c.assetId,...c.referenceAssetIds??[]]:[]})];

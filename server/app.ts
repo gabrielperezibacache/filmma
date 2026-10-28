@@ -1,3 +1,4 @@
+import {registerGoogleBrowser} from './google-browser.js';
 import {registerGoogleVideo} from './google-video.js';
 import{registerLibrary,libraryFileHash,uploadFileName}from'./library.js';
 import {reconcileVisualSettings} from '../src/visual-sampling.js';
@@ -83,6 +84,8 @@ export async function createApp(options: AppOptions = {}) {
   await store.init();
   const app = express();
   app.disable('x-powered-by');
+  const googleBrowserBridge=express.Router();
+  app.use('/api/google-browser/bridge',googleBrowserBridge);
   app.use((req, res, next) => {
     const hostname = (req.headers.host ?? '').replace(/:\d+$/, '');
     if (!allowedHosts.has(hostname)) return res.status(403).json({ error: 'Filmma sólo acepta conexiones locales.' });
@@ -187,7 +190,8 @@ export async function createApp(options: AppOptions = {}) {
   async function enqueue(type: Job['type'], message: string, work: QueuedTask['work'], result?: Job['result'],context?:Job['context']) { return (await enqueueMany([{ type, message, work, result,context }]))[0]!; }
 
   await registerLibrary({app,store,dataDirectory,mediaPath,detectMedia,enqueue});
-  await registerGoogleVideo({app,store,dataDirectory,ffmpeg,ffprobe,mediaPath,detectMedia});
+  const googleVideo=await registerGoogleVideo({app,store,dataDirectory,ffmpeg,ffprobe,mediaPath,detectMedia});
+  const googleBrowser=await registerGoogleBrowser({app,bridge:googleBrowserBridge,store,dataDirectory,publicDirectory,video:googleVideo,mediaPath});
   registerColorReview({app,getProject:()=>store.project,dataDirectory,mediaPath,ffmpeg,ffprobe});
   await registerSoundReview({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
   await registerPlaybackProxies({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
@@ -392,6 +396,7 @@ export async function createApp(options: AppOptions = {}) {
   app.post('/api/jobs/:id/cancel', asyncRoute(async (req, res) => {
     const job = store.jobs.find((item) => item.id === req.params.id);
     if (!job) return res.status(404).json({ error: 'Trabajo no encontrado.' });
+    if(job.type==='google-browser'&&['queued','running'].includes(job.status)){await googleBrowser.stop(job.id);return res.json({job})}
     if (job.status === 'queued' || job.status === 'running') { job.status = 'cancelled'; job.message = 'Cancelando…'; job.updatedAt = now(); running.get(job.id)?.abort(); if(job.type==='continuity'&&job.result?.projectId&&job.result.continuityReportId)await visualContinuity.interrupt(job.result.projectId,job.result.continuityReportId,'cancelled','Revisión cancelada. Las comparaciones terminadas se conservan.'); await store.save(); }
     res.json({ job });
   }));

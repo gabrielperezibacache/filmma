@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Filmma · Google Browser Bridge",
+  "description": "Genera y recupera tomas en las interfaces de Gemini y Flow con tu sesión de Chrome. No usa claves API ni lee cookies.",
+  "version": "0.1.0",
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:4318/*",
+    "http://127.0.0.1:4320/*",
+    "https://gemini.google.com/*",
+    "https://flow.google.com/*",
+    "https://*.googleusercontent.com/*"
+  ],
+  "background": {
+    "service_worker": "worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://gemini.google.com/*",
+        "https://flow.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Enlazar Chrome con Filmma"
+  }
+}

@@ -18,7 +18,7 @@ export function assetOrigin(a:Asset,entry?:LibraryEntry){
  if(a.lipSync)return{kind:'lipsync',label:'Sincronización labial',model:a.lipSync.model,at:a.lipSync.createdAt,sources:[a.lipSync.sourceAssetId,a.lipSync.audioAssetId]};
  if(a.voiceReference)return{kind:'voice-reference',label:'Referencia de voz preparada',model:'Qwen',at:a.voiceReference.createdAt,sources:[a.voiceReference.sourceAssetId]};
  if(a.speech)return{kind:'speech',label:'Voz del guion',model:a.speech.model,at:a.speech.createdAt,sources:a.speech.voice.engine==='qwen'&&a.speech.voice.referenceAssetId?[a.speech.voice.referenceAssetId]:[]};
- if(a.googleVideo)return{kind:'google-video',label:'Google · importación declarada',model:a.googleVideo.provider==='gemini'?'Gemini':'Flow',at:a.googleVideo.importedAt,sources:a.googleVideo.referenceAssetIds};
+ if(a.googleVideo)return{kind:'google-video',label:a.googleVideo.verification==='browser-observed'?'Google · capturada en navegador':'Google · importación declarada',model:a.googleVideo.provider==='gemini'?'Gemini':'Flow',at:a.googleVideo.importedAt,sources:a.googleVideo.referenceAssetIds};
  if(a.generation)return{kind:'generation',label:'Toma generada',model:a.generation.model,at:a.generation.createdAt,sources:a.generation.referenceAssetIds};
  if(entry?.imported)return{kind:'import',label:'Original importado',at:entry.imported.at,sources:[]};
  if(a.url.startsWith('/demo/'))return{kind:'demo',label:'Material de ejemplo',sources:[]};
@@ -28,4 +28,4 @@ export function recordedAssetSha(a:Asset,entry?:LibraryEntry){return entry?.sha2
 export const normalizeTags=(value:string[])=>[...new Map(value.map(t=>t.trim().replace(/\s+/g,' ')).filter(Boolean).map(t=>[t.toLocaleLowerCase(),t])).values()];
 export function jobProjectId(j:Job){return j.context?.projectId??j.result?.projectId}
 export function jobSceneId(j:Job){return j.context?.sceneId??(typeof j.result?.sceneId==='string'?j.result.sceneId:undefined)}
-export const jobNames:Record<string,string>={'google-video':'Video de Google importado',library:'Comprobación de archivos',generation:'Generación de plano',generate:'Generación de plano',export:'Exportación',codex:'Asistente Codex',runtime:'Preparación del motor',audio:'Medición de sonido',proxy:'Copias ligeras de reproducción',enhance:'Acabado y mejora de imagen',continuity:'Revisión de continuidad visual',speech:'Voces del guion',lipsync:'Sincronización labial'};
+export const jobNames:Record<string,string>={'google-browser':'Generación en navegador Google','google-video':'Video de Google importado',library:'Comprobación de archivos',generation:'Generación de plano',generate:'Generación de plano',export:'Exportación',codex:'Asistente Codex',runtime:'Preparación del motor',audio:'Medición de sonido',proxy:'Copias ligeras de reproducción',enhance:'Acabado y mejora de imagen',continuity:'Revisión de continuidad visual',speech:'Voces del guion',lipsync:'Sincronización labial'};
