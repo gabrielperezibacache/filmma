@@ -2,9 +2,9 @@
 
 **Del guion al último fotograma, con tus personajes y tus originales siempre a mano.**
 
-Filmma es un estudio de cine para Mac: escribe una historia, dirige sus planos, conserva las referencias de personajes y objetos, monta imagen y sonido y prepara la entrega. Combina generación local en Apple Silicon con un flujo opcional para tu sesión de Google AI Pro.
+Filmma es un estudio de cine para Mac y Windows: escribe una historia, dirige sus planos, conserva las referencias de personajes y objetos, monta imagen y sonido y prepara la entrega. Combina generación local en Apple Silicon con un flujo opcional para tu sesión de Google AI Pro.
 
-[Descargar para Mac](https://github.com/gabrielperezibacache/filmma/releases/latest) · [Guía de uso](docs/GUIA.md) · [Modelos locales](docs/LOCAL_MODELS.md) · [Google AI Pro](docs/GOOGLE-AI-PRO.md)
+[Descargar para Mac y Windows](https://github.com/gabrielperezibacache/filmma/releases/latest) · [Guía de uso](docs/GUIA.md) · [Modelos locales](docs/LOCAL_MODELS.md) · [Google AI Pro](docs/GOOGLE-AI-PRO.md) · [Instalación, RAM y CUDA](docs/LOCAL_INSTALLATION.md)
 
 ![Filmma: visor, secuencia y siguiente paso de producción](docs/images/filmma-home.webp)
 
@@ -39,12 +39,20 @@ En **Configuración** puedes cambiar el idioma —español o inglés—, la apar
 
 También puedes abrir la versión de desarrollo con `Abrir Filmma.command` o visitar `http://127.0.0.1:4318` cuando el servidor local esté iniciado.
 
+## Empezar en Windows
+
+Descarga **Filmma-…-win-x64-Setup.exe** de Releases y comprueba `SHA256SUMS.txt`. El instalador por usuario incluye Python y multimedia, permite elegir carpeta y conserva proyectos y modelos al actualizar o desinstalar. También hay ZIP x64. La distribución aún no tiene firma Authenticode. Consulta [compatibilidad, memoria e instalación](docs/LOCAL_INSTALLATION.md).
+
+El editor, guion y exportación son multiplataforma. Los motores integrados Metal y MLX requieren Apple Silicon. En Windows/Linux se documentan H3 con Diffusers + CUDA + RAM/INT8 y alternativas ligeras externas; no se anuncian como adaptadores integrados ni como inferencia Windows ya verificada. El diagnóstico distingue RAM del sistema de VRAM y evita recomendar H3 a equipos insuficientes.
+
+En Mac, el selector de residencia mantiene SSD streaming en 36 GB y permite un transformador residente desde 64 GiB, con 96 GiB recomendados y una prueba breve acotada. No convierte pesos, no vuelve a descargarlos y no relaja los límites existentes de HD/tomas largas.
+
 ## Generar con tu cuenta Google AI Pro
 
 Filmma ofrece dos recorridos que conservan el mismo guion, referencias y procedencia:
 
 - **Asistido:** prepara un ZIP con el prompt y las imágenes elegidas; genera en Gemini o Flow y vuelve con el video descargado.
-- **Puente de Chrome —experimental—:** una extensión local prepara el trabajo en Google y contempla la captura del video de Gemini. Requiere instalarla y enlazarla mediante un código local. El Flow actual necesita confirmar la toma y descargar «Tamaño original» de forma asistida. La prueba autónoma de la extensión sigue pendiente del enlace; consulta [el estado de las pruebas](docs/GOOGLE-AI-PRO.md).
+- **Puente de Chrome —experimental—:** una extensión local prepara el trabajo en Google y contempla la captura del video de Gemini. La extensión 0.2.0 permite detectarla y autorizarla desde Filmma; el enlace se conserva al reiniciar. El código sigue como alternativa. Flow mantiene su confirmación por toma y sus referencias mediante selector nativo; el puente incorpora la recepción acotada de «Tamaño original» desde Descargas, pendiente de verificación con la extensión real. La prueba autónoma de la extensión sigue pendiente del enlace; consulta [el estado de las pruebas](docs/GOOGLE-AI-PRO.md).
 
 El puente **no usa la API de pago, no copia cookies ni contraseñas y no compra créditos**. Emplea el acceso y los límites de tu suscripción. No garantiza disponibilidad ni generaciones ilimitadas. Si aparece login, CAPTCHA, un acuerdo, falta de cuota o un control ambiguo, se detiene. Una solicitud ya enviada no se repite automáticamente.
 

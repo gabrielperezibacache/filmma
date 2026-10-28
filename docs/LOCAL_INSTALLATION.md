@@ -1,0 +1,76 @@
+# Instalación local: RAM, SSD y GPU
+
+Revisión de documentación oficial: **28 de octubre de 2026**. Filmma conserva los originales, la biblioteca de personajes y los paquetes de guion al cambiar de motor. Instalar Filmma y disponer de una GPU capaz de ejecutar H3 son requisitos distintos.
+
+## Elegir antes de descargar
+
+| Equipo | Opción aconsejada | Estado en Filmma |
+| --- | --- | --- |
+| Mac Apple Silicon, 32–48 GiB | H3 Metal BF16 con SSD streaming; pruebas cortas | Integrado; probado en M4 Max 36 GB |
+| Mac Apple Silicon, 64 GiB | SSD como inicio; RAM residente para una prueba breve, vigilando presión | Selector integrado; RAM residente pendiente de validación en ese equipo |
+| Mac Apple Silicon, 96–128+ GiB | Transformador residente en RAM; comenzar con el perfil breve | Integrado; automático desde 96 GiB, todavía requiere prueba local |
+| Windows/Linux NVIDIA, 96+ GiB RAM y 24–32 GiB VRAM | Diffusers, INT8 y offload por bloques desde RAM | Receta externa; no motor integrado ni inferencia comprobada por Filmma |
+| Windows/Linux NVIDIA, 96+ GiB RAM y 12–16 GiB VRAM | Misma receta, VAE también descargado de GPU, lienzo pequeño | Experimental y mucho más lento; receta externa |
+| Windows/Linux NVIDIA, 192+ GiB RAM y GPU 80 GiB | Diffusers BF16 con offload de componentes | Receta externa; 192 GiB es margen de planificación de Filmma |
+| NVIDIA con poca RAM, AMD, Intel o CPU | Elegir una variante ligera de LTX/Wan en ComfyUI compatible con esa GPU; importar la toma | Entorno externo; no recomendar H3 a ciegas |
+| Windows ARM64 / Mac Intel | Editor en navegador con servidor compatible; paquete de escritorio ARM64/Intel pendiente | No se ofrece un instalador nativo para esas arquitecturas |
+
+La RAM y la VRAM dedicada no se suman como si fueran memoria unificada. Los valores de esta tabla son criterios conservadores de selección, no una garantía de velocidad o compatibilidad de kernels. No se declara inferencia Windows validada por haber compilado el instalador.
+
+## Mac: reducir lecturas sin cambiar los pesos
+
+En **Modelos → Memoria y compatibilidad**, el selector de H3 ofrece Automática, SSD streaming y Transformador en RAM. Automática conserva SSD en equipos de menos de 96 GiB. La opción RAM se habilita desde 64 GiB y recomienda 96 GiB; exige el perfil breve (hasta 22 fotogramas y una superficie de 512 × 512), presión normal y una estimación conservadora de 48 GiB libres. Los perfiles largos/HD conservan el supervisor existente y SSD streaming. Filmma no reduce capas, resolución ni precisión para hacer pasar un equipo insuficiente.
+
+El motor h3.c mantiene dos bloques en streaming. Al omitir `--ssd-streaming`, el transformador permanece residente; la carga inicial y el codificador siguen leyendo archivos. El sistema operativo puede usar intercambio: RAM residente no equivale a «cero SSD». [Referencia del motor y límites de sus mediciones](https://github.com/antirez/h3.c#weight-residency-and-streamed-prompt-encoding).
+
+Configuración por terminal, con Filmma sin tareas activas:
+
+```sh
+python3 runtime/filmma_runtime.py doctor --json
+python3 runtime/filmma_runtime.py configure-memory --mode auto --json
+# Sólo con Apple Silicon y >=64 GiB; empezar con el perfil breve:
+python3 runtime/filmma_runtime.py configure-memory --mode ram --json
+# Volver al consumo conservador:
+python3 runtime/filmma_runtime.py configure-memory --mode ssd --json
+```
+
+El cambio se protege con el mismo bloqueo de generación. No convierte, mueve ni vuelve a descargar los pesos. En el M4 Max de 36 GB se rechaza RAM residente antes de cargar el modelo. No se crea un RAM disk: duplicaría archivos y agotaría memoria. El SSD interno puede mejorar la lectura frente a uno externo lento, pero sólo se debe copiar el modelo si caben la copia y la reserva de 20 GiB; nunca borrar automáticamente el original.
+
+## Windows: instalar Filmma
+
+1. Descarga **Filmma-…-win-x64-Setup.exe** y `SHA256SUMS.txt` de [Releases del repositorio privado](https://github.com/gabrielperezibacache/filmma/releases). Debes entrar con la cuenta que tiene acceso.
+2. Comprueba el hash: `Get-FileHash .\Filmma-…-win-x64-Setup.exe -Algorithm SHA256` en PowerShell.
+3. Ejecuta el instalador por usuario. Permite elegir carpeta y no solicita privilegios de administrador. Windows 10/11 x64 compatible con Electron; Windows 11 actualizado es el destino preferido. No desactives SmartScreen: la distribución aún no tiene firma Authenticode.
+4. Abre Filmma. Proyectos y configuración se guardan en el perfil del usuario, fuera del directorio de instalación. Desinstalar o actualizar la aplicación conserva esos datos y los modelos externos.
+5. En **Modelos**, reconoce RAM y GPU NVIDIA mediante `nvidia-smi`. Si no existe ese diagnóstico, Filmma muestra capacidad desconocida y no inventa VRAM. El motor Metal/MLX aparece como no compatible.
+
+También hay ZIP x64 para extraer y ejecutar. Incluye Python aislado, FFmpeg/FFprobe, uv y GitHub CLI; no incluye cientos de GB de modelos, CUDA ni controladores. Las actualizaciones eligen el instalador del sistema y verifican SHA256 antes de abrirlo.
+
+## H3 con RAM del sistema en Windows o Linux
+
+La receta oficial de Diffusers cuantiza transformador y codificador a INT8 y mueve bloques desde RAM a CUDA. Estima unos **75 GB de RAM** para los pesos; Filmma recomienda **96 GiB** para dejar margen. Con 12–16 GB de VRAM también descarga el VAE de GPU. Con 24–32 GB hay más margen. La ruta BF16 y la de dos GPU son opciones diferentes. [Recetas oficiales y carga de un solo workflow](https://huggingface.co/docs/diffusers/main/en/api/pipelines/minimax_h3#memory).
+
+Para NVIDIA en Windows se recomienda preparar primero **WSL2 + Ubuntu**, manteniendo Filmma nativo de Windows. Instala manualmente el controlador NVIDIA compatible y WSL siguiendo [Microsoft](https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl). Filmma no modifica controladores, virtualización ni el límite de memoria de WSL. Comprueba `free -h` dentro de WSL: Windows puede tener 128 GiB y WSL disponer sólo de una fracción. Ajusta su presupuesto conscientemente dejando margen a Windows.
+
+Preparación del entorno, dentro de Ubuntu/WSL2 o Linux:
+
+```sh
+python3 -m venv ~/filmma-h3-cuda
+source ~/filmma-h3-cuda/bin/activate
+python -m pip install --upgrade pip
+nvidia-smi
+# Instala primero PyTorch con la orden que corresponde a tu GPU/controlador:
+# https://pytorch.org/get-started/locally/
+python -c "import torch; assert torch.cuda.is_available(); print(torch.cuda.get_device_name(), torch.cuda.get_device_properties(0).total_memory)"
+python -m pip install 'git+https://github.com/huggingface/diffusers.git@40e551a4380c0a48333f3eeb032ed7da1f361297' transformers accelerate torchao safetensors pillow imageio imageio-ffmpeg
+```
+
+Después abre la receta oficial de **Memory → consumer card** enlazada arriba, elige **un solo workflow** (`t2va`, `fl2va` o `ref2va`) y una carpeta nueva para la caché (`HF_HOME=/ruta/con/espacio/filmma-h3-diffusers`). El formato Diffusers no es intercambiable con la vista FL2VA/Ref2VA del motor Metal: **no sobrescribas el SSD actual**. La primera carga descarga componentes y puede tener un pico de RAM superior a su tamaño cuantizado. Revisa la licencia, espacio, RAM de WSL y compatibilidad de TorchAO antes de ejecutarla. La revisión de Diffusers está fijada; registra con `pip freeze` las versiones realmente resueltas y prueba antes de actualizarlas.
+
+No se proporciona una descarga INT4/GGUF como si estuviera verificada: el adaptador h3.c integrado usa BF16 y estas variantes requieren un motor y una prueba propios. INT8 puede cambiar detalle e identidad; usa las mismas referencias y compara varios fotogramas antes de dar la toma por buena.
+
+## Otros equipos y regreso al guion
+
+[ComfyUI documenta sus combinaciones de sistema, GPU y PyTorch](https://docs.comfy.org/installation/system_requirements). Su soporte de una GPU no garantiza que un workflow concreto de H3 funcione en ella. Para AMD/Intel/CPU, selecciona un modelo y un workflow que indiquen soporte explícito; CPU es una posibilidad de experimentación lenta, no una recomendación para rodaje H3.
+
+Para cualquier motor externo: abre el plano correcto en Filmma, conserva el paquete del prompt y las referencias, genera una salida nueva de hasta 15 s y usa **importar toma** en ese plano. Comprueba duración, proporción y fps reales; después revisa continuidad y prepara el acabado 4K. La importación conserva los bytes nativos y no sustituye las referencias de personajes. La procedencia se registra como importación, no como una generación verificada del motor interno. El 4K de postproducción sigue siendo un derivado; nunca se etiqueta como generación nativa 4K.

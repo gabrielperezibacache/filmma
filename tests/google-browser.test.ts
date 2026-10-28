@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, basename } from 'node:path';
 import { once } from 'node:events';
@@ -10,7 +10,7 @@ import { createApp } from '../server/app';
 import { runProcess } from '../server/process';
 const ext = 'a'.repeat(32), sha = (b: Buffer) => createHash('sha256').update(b).digest('hex');
 async function fixture() {
-    const dir = await mkdtemp(join(tmpdir(), 'filmma-browser-')), dataDirectory = join(dir, 'data'), f = await createApp({ dataDirectory, skipDiagnostics: true });
+    const dir = await mkdtemp(join(tmpdir(), 'filmma-browser-')), dataDirectory = join(dir, 'data'), f = await createApp({ dataDirectory, skipDiagnostics: true, nativeDownloadsDirectory:join(dir,'native-downloads') });
     const p = f.store.project;
     p.scenes = p.scenes.slice(0, 1);
     p.characters = p.characters.slice(0, 1);
@@ -140,7 +140,7 @@ test('quota and disconnection require attention; recovering a submitted page nev
     await f.json(await f.req('/google-browser/disconnect', {}));
     assert.equal((await f.bridge('/claim', {}, token)).status, 401);
     const { createApp } = await import('../server/app');
-    const reloaded = await createApp({ dataDirectory: f.dataDirectory, skipDiagnostics: true });
+    const reloaded = await createApp({ dataDirectory: f.dataDirectory, skipDiagnostics: true, nativeDownloadsDirectory:join(f.dir,'native-downloads') });
     assert.equal(reloaded.store.project.characters[0]!.assetId, 'identity');
     await reloaded.close();
 }
@@ -200,3 +200,37 @@ test('cancelling in Activity stops the same browser run and refuses incoming med
 test('idle extension ping proves its token is valid without creating or claiming a generation',async()=>{const f=await fixture();try{const {token}=await f.pair();assert.equal((await f.bridge('/ping',{},'expired')).status,401);const health=await f.json(await f.bridge('/ping',{},token));assert.equal(health.connected,true);assert.deepEqual((await f.json(await f.req('/google-browser/status'))).runs,[])}finally{await f.close()}});
 
 test('Flow native download handoff preserves its request and accepts the same package as a manual import',async()=>{const f=await fixture();try{const {token}=await f.pair();const request=(await f.json(await f.req('/google-video/requests',{projectId:f.store.project.id,sceneId:f.s.id,provider:'flow',seconds:8,referenceAssetIds:['identity']}),201)).request;await f.start(request.id);const {run}=await f.json(await f.bridge('/claim',{},token));for(const phase of ['preparing','submitting','generating'])await f.json(await f.bridge('/event/'+run.id,{phase,pageUrl:'https://flow.google.com/project/test'},token,run.lease));await f.json(await f.bridge('/event/'+run.id,{phase:'attention',error:'MANUAL_DOWNLOAD'},token,run.lease));assert.match((await f.json(await f.req('/google-browser/status'))).runs[0].message,/Tamaño original/);const body=new FormData();body.append('projectId',f.store.project.id);body.append('apply','false');body.append('file',new Blob([f.bytes],{type:'video/mp4'}),'flow-original.mp4');const result=await f.json(await fetch(f.base+'/api/google-video/requests/'+request.id+'/import',{method:'POST',headers:{'X-Filmma-Client':'filmma'},body}),201);assert.equal(result.asset.googleVideo.provider,'flow');assert.equal(result.asset.googleVideo.requestId,request.id);assert.deepEqual(result.asset.googleVideo.characterIds,[f.store.project.characters[0]!.id]);assert.equal(result.asset.googleVideo.outputSha256,sha(f.bytes));assert(f.store.project.scenes[0]!.takeAssetIds?.includes(result.asset.id))}finally{await f.close()}});
+
+test('device discovery requires app approval, survives response retries and never exposes tokens in status',async()=>{const f=await fixture();try{
+ const proof='6'.repeat(64),headers={Origin:'chrome-extension://'+ext,'X-Filmma-Extension':ext};
+ const discover=()=>f.req('/google-browser/bridge/discover',{proof,version:'0.2.0'},headers);
+ assert.equal((await f.json(await discover())).enabled,false);
+ await f.json(await f.req('/google-browser/discovery',{}));
+ assert.equal((await f.json(await discover())).pending,true);
+ const before=await f.json(await f.req('/google-browser/status'));assert.equal(before.configured,false);assert.equal(before.discovery.devices.length,1);assert(!JSON.stringify(before).includes(proof));
+ const id=before.discovery.devices[0].id;
+ assert.equal((await f.req('/google-browser/approve-device',{id},{Origin:'https://evil.invalid'})).status,403);
+ await f.json(await f.req('/google-browser/approve-device',{id}));
+ const approved=await f.json(await discover());assert(approved.token);assert.equal((await f.json(await discover())).token,approved.token);
+ const status=await f.json(await f.req('/google-browser/status'));assert.equal(status.configured,true);assert.equal(status.connected,false);assert(!JSON.stringify(status).includes(approved.token));
+ await f.json(await f.bridge('/ping',{},approved.token));assert.equal((await f.json(await f.req('/google-browser/status'))).connected,true);
+ const stored=await readFile(join(f.dataDirectory,'.application-private','google-browser.json'),'utf8');assert(!stored.includes(approved.token));
+ await f.json(await f.req('/google-browser/disconnect',{}));assert.equal((await f.json(await discover())).enabled,false);assert.equal((await f.bridge('/ping',{},approved.token)).status,401);
+}finally{await f.close()}});
+
+test('native Flow recovery imports exact original without fabricating a generation or changing script links',async()=>{const f=await fixture();try{
+ const {token}=await f.pair();const request=(await f.json(await f.req('/google-video/requests',{projectId:f.store.project.id,sceneId:f.s.id,provider:'flow',seconds:8,referenceAssetIds:['identity']}),201)).request;
+ const narrative=()=>JSON.stringify([f.store.project.scenes.map(({takeAssetIds,...scene})=>scene),f.store.project.characters]);const before=narrative();
+ await f.json(await f.req('/google-browser/recover-page',{requestId:request.id,pageUrl:'https://flow.google.com/project/test/edit/test',apply:false}),202);
+ const {run}=await f.json(await f.bridge('/claim',{},token));assert.equal(run.recoverOnly,true);assert.equal(run.submittedAt,undefined);
+ assert.equal((await f.bridge('/event/'+run.id,{phase:'submitting'},token,run.lease)).status,409);
+ await f.json(await f.bridge('/event/'+run.id,{phase:'generating'},token,run.lease));
+ const folder=join(f.dir,'native-downloads');await mkdir(folder);await writeFile(join(folder,'Woman_smiling_old.mp4'),Buffer.from('old original'));
+ await f.json(await f.bridge('/native-begin/'+run.id,{prefix:'Woman_smiling_'},token,run.lease));
+ assert.equal((await f.json(await f.bridge('/native-poll/'+run.id,{},token,run.lease))).pending,true);
+ const source=join(folder,'Woman_smiling_new.mp4');await writeFile(source,f.bytes);
+ assert.equal((await f.json(await f.bridge('/native-poll/'+run.id,{},token,run.lease))).pending,true);
+ const result=await f.json(await f.bridge('/native-poll/'+run.id,{},token,run.lease));assert.equal(result.pending,false);assert.equal(result.asset.googleVideo.outputSha256,sha(f.bytes));
+ assert.deepEqual(await readFile(source),f.bytes);assert.equal(narrative(),before);assert(f.store.project.scenes[0]!.takeAssetIds?.includes(result.asset.id));assert.deepEqual(await readFile(join(f.dataDirectory,'media',basename(result.asset.url))),f.bytes);
+ const status=await f.json(await f.req('/google-browser/status'));assert.equal(status.runs[0].phase,'completed');assert.equal(status.runs[0].submittedAt,undefined);
+}finally{await f.close()}});

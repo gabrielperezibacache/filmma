@@ -55,3 +55,14 @@ Fuentes oficiales: [planes y facturación](https://ai.google.dev/gemini-api/docs
 ## Validación
 
 Las pruebas automáticas usan videos técnicos locales, sin generar ni consumir créditos de Google. Cubren paquete y referencias, integridad de originales, resolución/fps nativos, rechazo de duración excesiva, contexto cambiado, idempotencia, guardado antiguo y portabilidad de la película. La comprobación de acceso, cuota y generación real requiere completar el paso de Google con la cuenta del usuario.
+
+
+## Enlace persistente 0.2.0
+
+En Configuración → Conexiones, pulsa **Detectar Chrome**. La extensión actualizada consulta sólo los puertos locales 4318/4320 y aparece con su identificador y versión. Pulsa **Enlazar este Chrome**: la aprobación ocurre en la aplicación, sin copiar códigos. La ventana de detección dura cinco minutos; no autoriza por sí sola a un navegador. Sólo después de aprobar se entrega un token al navegador que posee su prueba aleatoria. Filmma conserva su hash en el archivo privado; Chrome guarda el token localmente y comprueba el enlace al iniciar y cada 30 segundos. La pantalla muestra «Chrome conectado» únicamente después de recibir confirmación real. Revocar invalida también las detecciones pendientes.
+
+Si ya cargaste la carpeta `public/google-browser`, recarga una vez la extensión en `chrome://extensions` para pasar a 0.2.0; esa operación debe hacerse manualmente cuando el control de navegador no permite páginas internas. No cambian los permisos: Gemini, Flow, sus medios y Filmma local, sin cookies ni contraseñas. No se editan perfiles de Chrome para forzar un enlace.
+
+La recepción nativa de Flow espera un único MP4 nuevo de nombre concordante en la carpeta Descargas durante un máximo de tres minutos, exige estabilidad y archivo regular, lo copia sin borrar el original y verifica el contenido con el importador habitual. Ante varios candidatos, un enlace simbólico, otra carpeta de descarga o un nombre ambiguo, requiere importación manual. No usa endpoints de generación privados ni permisos globales de descargas. El modo de recuperación de una página existente no tiene permiso para enviar una generación; tampoco inventa una fecha de envío.
+
+Estas rutas tienen pruebas automatizadas de protocolo, copia exacta, revocación y conservación de vínculos. La conexión con la extensión instalada se valida por separado de esas pruebas y del recorrido asistido de Gemini/Flow ya documentado.

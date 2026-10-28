@@ -152,11 +152,26 @@
             await reader.cancel().catch(() => { });
         }
     }
+    async function downloadFlow(){
+        const open=oneButton(/^(abrir video en el editor|open video in editor)$/,true);
+        if(open){open.click();await waitFor(()=>oneButton(/^(descargar contenido multimedia|download media)$/,true));}
+        const titles=[...document.querySelectorAll('h1,[role="heading"][aria-level="1"]')].filter(visible);
+        if(titles.length!==1)throw Error('MANUAL_DOWNLOAD');
+        const title=titles[0].textContent.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');
+        if(title.length<4||title.length>100)throw Error('MANUAL_DOWNLOAD');
+        oneButton(/^(descargar contenido multimedia|download media)$/).click();
+        const original=await waitFor(()=>oneButton(/^(720p )?(tamano original|original size)$|^720p tamano original$/,true));
+        const ready=await chrome.runtime.sendMessage({type:'native-begin',prefix:title+'_'});if(!ready?.ok)throw Error('DOWNLOAD');
+        original.click();
+        const until=Date.now()+180000;
+        while(Date.now()<until){await sleep(2500);const result=await chrome.runtime.sendMessage({type:'native-poll'});if(!result?.ok)throw Error('DOWNLOAD');if(!result.pending)return;}
+        throw Error('DOWNLOAD');
+    }
     async function watch() { const until = Date.now() + 20 * 60 * 1000; let last = 0; while (Date.now() < until) {
         checkHuman();
         if(location.hostname==='flow.google.com'){
             if([...document.querySelectorAll('[role="radio"]')].filter(visible).some(e=>/^(aprobar|approve)$/.test(label(e))&&e.getAttribute('aria-disabled')!=='true'))throw Error('HUMAN');
-            if(buttons().some(e=>/^(abrir video en el editor|open video in editor|descargar contenido multimedia|download media)$/.test(label(e))))throw Error('MANUAL_DOWNLOAD');
+            if(buttons().some(e=>/^(abrir video en el editor|open video in editor|descargar contenido multimedia|download media)$/.test(label(e)))){await downloadFlow();return;}
         }
         const videos = [...document.querySelectorAll('video')].filter(visible).filter(e => e.currentSrc && e.readyState >= 2);
         if (videos.length > 1)

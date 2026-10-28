@@ -3,6 +3,8 @@ import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 
 import { constants } from 'node:fs';
 import { copyFile, lstat, mkdir, open, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { NativeDownloadReceipt } from './native-download.js';
 import { z } from 'zod';
 import type { Store } from './store.js';
 import type { Asset, Job } from './types.js';
@@ -26,6 +28,7 @@ type BrowserRun = {
     bytes: number;
     lease?: string;
     submittedAt?: string;
+    recoverOnly?: boolean;
     cancelledAt?: string;
     pageUrl?: string;
     baseVideoAssetId?: string;
@@ -55,6 +58,7 @@ export async function registerGoogleBrowser(o: {
     publicDirectory: string;
     video: Service;
     mediaPath: (asset: Asset) => Promise<string>;
+    nativeDownloadsDirectory?: string;
 }) {
     const { app, bridge, store, video } = o, dir = join(o.dataDirectory, 'google-browser'), downloads = join(dir, 'downloads'), privateDir = join(o.dataDirectory, '.application-private');
     await Promise.all([mkdir(downloads, { recursive: true, mode: 0o700 }), mkdir(privateDir, { recursive: true, mode: 0o700 })]);
@@ -70,13 +74,17 @@ export async function registerGoogleBrowser(o: {
         expires: number;
         attempts: number;
     } | undefined;
+    const nativeReceipts=new Map<string,NativeDownloadReceipt>();
     const runs = new Map<string, BrowserRun>(), busy = new Set<string>();
+    let discoveryUntil = 0;
+    const devices = new Map<string,{id:string;extensionId:string;proofSha256:string;version:string;expires:number;lastSeen:number;token?:string;approved?:boolean}>();
+    const pruneDevices=()=>{for(const[key,d]of devices)if(d.expires<Date.now())devices.delete(key)};
     async function atomic(path: string, value: unknown) { const tmp = path + '.' + randomUUID() + '.tmp'; await writeFile(tmp, JSON.stringify(value), { mode: 0o600, flag: 'wx' }); await rename(tmp, path); }
     try {
         const h = await open(connectionPath, constants.O_RDONLY | constants.O_NOFOLLOW);
         try {
             const s = await h.stat();
-            if (!s.isFile() || s.size > 4096 || s.mode & 0o077)
+            if (!s.isFile() || s.size > 4096 || (process.platform !== 'win32' && s.mode & 0o077))
                 throw Error('Conexión privada inválida');
             const raw = JSON.parse(await h.readFile('utf8'));
             if (raw !== null)
@@ -132,6 +140,17 @@ export async function registerGoogleBrowser(o: {
     } const ext = req.get('X-Filmma-Extension'); if (origin && origin !== `chrome-extension://${ext}`)
         return res.status(403).json({ error: 'El origen de la extensión no coincide.' }); next(); });
     bridge.use(express.json({ limit: '64kb' }));
+    bridge.post('/discover',route(async(req,res)=>{
+        const input=z.object({proof:z.string().regex(/^[a-f0-9]{64}$/),version:z.string().min(1).max(30)}).strict().parse(req.body);
+        const ext=extensionId.parse(req.get('X-Filmma-Extension'));pruneDevices();
+        const key=digest(ext+':'+input.proof);let device=devices.get(key);
+        if(!device&&Date.now()>discoveryUntil)return res.json({enabled:false});
+        if(!device){if(devices.size>=6)throw fail('Demasiados dispositivos pendientes. Reinicia la detección.',429);device={id:randomUUID(),extensionId:ext,proofSha256:digest(input.proof),version:input.version,expires:discoveryUntil,lastSeen:Date.now()};devices.set(key,device)}
+        device.lastSeen=Date.now();
+        // A token is released only after approval through the normal Filmma UI.
+        // Retries with the same proof recover a lost response; no tokens in status.
+        res.json({enabled:true,pending:!device.approved,...(device.approved&&device.token?{token:device.token}:{})});
+    }));
     bridge.post('/pair', route(async (req, res) => { const input = z.object({ code: z.string().regex(/^\d{9}$/), extensionId, version: z.string().max(30) }).strict().parse(req.body); if (input.extensionId !== req.get('X-Filmma-Extension'))
         throw fail('Identificador de extensión distinto.', 403); if (!pair || pair.expires < Date.now() || ++pair.attempts > 5 || input.code !== pair.code)
         throw fail('Código caducado o incorrecto. Crea otro código en Filmma.', 401); const token = randomBytes(32).toString('base64url'); pair = undefined; connection = { extensionId: input.extensionId, tokenSha256: digest(token), connectedAt: new Date().toISOString(), lastSeen: new Date().toISOString(), version: input.version }; await atomic(connectionPath, connection); res.json({ token, connection: 'paired' }); }));
@@ -140,7 +159,7 @@ export async function registerGoogleBrowser(o: {
     bridge.post('/claim', route(async (req, res) => { auth(req); const r = [...runs.values()].find(r => r.phase === 'queued'); if (!r)
         return res.json({ run: null }); r.phase = 'opening'; r.message = phaseMessages.opening; r.lease = randomUUID(); try {
         const request = await video.load(r.requestId);
-        if (!r.submittedAt && video.status(request).stale) {
+        if (!r.submittedAt && !r.recoverOnly && video.status(request).stale) {
             r.phase = 'attention';
             r.message = 'El guion o la continuidad cambió antes de enviar. Prepara otro paquete.';
             await save(r);
@@ -171,7 +190,7 @@ export async function registerGoogleBrowser(o: {
     } }));
     bridge.post('/event/:id', route(async (req, res) => { const r = leased(req), input = z.object({ phase: z.enum(['preparing', 'submitting', 'generating', 'attention']), step:z.literal('references').optional(), pageUrl: z.string().max(2000).optional(), error: z.enum(['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'DISCONNECTED', 'UNSUPPORTED','MANUAL_DOWNLOAD']).optional() }).strict().parse(req.body); if (input.pageUrl)
         r.pageUrl = safePage(input.pageUrl, r.provider); if (input.phase === 'submitting') {
-        if (r.submittedAt || r.phase !== 'preparing' || busy.has(r.id))
+        if (r.recoverOnly || r.submittedAt || r.phase !== 'preparing' || busy.has(r.id))
             throw fail('Esta solicitud ya se envió o no está preparada.');
         busy.add(r.id);
         try {
@@ -189,12 +208,12 @@ export async function registerGoogleBrowser(o: {
         finally {
             busy.delete(r.id);
         }
-    } if (input.phase === 'generating' && !r.submittedAt)
+    } if (input.phase === 'generating' && !r.submittedAt && !r.recoverOnly)
         throw fail('No hay un envío confirmado.'); if (input.phase === 'generating' && ['downloading', 'validating'].includes(r.phase))
         return res.json({ ok: true }); r.phase = input.phase; r.message = input.phase==='preparing'&&input.step==='references'?'Flow espera las referencias: abre esta pestaña, súbelas y pulsa Añadir a petición. El prompt se enviará después.':input.phase === 'attention' ? errors[input.error ?? 'DOM_CHANGED'] : phaseMessages[input.phase]; await save(r); res.json({ ok: true }); }));
-    bridge.post('/chunk/:id', express.raw({ type: 'application/octet-stream', limit: '1mb' }), route(async (req, res) => { const r = leased(req); if (!r.submittedAt || !['generating', 'downloading'].includes(r.phase))
-        throw fail('Esta toma no espera un video.'); if (busy.has(r.id))
-        throw fail('Hay un bloque escribiéndose.'); const bytes = req.body as Buffer, offset = z.coerce.number().int().min(0).max(512 * 1024 ** 2).parse(req.query.offset); if (!Buffer.isBuffer(bytes) || !bytes.length || bytes.length > 1024 ** 2 || offset + bytes.length > 512 * 1024 ** 2)
+    bridge.post('/chunk/:id', express.raw({ type: 'application/octet-stream', limit: '1mb' }), route(async (req, res) => { const r = leased(req); if ((!r.submittedAt&&!r.recoverOnly) || !['generating', 'downloading'].includes(r.phase))
+        throw fail('Esta toma no espera un video.'); if (busy.has(r.id)||nativeReceipts.has(r.id))
+        throw fail('Hay otra descarga escribiéndose.'); const bytes = req.body as Buffer, offset = z.coerce.number().int().min(0).max(512 * 1024 ** 2).parse(req.query.offset); if (!Buffer.isBuffer(bytes) || !bytes.length || bytes.length > 1024 ** 2 || offset + bytes.length > 512 * 1024 ** 2)
         throw fail('El bloque de video supera el límite.', 400); const hash = digest(bytes); if (r.lastChunk?.offset === offset && r.lastChunk.sha256 === hash && r.lastChunk.size === bytes.length)
         return res.json({ bytes: r.bytes }); if (offset !== r.bytes)
         throw fail('El bloque no sigue el orden de la descarga.'); busy.add(r.id); try {
@@ -244,11 +263,24 @@ export async function registerGoogleBrowser(o: {
     finally {
         busy.delete(r.id);
     } }
+    bridge.post('/native-begin/:id',route(async(req,res)=>{const r=leased(req);if(r.provider!=='flow'||(!r.submittedAt&&!r.recoverOnly)||!r.pageUrl||r.bytes||nativeReceipts.has(r.id))throw fail('Esta toma no espera una descarga nativa.');const{prefix}=z.object({prefix:z.string().min(4).max(111)}).strict().parse(req.body);nativeReceipts.set(r.id,await new NativeDownloadReceipt(o.nativeDownloadsDirectory??join(homedir(),'Downloads'),prefix).begin());r.phase='downloading';r.message='Esperando Tamaño original en Descargas; no se modifica el archivo de Chrome.';await save(r);res.json({ok:true})}));
+    bridge.post('/native-poll/:id',route(async(req,res)=>{const r=leased(req),receipt=nativeReceipts.get(r.id);if(!receipt)throw fail('No hay una descarga nativa preparada.');if(busy.has(r.id))return res.json({pending:true});busy.add(r.id);let result;try{result=await receipt.capture(join(downloads,r.id+'.part'));if(result){r.bytes=result.bytes;await save(r);nativeReceipts.delete(r.id)}}finally{busy.delete(r.id)}if(!result)return res.json({pending:true});res.json({pending:false,...await finish(r)})}));
     bridge.post('/finish/:id', route(async (req, res) => { const r = leased(req); res.json(await finish(r)); }));
-    app.get('/api/google-browser/status', route(async (_req, res) => { res.json({ configured: !!connection, connected: !!connection?.lastSeen && Date.now() - Date.parse(connection.lastSeen) < 65000, extensionVersion: connection?.version, extensionUrl: '/api/google-browser/extension', runs: [...runs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100).map(publicRun) }); }));
+    app.get('/api/google-browser/status', route(async (_req, res) => {pruneDevices();res.json({ configured: !!connection, connected: !!connection?.lastSeen && Date.now() - Date.parse(connection.lastSeen) < 65000, extensionVersion: connection?.version, extensionUrl: '/api/google-browser/extension',discovery:{active:Date.now()<discoveryUntil,expiresAt:discoveryUntil?new Date(discoveryUntil).toISOString():null,devices:[...devices.values()].filter(d=>!d.approved).map(d=>({id:d.id,extensionId:d.extensionId,version:d.version,lastSeen:new Date(d.lastSeen).toISOString()}))}, runs: [...runs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100).map(publicRun) }); }));
+    app.post('/api/google-browser/discovery',route(async(_req,res)=>{devices.clear();discoveryUntil=Date.now()+5*60000;res.json({ok:true,expiresAt:new Date(discoveryUntil).toISOString()})}));
+    app.post('/api/google-browser/approve-device',route(async(req,res)=>{
+        const{id}=z.object({id:uuid}).strict().parse(req.body);pruneDevices();const d=[...devices.values()].find(v=>v.id===id);
+        if(!d||d.approved||Date.now()>discoveryUntil||Date.now()-d.lastSeen>65000)throw fail('Chrome ya no está disponible. Vuelve a detectarlo.');
+        if([...runs.values()].some(r=>!terminal(r)))throw fail('Termina la toma activa antes de cambiar el enlace.');
+        const token=randomBytes(32).toString('base64url');
+        connection={extensionId:d.extensionId,tokenSha256:digest(token),version:d.version,connectedAt:new Date().toISOString()};
+        await atomic(connectionPath,connection);d.token=token;d.approved=true;d.expires=Date.now()+120000;discoveryUntil=0;
+        for(const[key,v]of devices)if(v!==d)devices.delete(key);
+        res.json({ok:true,message:'Enlace autorizado. Esperando la confirmación de Chrome.'});
+    }));
     app.post('/api/google-browser/pairing', route(async (_req, res) => { if ([...runs.values()].some(r => !terminal(r)))
         throw fail('Detén la automatización antes de cambiar el enlace de Chrome.'); pair = { code: String(randomInt(100000000, 1000000000)), expires: Date.now() + 120000, attempts: 0 }; res.json({ code: pair.code, expiresAt: new Date(pair.expires).toISOString() }); }));
-    app.post('/api/google-browser/disconnect', route(async (_req, res) => { connection = undefined; pair = undefined; await atomic(connectionPath, null); for (const r of runs.values())
+    app.post('/api/google-browser/disconnect', route(async (_req, res) => { connection = undefined; pair = undefined; devices.clear(); discoveryUntil=0; await atomic(connectionPath, null); for (const r of runs.values())
         if (!terminal(r)) {
             r.phase = 'attention';
             r.message = errors.DISCONNECTED;
@@ -262,8 +294,9 @@ export async function registerGoogleBrowser(o: {
         throw fail('Este paquete ya se envió. Recupera su pestaña sin volver a generar.'); if (store.project.assets.some(a => a.googleVideo?.requestId === request.id))
         throw fail('Este paquete ya tiene una toma. Prepara otro para generar una alternativa.'); const stamp = new Date().toISOString(), r: BrowserRun = { id: randomUUID(), requestId: request.id, provider: request.provider, projectId: request.projectId, sceneId: request.sceneId, sceneTitle: request.sceneTitle, createdAt: stamp, updatedAt: stamp, phase: 'queued', message: phaseMessages.queued, bytes: 0, apply: input.apply, baseVideoAssetId: store.project.scenes.find(s => s.id === request.sceneId)?.videoAssetId }; if ([...runs.values()].some(x => !terminal(x)))
         throw fail('Hay una toma de Google activa.'); runs.set(r.id, r); const j: Job = { id: r.id, type: 'google-browser', status: 'queued', progress: 0, createdAt: stamp, updatedAt: stamp, message: r.message, context: { projectId: r.projectId, projectName: store.project.name, sceneId: r.sceneId, sceneTitle: r.sceneTitle }, result: { projectId: r.projectId, sceneId: r.sceneId } }; store.jobs.push(j); await save(r); res.status(202).json({ run: publicRun(r), job: j }); }));
+    app.post('/api/google-browser/recover-page',route(async(req,res)=>{const input=z.object({requestId:uuid,pageUrl:z.string().max(2000),apply:z.boolean().default(false)}).strict().parse(req.body);if(!connection)throw fail('Enlaza Chrome primero.');if([...runs.values()].some(r=>!terminal(r)))throw fail('Hay una toma activa.');const request=await video.load(input.requestId);if(store.project.id!==request.projectId)throw fail('Abre el proyecto del paquete.');const stamp=new Date().toISOString(),r:BrowserRun={id:randomUUID(),requestId:request.id,provider:request.provider,projectId:request.projectId,sceneId:request.sceneId,sceneTitle:request.sceneTitle,createdAt:stamp,updatedAt:stamp,phase:'queued',message:'Recuperando un resultado existente sin generar.',bytes:0,apply:input.apply,recoverOnly:true,pageUrl:safePage(input.pageUrl,request.provider),baseVideoAssetId:store.project.scenes.find(s=>s.id===request.sceneId)?.videoAssetId};runs.set(r.id,r);store.jobs.push({id:r.id,type:'google-browser',status:'queued',progress:0,createdAt:stamp,updatedAt:stamp,message:r.message,context:{projectId:r.projectId,sceneId:r.sceneId,sceneTitle:r.sceneTitle}});await save(r);res.status(202).json({run:publicRun(r)})}));
     async function stop(id: string) {
-        const r = get(id);
+        const r = get(id);nativeReceipts.delete(r.id);
         if (r.phase === 'completed') throw fail('La toma ya se conservó.');
         r.cancelledAt = new Date().toISOString();
         r.phase = 'cancelled';

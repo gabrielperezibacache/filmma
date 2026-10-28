@@ -10,7 +10,6 @@ import contextlib
 import concurrent.futures
 import ctypes
 import hashlib
-import fcntl
 import json
 import math
 import os
@@ -28,6 +27,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import portable_lock
+from weight_residency import residency_plan
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNTIME = ROOT / 'runtime'
@@ -128,8 +130,29 @@ def hardware():
         except (TypeError, ValueError, KeyError, IndexError):
             pass
     disk = shutil.disk_usage(ROOT)
+    if not mem:
+        try:
+            if platform.system() == 'Windows':
+                class MemoryStatus(ctypes.Structure):
+                    _fields_ = [('length', ctypes.c_ulong), ('load', ctypes.c_ulong)] + [(n, ctypes.c_ulonglong) for n in ('total', 'available', 'pageTotal', 'pageAvailable', 'virtualTotal', 'virtualAvailable', 'extended')]
+                status = MemoryStatus(); status.length = ctypes.sizeof(status)
+                if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+                    mem = str(status.total)
+            else:
+                mem = str(os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES'))
+        except (AttributeError, OSError, ValueError):
+            pass
+    gpus = []
+    raw_gpus = run_read(['nvidia-smi', '--query-gpu=name,memory.total,driver_version', '--format=csv,noheader,nounits'], timeout=4)
+    if raw_gpus:
+        for row in raw_gpus.splitlines():
+            values = row.split(',')
+            try:
+                gpus.append({'vendor': 'NVIDIA', 'name': values[0].strip(), 'memoryGB': round(float(values[1]) / 1024, 1), 'driver': values[2].strip()})
+            except (ValueError, IndexError):
+                pass
     return {'platform': platform.system(), 'architecture': platform.machine(),
-            'appleSilicon': apple, 'chip': chip or platform.machine(),
+            'appleSilicon': apple, 'chip': chip or platform.machine(), 'gpus': gpus,
             'memoryGB': round(int(mem) / 1024**3, 1) if mem and mem.isdigit() else None,
             'diskFreeGB': round(disk.free / 1024**3, 1), 'pythonVersion': platform.python_version(),
             'ffmpeg': shutil.which('ffmpeg'), 'ffprobe': shutil.which('ffprobe')}
@@ -199,10 +222,10 @@ def operation_active(name):
         return False
     with lock.open('a+') as handle:
         try:
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            portable_lock.acquire(handle)
         except BlockingIOError:
             return True
-        fcntl.flock(handle, fcntl.LOCK_UN)
+        portable_lock.release(handle)
         return False
 
 
@@ -474,7 +497,9 @@ def h3_command(request, output):
     args = [str(executable('minimax-h3').expanduser().resolve()), '-d', request.get('engineModelDirectory', request['modelDirectory']), '-p', request['prompt'],
             '--width', str(request['width']), '--height', str(request['height']),
             '--frames', str(request['numFrames']), '--steps', str(request['steps']),
-            '--seed', str(request['seed']), '--layers', '50', '--reuse', '1', '--ssd-streaming', '--profile', '-o', str(output)]
+            '--seed', str(request['seed']), '--layers', '50', '--reuse', '1', '--profile', '-o', str(output)]
+    if request.get('ssdStreaming', True):
+        args += ['--ssd-streaming']
     if request.get('inputImage'):
         args += ['--first-frame', request.get('engineInputImage', request['inputImage'])]
     if request.get('lastFrame'):
@@ -541,13 +566,13 @@ def validate_media(output):
 def exclusive_lock(name, blocking=False):
     with (RUNTIME / ('.' + name + '.lock')).open('a+') as handle:
         try:
-            fcntl.flock(handle, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+            portable_lock.acquire(handle, blocking)
         except BlockingIOError:
             raise RuntimeFailure('RUNTIME_BUSY', 'Ya existe una operación local de este tipo en curso.')
         try:
             yield
         finally:
-            fcntl.flock(handle, fcntl.LOCK_UN)
+            portable_lock.release(handle)
 
 
 def generate(request):
@@ -712,6 +737,20 @@ def _generate(request):
     hw = hardware()
     if not hw['appleSilicon']:
         raise RuntimeFailure('UNSUPPORTED_HARDWARE', 'La generación local requiere Apple Silicon.')
+    if request['model'] == 'minimax-h3':
+        try:
+            plan = residency_plan(hw, config().get('models', {}).get('minimax-h3', {}).get('weightResidency', 'auto'), request['memoryProfile'])
+        except ValueError as error:
+            raise RuntimeFailure('MEMORY_RESIDENCY', str(error))
+        request['ssdStreaming'] = plan['ssdStreaming']
+        request['weightResidency'] = plan
+        if not request['ssdStreaming']:
+            if request['numFrames'] > 22 or request['width'] * request['height'] > 512 * 512:
+                raise RuntimeFailure('RESIDENCY_LIMIT', 'La prueba de RAM residente admite hasta 22 fotogramas y 512 × 512 píxeles de superficie. Usa SSD streaming para los demás perfiles.')
+            baseline = system_memory(include_free=True)
+            if baseline['pressureLevel'] >= 2 or hw['memoryGB'] * baseline['freePercent'] / 100 < 48:
+                raise RuntimeFailure('MEMORY_BUDGET', 'Cierra aplicaciones o selecciona SSD: la prueba residente necesita una estimación conservadora de 48 GiB libres y presión normal.')
+        emit('log', stage='memory', message='Residencia de pesos: ' + plan['effective'], residency=plan)
     if not executable(request['model']).is_file():
         raise RuntimeFailure('RUNTIME_MISSING', 'Instala primero el motor local.', model=request['model'])
     engine_cwd = engine_working_directory(request['model'])
@@ -760,7 +799,10 @@ def _generate(request):
             temp_request = output.parent / ('.ltx-request-' + uuid.uuid4().hex + '.json')
             temp_request.write_text(json.dumps({**request, 'outputPath': str(partial)}))
             command = [str(executable('ltx-2b')), str(RUNTIME / 'ltx_worker.py'), str(temp_request)]
-        child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=str(engine_cwd), start_new_session=True, env={**os.environ, 'PYTHONUNBUFFERED': '1'})
+        child_env = {**os.environ, 'PYTHONUNBUFFERED': '1'}
+        if request['model'] == 'minimax-h3' and not request['ssdStreaming']:
+            child_env['H3_ZERO_COPY_WEIGHTS'] = '0'
+        child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=str(engine_cwd), start_new_session=True, env=child_env)
         if memory_baseline is not None:
             memory_monitor = LongGenerationMonitor(child, request, memory_baseline)
             memory_monitor.start()
@@ -803,7 +845,7 @@ def _generate(request):
         metadata.update({'model': request['model'], 'memoryProfile': request['memoryProfile'], 'seed': request['seed'], 'elapsedSeconds': round(time.time() - started, 2),
                          'local': True, 'modelRevision': CATALOG['models'][request['model']]['revision'],
                          'runtimeRevision': CATALOG['models'][request['model']]['runtime']['revision'],
-                         'warnings': request['warnings'], 'engineMetrics': engine_metrics})
+                         'warnings': request['warnings'], 'engineMetrics': engine_metrics, 'weightResidency': request.get('weightResidency')})
         output.with_suffix('.filmma.json').write_text(json.dumps({'request': request, 'metadata': metadata}, ensure_ascii=False, indent=2))
         try:
             save_validation(request, metadata, hw)
@@ -838,6 +880,17 @@ def sha256_file(path):
         for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
             digest.update(block)
     return digest.hexdigest()
+
+
+def configure_memory(mode):
+    residency_plan(hardware(), mode)
+    with exclusive_lock('generation'), exclusive_lock('configuration', blocking=True):
+        value = config()
+        value.setdefault('models', {}).setdefault('minimax-h3', {})['weightResidency'] = mode
+        temp = CONFIG_PATH.with_suffix('.tmp')
+        temp.write_text(json.dumps(value, indent=2) + '\n')
+        temp.replace(CONFIG_PATH)
+    return {'ok': True, 'mode': mode, 'note': 'Los perfiles largos y HD mantienen SSD streaming y sus límites. RAM explícita sólo admite el perfil breve.'}
 
 
 def configure(model, directory, references=None):
@@ -1067,6 +1120,7 @@ def main():
     sub = parser.add_subparsers(dest='command', required=True)
     p = sub.add_parser('doctor'); p.add_argument('--json', action='store_true')
     p = sub.add_parser('generate'); p.add_argument('--request', required=True, help='JSON file, inline JSON, or - for stdin')
+    p = sub.add_parser('configure-memory'); p.add_argument('--mode', choices=['auto', 'ssd', 'ram'], required=True); p.add_argument('--json', action='store_true')
     for command in ('download-plan', 'download', 'install-runtime', 'configure', 'verify'):
         p = sub.add_parser(command)
         p.add_argument('--model', choices=list(MODEL_NAMES), default='minimax-h3')
@@ -1079,6 +1133,8 @@ def main():
     try:
         if args.command == 'doctor':
             print(json.dumps(doctor(), ensure_ascii=False, indent=None if args.json else 2))
+        elif args.command == 'configure-memory':
+            print(json.dumps(configure_memory(args.mode), ensure_ascii=False))
         elif args.command == 'generate':
             value = sys.stdin.read() if args.request == '-' else args.request if args.request.lstrip().startswith('{') else Path(args.request).read_text()
             generate(json.loads(value))

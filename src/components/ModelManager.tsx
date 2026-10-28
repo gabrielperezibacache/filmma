@@ -1,3 +1,4 @@
+import LocalInstallationOptions from './LocalInstallationOptions';
 import ModelRecommendations from './ModelRecommendations';
 import QualityWorkbench from './QualityWorkbench';
 import {projectNeedsIdentityReferences,type RecommendationIntent} from '../model-recommendations';
@@ -30,6 +31,7 @@ export default function ModelManager({project,jobs,onJob,onActivate,onAssistant}
  {error&&<p role="alert" className="settings-error">{error}</p>}{notice&&<p role="status" className="settings-notice">{notice}</p>}
  {!report?<div className="settings-loading"><LoaderCircle className="spin"/>{tr('Reconociendo tu equipo…','Detecting your hardware…')}</div>:<>
  <div className="model-hardware"><HardDrive size={24}/><div><strong>{report.hardware.chip||tr('Equipo local','Local computer')}</strong><span>{report.hardware.memoryGB} GB · {report.hardware.architecture??'arm64'} · {tr('Una tarea de GPU a la vez','One GPU task at a time')}</span></div><span>{tr('Originales protegidos','Originals preserved')}<ShieldCheck size={16}/></span></div>
+ <LocalInstallationOptions installation={report.installation} hardware={report.hardware} busy={blocked} onChanged={load}/>
  <ModelRecommendations report={report} intent={intent} onIntent={setIntent} busy={blocked} onChoose={p=>{setSelected(p.model);setPresetId(p.id);setSection('models');if(p.readiness==='ready')void run('activate',async()=>{const d=await api('/models/activate',{model:p.model,presetId:p.id});await save({preferredModel:p.model});onActivate(d.preset);setNotice(tr('Perfil aplicado a la generación. El guion y los personajes se conservan.','Profile applied to generation. Script and characters are preserved.'))})}}/>
  <nav className="settings-tabs" aria-label={tr('Modelos y calidad','Models and quality')}><button aria-current={section==='models'?'page':undefined} onClick={()=>setSection('models')}>{tr('Preparar y configurar','Prepare and configure')}</button><button aria-current={section==='quality'?'page':undefined} onClick={()=>setSection('quality')}>{tr('Comparar calidad nativa','Compare native quality')}</button></nav>
  {section==='quality'?<QualityWorkbench models={report.models} jobs={jobs} onJob={onJob} onPrepare={id=>{setSelected(id as 'ltx-2b'|'minimax-h3');setSection('models')}}/>:<>

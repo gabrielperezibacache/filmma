@@ -1,4 +1,4 @@
-name: Filmma for Mac
+name: Filmma desktop
 on:
   push:
     branches: [main]
@@ -7,10 +7,10 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: macos-release-${{ github.ref }}
+  group: desktop-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  build:
+  mac:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +54,70 @@ jobs:
             release/*.dmg
             release/*.zip
             release/SHA256SUMS.txt
-      - name: Publish private release
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: astral-sh/setup-uv@v6
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git make diffutils curl tar xz
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-nasm
+            mingw-w64-ucrt-x86_64-pkgconf
+      - run: npm ci
+      - name: Release version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            BASE_VERSION="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")')"
+            VERSION="$BASE_VERSION.${GITHUB_RUN_NUMBER}"
+          fi
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          echo "FILMMA_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Build portable media runtime from verified sources
+        shell: msys2 {0}
+        run: bash scripts/packaging/build-media-windows.sh
+      - name: Install portable Python
+        run: uv python install 3.12
+      - name: Build Windows installer
+        run: npm run desktop:build:win
+      - name: Smoke test packaged Windows app, media and model diagnosis
+        run: node scripts/packaging/smoke-windows.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Filmma-${{ env.FILMMA_VERSION }}-win-x64
+          path: |
+            release/*.exe
+            release/*.zip
+            release/windows-smoke.json
+  release:
+    needs: [mac, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify and publish both platforms together
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v$FILMMA_VERSION" release/*.dmg release/*.zip release/SHA256SUMS.txt --title "Filmma $FILMMA_VERSION" --notes "Apple Silicon. Instalador con firma ad hoc, sin notarización Apple. Conserva proyectos y modelos externos."
+        shell: bash
+        run: |
+          VERSION="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")').$GITHUB_RUN_NUMBER"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; fi
+          node scripts/packaging/checksums.mjs
+          gh release create "v$VERSION" release/*.dmg release/*.zip release/*.exe release/SHA256SUMS.txt release/windows-smoke.json --title "Filmma $VERSION" --notes "macOS Apple Silicon + Windows x64. Instaladores sin firma de editor ni notarización. Incluyen multimedia y conservan proyectos y modelos externos. Windows: motores CUDA externos documentados; Metal y MLX requieren Mac."

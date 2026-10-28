@@ -1,7 +1,7 @@
 {
   "name": "filmma-studio",
   "private": true,
-  "version": "0.14.1",
+  "version": "0.15.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n api,studio \"tsx watch server/index.ts\" \"vite --host 127.0.0.1 --port 4317\"",
@@ -13,7 +13,8 @@
     "desktop:prepare": "node scripts/packaging/prepare-desktop.mjs",
     "desktop:build": "npm run build && npm run desktop:prepare && electron-builder --config desktop/electron-builder.cjs --mac --arm64 --publish never",
     "desktop:dev": "electron .",
-    "release:checksums": "node scripts/packaging/checksums.mjs"
+    "release:checksums": "node scripts/packaging/checksums.mjs",
+    "desktop:build:win": "npm run build && npm run desktop:prepare && electron-builder --config desktop/electron-builder.cjs --win --x64 --publish never"
   },
   "dependencies": {
     "express": "^5.1.0",
@@ -45,7 +46,7 @@
     "vite": "^7.1.7"
   },
   "main": "desktop/main.cjs",
-  "description": "Estudio local de cine, guion y continuidad en Apple Silicon",
+  "description": "Estudio de cine, guion y continuidad para macOS y Windows",
   "author": "Filmma",
   "license": "UNLICENSED"
 }

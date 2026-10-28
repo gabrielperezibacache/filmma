@@ -8,6 +8,7 @@ import {ApplicationPreferences} from './app-preferences.js';
 import {runProcess} from './process.js';
 import {spawn} from 'node:child_process';
 
+export const installerPattern=(platform:string,arch:string)=>platform==='win32'&&arch==='x64'?/^Filmma-[0-9][a-zA-Z0-9.+-]*-win-x64-Setup\.exe$/:platform==='darwin'&&arch==='arm64'?/^Filmma-[0-9][a-zA-Z0-9.+-]*-arm64\.dmg$/:null;
 const REPOSITORY='gabrielperezibacache/filmma';
 const route=(fn:any)=>(req:any,res:any,next:any)=>Promise.resolve(fn(req,res)).catch(next);
 const fail=(message:string,status=409)=>Object.assign(new Error(message),{status});
@@ -28,7 +29,7 @@ export async function registerApplicationRoutes(options:{app:Express;root:string
    let commit:any,release:any;
    try{[commit,release]=await Promise.all([ghJson(`repos/${REPOSITORY}/commits/main`),ghJson(`repos/${REPOSITORY}/releases/latest`).catch(()=>null)])}
    catch(error){return{status:'connection-required',message:(error as Error).message,repository:REPOSITORY,currentVersion:metadata.version}}
-   const artifact=release?.assets?.find((a:any)=>/^Filmma-[0-9][a-zA-Z0-9.+-]*-arm64\.dmg$/.test(a.name));
+   const artifact=release?.assets?.find((a:any)=>installerPattern(process.platform,process.arch)?.test(a.name));
    const checksums=release?.assets?.find((a:any)=>a.name==='SHA256SUMS.txt');
    if(release&&!/^v?\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/.test(String(release.tag_name)))release=null;
    const latestVersion=String(release?.tag_name??'').replace(/^v/,'');
@@ -56,7 +57,7 @@ export async function registerApplicationRoutes(options:{app:Express;root:string
  app.put('/api/application/preferences',route(async(req:any,res:any)=>res.json({preferences:await prefs.update(req.body)})));
  app.post('/api/application/updates/check',route(async(req:any,res:any)=>{const input=z.object({currentVersion:z.string().regex(/^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$/).optional()}).strict().parse(req.body??{});const value=await check(true);if(input.currentVersion&&value.latestVersion){const newer=value.latestVersion.localeCompare(input.currentVersion,undefined,{numeric:true})>0;res.json({...value,currentVersion:input.currentVersion,status:newer&&value.release?.artifact?'available':value.status==='available'?'current':value.status})}else res.json(value)}));
  app.get('/api/application/updates',route(async(_req:any,res:any)=>res.json(await check())));
- app.post('/api/application/open-data',route(async(_req:any,res:any)=>{if(process.platform!=='darwin')throw fail('Esta acción requiere macOS.');if(options.opener)await options.opener(dataDirectory);else{const r=await runProcess('open',[dataDirectory],{timeoutMs:5000});if(r.code!==0)throw fail('No se pudo abrir la carpeta.')}res.json({ok:true})}));
+ app.post('/api/application/open-data',route(async(_req:any,res:any)=>{if(!['darwin','win32'].includes(process.platform))throw fail('Abre la carpeta de datos manualmente en este sistema.');if(options.opener)await options.opener(dataDirectory);else{const r=await runProcess(process.platform==='win32'?'explorer.exe':'open',[dataDirectory],{timeoutMs:5000});if(r.code!==0)throw fail('No se pudo abrir la carpeta.')}res.json({ok:true})}));
  let downloading:Promise<any>|undefined;
  app.post('/api/application/updates/download',route(async(req:any,res:any)=>{
   const input=z.object({releaseId:z.number().int().positive()}).strict().parse(req.body);idle();
@@ -78,9 +79,9 @@ export async function registerApplicationRoutes(options:{app:Express;root:string
  }));
  app.post('/api/application/updates/open',route(async(req:any,res:any)=>{
   idle();const {id}=z.object({id:z.string().regex(/^[0-9]+$/)}).strict().parse(req.body);const directory=join(dataDirectory,'application-updates',id),record=JSON.parse(await readFile(join(directory,'verified.json'),'utf8'));
-  if(basename(record.filename)!==record.filename||!record.filename.endsWith('-arm64.dmg'))throw fail('El instalador guardado no es válido.');
+  if(basename(record.filename)!==record.filename||!installerPattern(process.platform,process.arch)?.test(record.filename))throw fail('El instalador guardado no es válido.');
   const path=resolve(directory,record.filename),info=await lstat(path);if(!info.isFile()||info.isSymbolicLink()||await sha(path)!==record.sha256)throw fail('El instalador cambió. Descárgalo de nuevo.');
-  if(options.opener)await options.opener(path);else{const r=await runProcess('open',[path],{timeoutMs:10000});if(r.code!==0)throw fail('No se pudo abrir el instalador.')}res.json({ok:true});
+  if(options.opener)await options.opener(path);else{const r=await runProcess(process.platform==='win32'?path:'open',process.platform==='win32'?[]:[path],{timeoutMs:process.platform==='win32'?600000:10000});if(r.code!==0)throw fail('No se pudo abrir el instalador.')}res.json({ok:true});
  }));
  return{preferences:prefs,metadata};
 }

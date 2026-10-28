@@ -2,6 +2,21 @@
    No cookie/debugger/history permissions and no generation API endpoints. */
 const ownOrigins = new Set(['http://127.0.0.1:4318', 'http://127.0.0.1:4320']);
 let claiming = false;
+
+async function discover() {
+    const {active}=await state();if(active)return;
+    const saved=await chrome.storage.local.get('discoveryProofs'),proofs=saved.discoveryProofs??{};
+    for(const endpoint of ownOrigins){
+        try{
+            if(!proofs[endpoint]){proofs[endpoint]=Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('');await chrome.storage.local.set({discoveryProofs:proofs})}
+            const response=await fetch(endpoint+'/api/google-browser/bridge/discover',{method:'POST',headers:{'Content-Type':'application/json','X-Filmma-Extension':chrome.runtime.id},body:JSON.stringify({proof:proofs[endpoint],version:chrome.runtime.getManifest().version}),redirect:'error',signal:AbortSignal.timeout(3000)});
+            if(!response.ok)continue;const result=await response.json();
+            if(result.token){const current=(await state()).connection;if(current?.endpoint===endpoint&&current?.token===result.token)continue;await chrome.storage.local.set({connection:{endpoint,token:result.token}});await api('/ping',{});}
+        }catch{} // One offline Filmma instance must not disconnect the other.
+    }
+}
+async function tick(){await discover();const {connection}=await state();if(connection){try{await api('/ping',{})}catch{}await claim()}}
+
 async function state() { return chrome.storage.local.get(['connection', 'active']); }
 async function api(path, body, run) { const { connection } = await state(); if (!connection || !ownOrigins.has(connection.endpoint))
     throw Error('Enlaza Filmma en las opciones de la extensión.'); const response = await fetch(connection.endpoint + '/api/google-browser/bridge' + path, { method: 'POST', headers: { 'Content-Type': body instanceof Uint8Array ? 'application/octet-stream' : 'application/json', 'X-Filmma-Extension': chrome.runtime.id, Authorization: 'Bearer ' + connection.token, ...(run ? { 'X-Filmma-Lease': run.lease } : {}) }, body: body instanceof Uint8Array ? body : JSON.stringify(body ?? {}), redirect: 'error' }); const result = await response.json(); if (!response.ok)
@@ -27,7 +42,7 @@ async function claim() {
         const run = result.run;
         reserved = { run };
         const tab = await chrome.tabs.create({ url: run.pageUrl || (run.provider === 'gemini' ? 'https://gemini.google.com/app' : 'https://flow.google.com/'), active: true });
-        await chrome.storage.local.set({ active: { run, tabId: tab.id, submitted: !!run.submittedAt, started: Date.now() } });
+        await chrome.storage.local.set({ active: { run, tabId: tab.id, submitted: !!run.submittedAt||!!run.recoverOnly, started: Date.now() } });
     }
     catch {
         // A transient heartbeat failure keeps ownership of the existing tab. A claim
@@ -146,6 +161,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             await finish(active);
             return { ok: true };
         }
+        if(message.type==='native-begin')return api('/native-begin/'+active.run.id,{prefix:message.prefix},active.run);
+        if(message.type==='native-poll'){const result=await api('/native-poll/'+active.run.id,{},active.run);if(!result.pending)await chrome.storage.local.remove('active');return{ok:true,pending:result.pending};}
         if (message.type === 'media') {
             const url = new URL(message.url);
             if (url.protocol !== 'https:' || url.username || url.password || !((url.hostname.endsWith('.googleusercontent.com')||url.hostname==='contribution.usercontent.google.com') || url.hostname === (active.run.provider === 'gemini' ? 'gemini.google.com' : 'flow.google.com')))
@@ -159,8 +176,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
 });
 chrome.alarms.onAlarm.addListener(alarm => { if (alarm.name === 'filmma')
-    void claim(); });
-chrome.runtime.onInstalled.addListener(() => { void chrome.runtime.openOptionsPage(); void chrome.alarms.create('filmma', { periodInMinutes: .5 }); });
+    void tick(); });
+chrome.runtime.onInstalled.addListener(() => { void chrome.runtime.openOptionsPage(); void chrome.alarms.create('filmma', { periodInMinutes: .5 }); void tick(); });
 chrome.action.onClicked.addListener(() => void chrome.runtime.openOptionsPage());
 
-chrome.runtime.onStartup?.addListener(()=>{void chrome.alarms.create('filmma',{periodInMinutes:.5});void claim()});
+chrome.runtime.onStartup?.addListener(()=>{void chrome.alarms.create('filmma',{periodInMinutes:.5});void tick()});

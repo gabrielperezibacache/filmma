@@ -70,7 +70,7 @@ export function detectMedia(buffer: Buffer): { extension: string; mime: string; 
   return undefined;
 }
 
-export type AppOptions = { dataDirectory?: string; publicDirectory?: string; distDirectory?: string; runtimePath?: string; upscalerPath?: string; continuityPath?: string; speechPath?:string; lipSyncPath?:string; qwenPath?:string; credentialsDirectory?:string; providerFetch?:typeof fetch; python?: string; codex?: string; ffmpeg?: string; ffprobe?: string; skipDiagnostics?: boolean };
+export type AppOptions = { nativeDownloadsDirectory?: string; dataDirectory?: string; publicDirectory?: string; distDirectory?: string; runtimePath?: string; upscalerPath?: string; continuityPath?: string; speechPath?:string; lipSyncPath?:string; qwenPath?:string; credentialsDirectory?:string; providerFetch?:typeof fetch; python?: string; codex?: string; ffmpeg?: string; ffprobe?: string; skipDiagnostics?: boolean };
 
 export async function createApp(options: AppOptions = {}) {
   const dataDirectory = resolve(options.dataDirectory ?? process.env.FILMMA_DATA_DIR ?? join(root, 'data'));
@@ -191,7 +191,7 @@ export async function createApp(options: AppOptions = {}) {
 
   await registerLibrary({app,store,dataDirectory,mediaPath,detectMedia,enqueue});
   const googleVideo=await registerGoogleVideo({app,store,dataDirectory,ffmpeg,ffprobe,mediaPath,detectMedia});
-  const googleBrowser=await registerGoogleBrowser({app,bridge:googleBrowserBridge,store,dataDirectory,publicDirectory,video:googleVideo,mediaPath});
+  const googleBrowser=await registerGoogleBrowser({app,bridge:googleBrowserBridge,store,dataDirectory,publicDirectory,video:googleVideo,mediaPath,nativeDownloadsDirectory:options.nativeDownloadsDirectory});
   registerColorReview({app,getProject:()=>store.project,dataDirectory,mediaPath,ffmpeg,ffprobe});
   await registerSoundReview({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
   await registerPlaybackProxies({app,dataDirectory,getProject:()=>store.project,getJobs:()=>store.jobs,mediaPath,ffmpeg,ffprobe,enqueue});
