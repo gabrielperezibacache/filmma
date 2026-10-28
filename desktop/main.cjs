@@ -3,7 +3,7 @@ const{spawn}=require('node:child_process');const fs=require('node:fs/promises');
 let window,worker,endpoint,owned=false,quitting=false;
 const isolated=process.env.FILMMA_DESKTOP_TEST_DATA;
 const resources=app.isPackaged?process.resourcesPath:path.resolve(__dirname,'../build/desktop-resources');
-const allowedExternal=url=>{try{const u=new URL(url);return u.protocol==='https:'&&['github.com','huggingface.co','docs.astral.sh','developer.apple.com','support.apple.com','gemini.google.com','labs.google','flow.google.com','ai.google.dev','support.google.com'].includes(u.hostname)}catch{return false}};
+const allowedExternal=url=>{try{const u=new URL(url);return u.protocol==='https:'&&['github.com','huggingface.co','docs.astral.sh','docs.comfy.org','developer.apple.com','support.apple.com','gemini.google.com','labs.google','flow.google.com','ai.google.dev','support.google.com'].includes(u.hostname)}catch{return false}};
 async function request(url){return fetch(url,{signal:AbortSignal.timeout(5000)}).then(r=>r.ok?r.json():null).catch(()=>null)}
 async function engine(){
  const shared=isolated?null:await request('http://127.0.0.1:4318/api/application');
