@@ -6,7 +6,7 @@ La revisión reúne una interfaz más clara y un flujo conectado del guion al mo
 
 - Navegación, tipografía, formularios y estados vacíos revisados en los doce apartados. Guardado visible con reintento, retorno de foco y recorrido con teclado.
 - Visor ampliado en Montaje y accesos directos entre guion, voces, biblioteca y continuidad.
-- Modelos: generación, instalación y calidad en apartados separados. Resolución expresada en píxeles, duración editable y fps con valores recomendados. El acabado 4K permanece separado de la generación nativa.
+- Modelos: Generación, Instalación y modelos y Pruebas de calidad en apartados separados. Resolución expresada en píxeles, duración editable y fps con valores recomendados. El acabado 4K permanece separado de la generación nativa.
 - H3 GGUF: catálogo, descargas reanudables, procedencia y validación aislada. Las mediciones Q4/Q8 de 512 × 320 y 22 fotogramas no acreditan 720p ni 15 segundos.
 - ElevenLabs: voces por personaje, búsqueda y muestra pública, ajustes por modelo y tiempos de habla para subtítulos. Clave fuera del proyecto; permisos privados en Mac y cifrado DPAPI por usuario en Windows. Qwen local continúa disponible.
 - Empaquetado con lista explícita de recursos. Pruebas en carpetas y puertos aislados; perfiles de Electron de prueba separados del instalado.

@@ -34,7 +34,7 @@ Filmma es un estudio de cine para Mac y Windows: escribe una historia, dirige su
 ## Novedades de esta entrega
 
 - Interfaz revisada en los doce apartados: guardado visible, navegación con teclado, formularios más claros y adaptación móvil.
-- Configuración del modelo dividida en **Generación**, **Instalar y administrar** y **Calidad**. Duración, proporción, fps y resolución nativa se distinguen del acabado final.
+- Configuración del modelo dividida en **Generación**, **Instalación y modelos** y **Pruebas de calidad**. Duración, proporción, fps y resolución nativa se distinguen del acabado final.
 - ElevenLabs por personaje: catálogo, muestras, interpretación y tiempos de habla conectados con guion y subtítulos. La cuenta se conecta después; las pruebas no consumen créditos.
 - MiniMax H3 GGUF separado de los pesos BF16, con mediciones y límites documentados.
 - Paquetes y pruebas aislados de los proyectos abiertos; la clave de ElevenLabs se protege con DPAPI en Windows.
@@ -46,7 +46,7 @@ Filmma es un estudio de cine para Mac y Windows: escribe una historia, dirige su
 1. Descarga el **DMG arm64** de la [última versión](https://github.com/gabrielperezibacache/filmma/releases/latest). El repositorio y las descargas son públicos.
 2. Arrastra **Filmma** a Aplicaciones y ábrela. El paquete requiere **Apple Silicon y macOS 27 o posterior**. Tiene firma ad hoc; todavía no está notarizado con Developer ID.
 3. Crea una película y escribe el primer plano. Añade personajes, imágenes y diálogos antes de generar.
-4. En **Modelos → Instalar y administrar**, elige el almacenamiento, consulta la recomendación para tu equipo y prepara un modelo local; o utiliza **Dirección → Generar → Google AI Pro**.
+4. En **Modelos → Instalación y modelos**, elige el almacenamiento, consulta la recomendación para tu equipo y prepara un modelo local; o utiliza **Dirección → Generar → Google AI Pro**.
 5. Lleva la toma a **Montaje**, revisa la continuidad y exporta.
 
 En **Configuración** puedes cambiar el idioma —español o inglés—, la apariencia, la escala, la navegación y las animaciones. La aplicación consulta las releases de GitHub y comprueba SHA256 al descargar una actualización. Los proyectos y los modelos se guardan fuera del paquete de la aplicación.
