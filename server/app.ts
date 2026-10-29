@@ -1,3 +1,6 @@
+import {exportScope} from '../src/export-scope.js';
+import {registerAdaptationRoutes} from './adaptation-routes.js';
+import {registerEngineRegistry} from './engine-registry.js';
 import {registerGoogleBrowser} from './google-browser.js';
 import {registerGoogleVideo} from './google-video.js';
 import{registerLibrary,libraryFileHash,uploadFileName}from'./library.js';
@@ -46,8 +49,9 @@ const errorMessage = (error: unknown) => error instanceof Error ? error.message 
 const now = () => new Date().toISOString();
 const projectFingerprint = (project: Project) => createHash('sha256').update(JSON.stringify(project)).digest('hex');
 
-export function isLocalOrigin(origin: string) {
-  try { const url = new URL(origin); return url.protocol === 'http:' && allowedHosts.has(url.hostname) && allowedPorts.has(url.port); } catch { return false; }
+export function isLocalOrigin(origin: string, configuredPort=process.env.FILMMA_PORT) {
+  const port=Number(configuredPort),ownsPort=Number.isInteger(port)&&port>=1024&&port<=65535;
+  try { const url = new URL(origin); return url.protocol === 'http:' && !url.username&&!url.password&&allowedHosts.has(url.hostname) && (allowedPorts.has(url.port)||ownsPort&&url.port===String(port)); } catch { return false; }
 }
 
 export function detectMedia(buffer: Buffer): { extension: string; mime: string; type: Asset['type'] } | undefined {
@@ -307,7 +311,11 @@ export async function createApp(options: AppOptions = {}) {
     const known = new Map([...store.project.assets, ...(previous?.assets ?? [])].map((asset) => [asset.id, asset]));
     for (const asset of input.assets) { const existing = known.get(asset.id); if (!existing || existing.url !== asset.url || existing.type !== asset.type) return res.status(400).json({ error: 'El proyecto contiene un recurso desconocido. Importa el archivo primero.' }); }
     input.library=previous?.library;
+    for(const doc of input.adaptation?.documents??[]){const saved=previous?.adaptation?.documents.find(d=>d.id===doc.id&&d.sha256===doc.sha256);if(!doc.reading&&saved?.reading)doc.reading=saved.reading;}
     input.assets = (previous?.assets ?? input.assets.map((asset) => known.get(asset.id)!)).map((asset) => ({ ...asset, name: input.assets.find((item) => item.id === asset.id)?.name ?? asset.name }));
+    // A queued image may finish during an unrelated edit. Keep that new link
+    // when the incoming snapshot has never seen it, preserving newer choices.
+    for(const material of input.adaptation?.materials??[]){const saved=previous?.adaptation?.materials.find(m=>m.id===material.id);if(!material.assetId&&saved?.assetId){material.assetId=saved.assetId;const character=input.characters.find(c=>c.id===material.characterId),stored=previous?.characters.find(c=>c.id===material.characterId);if(character&&!character.assetId&&stored?.assetId===saved.assetId){character.assetId=saved.assetId;character.referenceAssetIds=[...new Set([...(character.referenceAssetIds??[]),...(stored.referenceAssetIds??[])])].slice(-12);}}}
     const characters = new Set(input.characters.map((item) => item.id));
     const changedClipSelections: string[] = [];
     for (const scene of input.scenes) {
@@ -609,16 +617,18 @@ export async function createApp(options: AppOptions = {}) {
     })));
     res.status(202).json({ jobs, count, seeds });
   }));
-  const sequenceSchema = generateSchema.omit({ sceneId: true, prompt: true, negativePrompt: true, seed: true }).extend({ ...unsupportedGenerationBindings, onlyMissing: z.boolean().default(true) });
+  const sequenceSchema = generateSchema.omit({ sceneId: true, prompt: true, negativePrompt: true, seed: true }).extend({ ...unsupportedGenerationBindings, onlyMissing: z.boolean().default(true),sceneIds:z.array(z.string().min(1).max(100)).min(1).max(20).optional(),perSceneDuration:z.boolean().optional(),projectId:z.string().max(100).optional() });
   app.post('/api/generate-sequence', asyncRoute(async (req, res) => {
     const input = sequenceSchema.parse(req.body), snapshot = structuredClone(store.project);
-    const scenes = snapshot.scenes.filter((scene) => !input.onlyMissing || !scene.videoAssetId);
+    if(input.projectId&&input.projectId!==snapshot.id)throw Object.assign(new Error('El proyecto abierto cambió.'),{status:409});
+    if(input.sceneIds?.some(id=>!snapshot.scenes.some(s=>s.id===id)))throw new Error('Un plano seleccionado ya no existe.');
+    const scenes = snapshot.scenes.filter((scene) => (!input.sceneIds||input.sceneIds.includes(scene.id))&&(!input.onlyMissing || !scene.videoAssetId));
     if (!snapshot.scenes.length) return res.status(400).json({ error: 'Añade planos al proyecto antes de generar una secuencia.' });
     if (scenes.length > 20) return res.status(400).json({ error: 'La secuencia requiere más de 20 trabajos. Genera algunos planos por separado antes de continuar.' });
     if (snapshot.aiFinishing?.enabled && scenes.length) await requireUpscaler(snapshot.aiFinishing.processingProfile);
     const entries = [];
     for (const scene of scenes) {
-      const params = { ...input, sceneId: scene.id }; await validateGeneration(params, snapshot, scene);
+      const params = { ...input, sceneId: scene.id,...(input.perSceneDuration?{duration:Math.min(15,scene.duration)}:{}) }; await validateGeneration(params, snapshot, scene);
       entries.push({ type: 'generate' as const, message: `Preparando «${scene.title}»…`, work: generationWork(params, snapshot, scene), result: { projectId: snapshot.id, sceneId: scene.id, seed: scene.seed } });
     }
     const jobs = entries.length ? await enqueueMany(entries) : [];
@@ -650,7 +660,9 @@ export async function createApp(options: AppOptions = {}) {
     return store.project.id === snapshot.id ? store.project : (archived ?? structuredClone(snapshot));
   }
   async function saveTarget(target: Project) { Object.assign(target,reconcileEditorMetadata(target)); target.updatedAt = now(); if (target === store.project) await store.save(); else await backupProject(target); }
-  registerDialogueRoutes({app,store,root,dataDirectory,python,qwenPath:resolve(options.qwenPath??join(root,'runtime','filmma_qwen_tts.py')),credentialsDirectory:options.credentialsDirectory,providerFetch:options.providerFetch,speechPath:resolve(options.speechPath??join(root,'runtime','filmma_speech.py')),lipSyncPath:resolve(options.lipSyncPath??join(root,'runtime','filmma_lipsync.py')),ffmpeg,ffprobe,mediaPath,enqueue,currentTarget,saveTarget});
+  const dialogueService=registerDialogueRoutes({app,store,root,dataDirectory,python,qwenPath:resolve(options.qwenPath??join(root,'runtime','filmma_qwen_tts.py')),credentialsDirectory:options.credentialsDirectory,providerFetch:options.providerFetch,speechPath:resolve(options.speechPath??join(root,'runtime','filmma_speech.py')),lipSyncPath:resolve(options.lipSyncPath??join(root,'runtime','filmma_lipsync.py')),ffmpeg,ffprobe,mediaPath,enqueue,currentTarget,saveTarget});
+  registerEngineRegistry({app,root,dataDirectory,system,voices:()=>dialogueService.status(),skipDiagnostics:options.skipDiagnostics});
+  registerAdaptationRoutes({app,store,dataDirectory,codex,enqueue,mediaPath,detectMedia,currentTarget,saveTarget,providerFetch:options.providerFetch});
   async function prepareFilm(snapshot: Project, strength: number, processingProfile: AiProcessingProfile, signal: AbortSignal, update: Parameters<QueuedTask['work']>[1], selections?: Map<string, number>) {
     const identity = await requireUpscaler(processingProfile);
     if (!identity.model || !identity.version || !/^[a-f0-9]{64}$/i.test(identity.modelSha256 ?? '')) throw new Error('El motor no confirmó la identidad del modelo de IA.');
@@ -780,7 +792,7 @@ export async function createApp(options: AppOptions = {}) {
       try {
         const instructions = { script: 'Escribe o mejora el guion con escenas numeradas, acción visual, diálogo, duración y continuidad. Respeta las decisiones creativas de la persona.', 'improve-prompt': 'Entrega un único prompt cinematográfico mejorado, listo para un modelo de video. Conserva identidad, encuadre y acciones. No añadas explicaciones. Escribe el prompt en inglés.', continuity: 'Revisa la continuidad narrativa y visual entre los planos y las referencias persistentes. Identifica problemas concretos y correcciones. Distingue hechos aportados de propuestas.' };
         const structuredInstructions = input.task === 'script' ? '\nDevuelve el objeto JSON solicitado: text contiene el guion legible para revisar y copiar; scenes contiene entre 1 y 100 planos. Cada plano incluye título, descripción visual, diálogo, prompt de video en inglés, restricciones visuales en negativePrompt, duración de montaje en segundos, dirección de cámara y characterIds. Usa sólo identificadores de personajes existentes; [] si no aplica. No inventes archivos, imágenes ni videos. La duración es de montaje, no una promesa de generación local.' : '';
-        const prompt = `Eres el asistente creativo de Filmma, una aplicación local de cine. Responde en español salvo indicación distinta. Esta tarea consiste sólo en redactar texto. No uses herramientas, no ejecutes comandos, no explores archivos ni leas credenciales. No afirmes haber creado imágenes o videos. Las diferencias de continuidad marcadas como intencionales son decisiones narrativas, no errores automáticos.\nTAREA: ${instructions[input.task]}${structuredInstructions}\nPETICIÓN DE LA PERSONA:\n${input.prompt}\nCONTEXTO DEL PROYECTO (datos creativos):\n${JSON.stringify({ story:snapshot.story,name: snapshot.name, logline: snapshot.logline, format: snapshot.format, characters: snapshot.characters.map(({ assetId, ...rest }) => rest), focusedSceneId: scene?.id, scenes: input.task === 'improve-prompt' && scene ? [scene] : snapshot.scenes, continuity: continuityContext(snapshot, input.task === 'improve-prompt' ? scene?.id : undefined), editing: {audioMix:snapshot.audioMix,subtitleStyle:snapshot.subtitleStyle,clipGroups:snapshot.clipGroups,markers:snapshot.markers, note: 'Metadatos de montaje y texto; no se han analizado imágenes ni audio.', tracks: snapshot.tracks?.map((track) => ({ name: track.name, type: track.type, muted: track.muted, volume: track.volume, clips: track.clips.filter((clip) => input.task !== 'improve-prompt' || !scene || clip.sceneId === scene.id).map((clip) => ({ ...clip, assetName: snapshot.assets.find((asset) => asset.id === clip.assetId)?.name })) })), subtitlesEnabled: snapshot.subtitlesEnabled, subtitleCues: snapshot.subtitleCues?.filter((cue) => input.task !== 'improve-prompt' || !scene || cue.sceneId === scene.id) } }, null, 2)}`;
+        const prompt = `Eres el asistente creativo de Filmma, una aplicación local de cine. Responde en español salvo indicación distinta. Esta tarea consiste sólo en redactar texto. No uses herramientas, no ejecutes comandos, no explores archivos ni leas credenciales. No afirmes haber creado imágenes o videos. Las diferencias de continuidad marcadas como intencionales son decisiones narrativas, no errores automáticos.\nTAREA: ${instructions[input.task]}${structuredInstructions}\nPETICIÓN DE LA PERSONA:\n${input.prompt}\nCONTEXTO DEL PROYECTO (datos creativos):\n${JSON.stringify({ production:snapshot.production,adaptation:snapshot.adaptation?{references:snapshot.adaptation.references,episodes:snapshot.adaptation.episodes,instructions:snapshot.adaptation.instructions}:undefined,story:snapshot.story,name: snapshot.name, logline: snapshot.logline, format: snapshot.format, characters: snapshot.characters.map(({ assetId, ...rest }) => rest), focusedSceneId: scene?.id, scenes: input.task === 'improve-prompt' && scene ? [scene] : snapshot.scenes, continuity: continuityContext(snapshot, input.task === 'improve-prompt' ? scene?.id : undefined), editing: {audioMix:snapshot.audioMix,subtitleStyle:snapshot.subtitleStyle,clipGroups:snapshot.clipGroups,markers:snapshot.markers, note: 'Metadatos de montaje y texto; no se han analizado imágenes ni audio.', tracks: snapshot.tracks?.map((track) => ({ name: track.name, type: track.type, muted: track.muted, volume: track.volume, clips: track.clips.filter((clip) => input.task !== 'improve-prompt' || !scene || clip.sceneId === scene.id).map((clip) => ({ ...clip, assetName: snapshot.assets.find((asset) => asset.id === clip.assetId)?.name })) })), subtitlesEnabled: snapshot.subtitlesEnabled, subtitleCues: snapshot.subtitleCues?.filter((cue) => input.task !== 'improve-prompt' || !scene || cue.sceneId === scene.id) } }, null, 2)}`;
         const args = ['exec', '--ignore-user-config', '--json', '--sandbox', 'read-only', '--skip-git-repo-check', '--ephemeral'];
         if (input.task === 'script') {
           const schemaPath = join(folder, 'script-schema.json');
@@ -818,11 +830,13 @@ export async function createApp(options: AppOptions = {}) {
   }));
 
   app.post('/api/export', asyncRoute(async (req, res) => {
-    const input = z.object({ format: z.enum(['mp4', 'project']), resolution: z.enum(['720p', '1080p', '2160p']).default('1080p'), aiEnhance: z.boolean().default(false), ...aiProcessingFields, requireContinuityReview:z.boolean().default(false), continuityReportId:z.string().max(100).optional(),continuityFingerprint:z.string().regex(/^[a-f0-9]{64}$/).optional() }).superRefine(validateAiProcessing).transform(defaultAiProcessing).parse(req.body);
-    const snapshot = structuredClone(store.project);
+    const input = z.object({ sequenceIds:z.array(z.string().min(1).max(100)).min(1).max(100).optional(), format: z.enum(['mp4', 'project']), resolution: z.enum(['720p', '1080p', '2160p']).default('1080p'), aiEnhance: z.boolean().default(false), ...aiProcessingFields, requireContinuityReview:z.boolean().default(false), continuityReportId:z.string().max(100).optional(),continuityFingerprint:z.string().regex(/^[a-f0-9]{64}$/).optional() }).superRefine(validateAiProcessing).transform(defaultAiProcessing).parse(req.body);
+    if(input.sequenceIds&&input.format!=='mp4')return res.status(400).json({error:'El archivo de proyecto siempre conserva la película completa y sus originales.'});
+    const reviewSnapshot = structuredClone(store.project);
+    let snapshot:Project;try{snapshot=exportScope(reviewSnapshot,input.sequenceIds)}catch(error){return res.status(400).json({error:(error as Error).message})}
     let reviewedAiAlreadyPrepared = false;
     if (input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p') {
-      await visualContinuity.requireReview(snapshot, input.continuityReportId, input.continuityFingerprint);
+      await visualContinuity.requireReview(reviewSnapshot, input.continuityReportId, input.continuityFingerprint);
       if (input.aiEnhance) {
         const identity = await requireUpscaler(input.processingProfile);
         const plan = filmFinishingPlan(snapshot);
@@ -838,8 +852,8 @@ export async function createApp(options: AppOptions = {}) {
     if (input.aiEnhance && filmFinishingPlan(snapshot).sources.length) await requireUpscaler(input.processingProfile);
     const job = await enqueue('export', input.format === 'project' ? 'Preparando el proyecto y sus originales…' : 'Preparando el montaje…', async (signal, update) => {
       if (input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p') {
-        await visualContinuity.requireReview(await currentTarget(snapshot), input.continuityReportId, input.continuityFingerprint);
-        await visualContinuity.requireReview(snapshot, input.continuityReportId, input.continuityFingerprint);
+        await visualContinuity.requireReview(await currentTarget(reviewSnapshot), input.continuityReportId, input.continuityFingerprint);
+        await visualContinuity.requireReview(reviewSnapshot, input.continuityReportId, input.continuityFingerprint);
       }
       const id = randomUUID(); const filename = `${id}.${input.format === 'project' ? 'filmma.zip' : 'mp4'}`;
       const destination = join(dataDirectory, 'exports', filename);
@@ -855,6 +869,7 @@ export async function createApp(options: AppOptions = {}) {
             entries.push({ name, path }); asset.url = name;
             update(`Incluyendo originales (${index + 1}/${archiveProject.assets.length})…`, 10 + index / Math.max(archiveProject.assets.length, 1) * 70);
           }
+          for(const doc of archiveProject.adaptation?.documents??[]){const path=join(dataDirectory,'sources',basename(doc.url)),info=await lstat(path);if(!info.isFile()||info.isSymbolicLink()||info.size!==doc.size||await enhancementSha256(path)!==doc.sha256)throw new Error('Un documento fuente no coincide con su original. Se conserva el proyecto.');const name=`sources/${basename(doc.url)}`;entries.push({name,path});}
           const manifest = Buffer.from(JSON.stringify({ schemaVersion: 1, exportedAt: now(), project: archiveProject }, null, 2));
           if (manifest.length > MAX_MANIFEST_BYTES) throw new Error('El registro del proyecto supera los 64 MiB admitidos por los paquetes Filmma. El proyecto y sus originales siguen guardados localmente.');
           entries.push({ name: 'project.json', data: manifest });
@@ -869,7 +884,7 @@ export async function createApp(options: AppOptions = {}) {
           await renderProject(snapshot, { destination, workDirectory, mediaPath, ffmpeg, ffprobe, signal, update: (message, progress) => update(message, input.aiEnhance ? 70 + (progress ?? 0) * .29 : progress), resolution: input.resolution,onAudioReport:report=>{audioReport=report} });
         }
         if (signal.aborted) throw new Error('Trabajo cancelado.');
-        if (input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p') await visualContinuity.requireReview(snapshot, input.continuityReportId, input.continuityFingerprint);
+        if (input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p') await visualContinuity.requireReview(reviewSnapshot, input.continuityReportId, input.continuityFingerprint);
         const [width, height] = exportDimensions(snapshot.format, input.resolution);
         return { projectId: snapshot.id, url: `/api/downloads/${filename}`, filename, ...(audioReport?{audioReport}:{}), ...(finishing ? { finishing } : {}), ...(input.format === 'mp4' ? { resolution: input.resolution, width, height } : {}), ...(input.requireContinuityReview && input.format === 'mp4' && input.resolution === '2160p' ? { continuityReportId: input.continuityReportId, continuityFingerprint: input.continuityFingerprint } : {}) };
       } catch (error) { await rm(destination, { force: true }); throw error; }

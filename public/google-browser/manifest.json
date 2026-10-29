@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Filmma · Google Browser Bridge",
   "description": "Genera y recupera tomas en las interfaces de Gemini y Flow con tu sesión de Chrome. No usa claves API ni lee cookies.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "permissions": [
     "storage",
     "alarms"

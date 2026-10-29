@@ -5,7 +5,7 @@ import {tr,t} from '../i18n';
 type Props={items:{id:string;label:string;icon:LucideIcon}[];page:string;activeJobs:number;onNavigate:(page:string)=>void;onProjects:()=>void;onNew:()=>void};
 export default function StudioNavigation({items,page,activeJobs,onNavigate,onProjects,onNew}:Props){
  const menu=useRef<HTMLDetailsElement>(null);
- const groups=[{label:tr('Historia','Story'),ids:['home','script','cast']},{label:tr('Rodaje','Production'),ids:['direction','storyboard','voices']},{label:tr('Montaje y entrega','Edit and deliver'),ids:['studio','continuity']},{label:tr('Estudio','Studio'),ids:['library','jobs','engine']}];
+ const groups=[{label:tr('Historia','Story'),ids:['home','workflow','script','cast']},{label:tr('Rodaje','Production'),ids:['direction','storyboard','voices']},{label:tr('Montaje y entrega','Edit and deliver'),ids:['studio','continuity']},{label:tr('Estudio','Studio'),ids:['library','jobs','engine']}];
  const navigate=(id:string)=>{onNavigate(id);if(menu.current)menu.current.open=false};
  const current=items.find(item=>item.id===page);
  const links=groups.map(group=><div className="studio-nav-group" key={group.ids[0]}><p>{group.label}</p>{group.ids.map(id=>{const item=items.find(item=>item.id===id);if(!item)return null;const Icon=item.icon;return <button key={id} className={`nav-item ${page===id?'selected':''}`} aria-current={page===id?'page':undefined} aria-label={t(item.label)} title={t(item.label)} onClick={()=>navigate(id)}><span><Icon size={18}/></span><span>{t(item.label)}</span>{id==='jobs'&&activeJobs>0&&<small className="nav-job-count">{activeJobs}</small>}</button>})}</div>);

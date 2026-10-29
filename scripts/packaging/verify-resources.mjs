@@ -1,7 +1,7 @@
 import {readdir,access,readFile,lstat} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import assert from 'node:assert/strict';
-export const runtimeFiles=['filmma_continuity.py','filmma_continuity.swift','filmma_lipsync.py','filmma_qwen_tts.py','filmma_runtime.py','filmma_speech.py','filmma_temporal.py','filmma_upscale.py','h3-gguf-catalog.json','h3_gguf_cli.c','h3_quant_benchmark.py','h3_quantized.py','ltx_memory.py','ltx_worker.py','model-catalog.json','model_transfer.py','portable_lock.py','requirements-mlx.txt','temporal-dependency.json','upscale-LICENSES.txt','upscale-model.json','weight_residency.py'];
+export const runtimeFiles=['filmma_continuity.py','filmma_continuity.swift','filmma_lipsync.py','filmma_qwen_tts.py','filmma_runtime.py','filmma_speech.py','filmma_temporal.py','filmma_upscale.py','h3-gguf-catalog.json','h3_gguf_cli.c','h3_quant_benchmark.py','h3_quantized.py','ltx_memory.py','ltx_worker.py','model-catalog.json','model_transfer.py','portable_lock.py','requirements-mlx.txt','speech-model.json','temporal-dependency.json','upscale-LICENSES.txt','upscale-model.json','weight_residency.py'];
 export async function verifyResources(target){
  const allowed=new Set(['dist','public','server','package.json','package-lock.json','node_modules','engine','bin','python','sources','THIRD_PARTY_MAC.md','THIRD_PARTY_WINDOWS.md']);
  for(const item of await readdir(target))assert(allowed.has(item),`Unexpected resource: ${item}`);

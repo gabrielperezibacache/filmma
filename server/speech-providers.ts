@@ -167,7 +167,7 @@ export function createElevenLabsProvider(options: ElevenLabsOptions = {}) {
     return disconnected();
   }
   async function synthesize(input: ElevenLabsSynthesis) {
-    const parsed = z.object({ text: z.string().trim().min(1).max(600), voiceId: safeId, modelId: z.enum(ELEVENLABS_MODELS), language: z.enum(['es', 'en']), speed: z.number().min(.7).max(1.2), seed: z.number().int().min(0).max(4294967295).optional(), settings:elevenLabsSettingsSchema.optional(), withTimestamps:z.boolean().optional() }).safeParse(input);
+    const parsed = z.object({ text: z.string().trim().min(1).max(783), voiceId: safeId, modelId: z.enum(ELEVENLABS_MODELS), language: z.enum(['es', 'en']), speed: z.number().min(.7).max(1.2), seed: z.number().int().min(0).max(4294967295).optional(), settings:elevenLabsSettingsSchema.optional(), withTimestamps:z.boolean().optional() }).safeParse(input);
     if (!parsed.success || !isAbsolute(input.outputPath) || !input.outputPath.endsWith('.wav')) throw new ProviderError('Revisa el texto, la voz y la velocidad de ElevenLabs (0,7 a 1,2).');
     if (await lstat(input.outputPath).catch(error => { if (error.code === 'ENOENT') return undefined; throw new ProviderError('No se pudo preparar una copia nueva para la voz.', 500, 'OUTPUT'); })) throw new ProviderError('El archivo de destino ya existe. Elige una copia nueva antes de generar.', 409, 'OUTPUT');
     const currentRevision = revision;

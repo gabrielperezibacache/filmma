@@ -1,3 +1,4 @@
+import {webcrypto} from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -18,7 +19,7 @@ async function worker(initial: Record<string, unknown> = {}) {
         runtime: { id: extensionId, getURL: (path: string) => `chrome-extension://${extensionId}/${path}`, getManifest: () => ({ version: '0.1.0' }), openOptionsPage: async () => { }, onMessage: { addListener: (handler: any) => { onMessage = handler; } }, onInstalled: { addListener: () => { } } },
         tabs: { create: async (options: any) => { tabs.push(options.url); return { id: 99 }; } }, alarms: { create: async () => { }, onAlarm: { addListener: (handler: any) => { onAlarm = handler; } } }, action: { onClicked: { addListener: () => { } } }
     };
-    vm.runInNewContext(source, { chrome, fetch, URL, Response, Uint8Array, AbortSignal, atob, Date, Error });
+    vm.runInNewContext(source, { chrome, fetch, URL, Response, Uint8Array, AbortSignal, atob, Date, Error,crypto:webcrypto });
     const send = (message: any, sender: any) => new Promise<any>(resolve => { onMessage(message, sender, resolve); });
     return { saved, requests, tabs, send, run, alarm: () => onAlarm({ name: 'filmma' }), failHeartbeat: () => { failHeartbeat = true; } };
 }

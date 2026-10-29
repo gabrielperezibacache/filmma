@@ -17,13 +17,18 @@
     "desktop:build:win": "npm run build && npm run desktop:prepare && electron-builder --config desktop/electron-builder.cjs --win --x64 --publish never"
   },
   "dependencies": {
+    "@xmldom/xmldom": "^0.9.12",
     "express": "^5.1.0",
+    "fflate": "^0.8.3",
     "lucide-react": "^0.468.0",
+    "mammoth": "^1.13.0",
     "motion": "^12.23.12",
     "multer": "^2.0.2",
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "sharp": "^0.35.5",
+    "word-extractor": "^1.0.4",
     "zod": "^4.1.5"
   },
   "devDependencies": {

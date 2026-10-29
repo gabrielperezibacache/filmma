@@ -324,3 +324,7 @@ El resumen **El original se generará así** muestra resolución, duración nati
 **Instalación y modelos** reúne carpetas, descargas, variantes cuantizadas, memoria y comprobación de pesos. **Pruebas de calidad** conserva las pruebas comparativas aparte de la película. Cambiar el modelo en Generación no descarga ni activa una instalación diferente por sí solo.
 
 **Exportar** controla por separado la resolución final (incluido 4K), proporción y fps de salida, y el reescalado con IA. Exportar a 4K no convierte el original en una generación nativa 4K. Los ajustes del montaje no se cambian al editar los segundos de una nueva toma.
+
+## Configurar el recorrido y las cuentas
+
+Abre **Producción** para escoger el tipo de pieza, objetivo, público, duración orientativa y servicios. Video local o Google, voces Qwen/Kokoro/ElevenLabs y acabado tienen elecciones separadas. **Cuentas de Google** enlaza cada perfil de Chrome; Dirección elige uno para la toma. Las cookies permanecen en Chrome y cada motor tiene una ficha local con su directorio. [Guía completa](PRODUCTION-WORKFLOW.md).

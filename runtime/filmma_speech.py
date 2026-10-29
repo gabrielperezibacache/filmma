@@ -22,7 +22,7 @@ import wave
 
 RUNTIME = Path(__file__).resolve().parent
 SPEECH_ROOT = RUNTIME / 'speech'
-MANIFEST = json.loads((SPEECH_ROOT / 'model.json').read_text())
+MANIFEST = json.loads((RUNTIME / 'speech-model.json').read_text())
 MODELS = SPEECH_ROOT / 'models'
 PYTHON = SPEECH_ROOT / '.venv' / 'bin' / 'python'
 CHILD = None

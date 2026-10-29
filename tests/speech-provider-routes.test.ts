@@ -29,7 +29,7 @@ async function fixture(){
     if(key===BAD_KEY)return Response.json({detail:{message:`Rejected ${BAD_KEY}`}}, {status:401});
     assert.equal(key,KEY);
     if(url.pathname==='/v2/voices')return Response.json({voices:[{voice_id:'account-voice',name:`Voz ${KEY}`,category:'personal',labels:{language:'es'}}],has_more:false});
-    if(url.pathname==='/v1/models')return Response.json([{model_id:'eleven_multilingual_v2',name:'Multilingual',can_do_text_to_speech:true,languages:[{language_id:'es'},{language_id:'en'}]},{model_id:'eleven_flash_v2_5',name:'Flash',can_do_text_to_speech:true,languages:[{language_id:'es'}]}]);
+    if(url.pathname==='/v1/models')return Response.json([{model_id:'eleven_v4',name:'Eleven v4',can_do_text_to_speech:true,languages:[{language_id:'es'}]},{model_id:'eleven_multilingual_v2',name:'Multilingual',can_do_text_to_speech:true,languages:[{language_id:'es'},{language_id:'en'}]},{model_id:'eleven_flash_v2_5',name:'Flash',can_do_text_to_speech:true,languages:[{language_id:'es'}]}]);
     if(url.pathname==='/v1/user/subscription')return Response.json({tier:'creator',character_count:10,character_limit:1000});
     if(url.pathname.startsWith('/v1/text-to-speech/')){
       assert.equal(url.searchParams.get('output_format'),'pcm_24000');
@@ -140,4 +140,21 @@ test('reconnecting ElevenLabs invalidates queued cloud work before it can consum
     assert.equal((await f.wait(firstJob.id)).status,'failed');const failed=await f.wait(queuedJob.id);assert.equal(failed.status,'failed');assert.match(failed.message,/cuenta de ElevenLabs cambió/);
     assert.equal(f.calls.filter(c=>c.path.startsWith('/v1/text-to-speech/')).length,1);assert.equal(f.store.project.assets.length,1);assert.deepEqual(await readdir(join(f.data,'media')),['original.wav']);
   }finally{await f.close();}
+});
+
+
+test('directed delivery sends acting cues but preserves script, character identity and clean subtitles',async()=>{
+ const f=await fixture();try{
+  await f.connect();const p=f.store.project,l=p.dialogueLines![0]!;
+  p.characters[0]!.voice={engine:'elevenlabs',voiceId:'account-voice',modelId:'eleven_v4',language:'es',speed:1};
+  l.direction='quiet';const script=p.scenes[0]!.dialogue;
+  const response=await f.post('/api/speech/generate',f.params());assert.equal(response.status,202);
+  const job=await f.wait((await response.json()).job.id);assert.equal(job.status,'completed',job.message);
+  const sent=f.calls.find(c=>c.path.startsWith('/v1/text-to-speech/'))!;assert.equal(sent.body.text,`[quietly] ${l.text}`);
+  const asset=f.store.project.assets.find(a=>a.id===job.result!.assetId)!;assert.equal(asset.speech!.text,l.text);assert.equal(asset.speech!.direction,l.direction);
+  assert.equal(asset.speech!.voice.voiceId,'account-voice');assert.equal(asset.speech!.alignment,undefined);assert.equal(asset.speech!.timingStatus,'unavailable');
+  const edited=applyDialogueSubtitle(applyDialogueAudio(f.store.project,l.id,asset.id),l.id,asset.id);
+  assert.equal(edited.subtitleCues![0]!.text,l.text);assert.equal(edited.scenes[0]!.dialogue,script);
+  edited.dialogueLines![0]!.direction='Urgently';assert(!speechIsCurrent(edited,edited.dialogueLines![0]!,asset));
+ }finally{await f.close();}
 });

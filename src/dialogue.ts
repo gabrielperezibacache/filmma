@@ -31,7 +31,7 @@ export function dialogueVoice(project:Project,line:DialogueLine):CharacterVoice 
 }
 export function dialogueSnapshot(project:Project,line:DialogueLine):DialogueSnapshot {
   const character=project.characters.find(c=>c.id===line.characterId);
-  return {text:line.text,sourceDialogue:line.sourceDialogue,delivery:line.delivery,voice:{...dialogueVoice(project,line)},
+  return {text:line.text,...(line.direction?{direction:line.direction}:{}),sourceDialogue:line.sourceDialogue,delivery:line.delivery,voice:{...dialogueVoice(project,line)},
     ...(character?{characterId:character.id,characterSnapshot:{name:character.name,description:character.description,referenceAssetId:character.assetId,continuity:resolveContinuity(project,line.sceneId,character.id)?.values??character.continuity}}:{})};
 }
 const canonical=(value:unknown):string=>JSON.stringify(value,(_key,item)=>item&&typeof item==='object'&&!Array.isArray(item)?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
@@ -45,8 +45,8 @@ export function speechIsCurrent(project:Project,line:DialogueLine,asset:Asset):b
   if(!speech||speech.projectId!==project.id||speech.sceneId!==line.sceneId||speech.lineId!==line.id||dialogueScriptChanged(project,line))return false;
   const currentVoice=dialogueVoice(project,line);
   if(currentVoice.engine==='qwen'&&currentVoice.referenceAssetId){const reference=project.assets.find(a=>a.id===currentVoice.referenceAssetId);if(reference?.type!=='audio'||reference.voiceReference?.projectId!==project.id||reference.voiceReference?.outputSha256!==currentVoice.referenceSha256)return false;}
-  const {text,sourceDialogue,delivery,voice,characterId,characterSnapshot}=speech;
-  return canonical({text,sourceDialogue,delivery,voice,characterId,characterSnapshot})===canonical(dialogueSnapshot(project,line));
+  const {text,direction,sourceDialogue,delivery,voice,characterId,characterSnapshot}=speech;
+  return canonical({text,...(direction?{direction}:{}),sourceDialogue,delivery,voice,characterId,characterSnapshot})===canonical(dialogueSnapshot(project,line));
 }
 export function resolveLipSyncAsset(project:Project,asset:Asset):Asset|undefined {
   const visited=new Set<string>();let current:Asset|undefined=asset;
@@ -105,7 +105,7 @@ export function dialogueLinesFromScene(project:Project,sceneId:string):DialogueL
     for(const word of text.split(' ')){if(chunk&&chunk.length+word.length+1>600){chunks.push(chunk);chunk='';}
       let remainder=word;while(remainder.length>600){let cut=600;if(/[\uD800-\uDBFF]/.test(remainder[cut-1]!))cut--;chunks.push(remainder.slice(0,cut));remainder=remainder.slice(cut);}
       chunk+=(chunk?' ':'')+remainder;}if(chunk)chunks.push(chunk);
-    for(const spoken of chunks)result.push({id:crypto.randomUUID(),sceneId,characterId:speaker,text:spoken,offset:0,delivery,sourceDialogue:dialogueSourceSignature(scene.dialogue)});
+    for(const spoken of chunks)result.push({...(!speaker&&project.production?{voice:defaultDialogueVoice(project.production.voiceEngine)}:{}),id:crypto.randomUUID(),sceneId,characterId:speaker,text:spoken,offset:0,delivery,sourceDialogue:dialogueSourceSignature(scene.dialogue)});
   }
   return result;
 }

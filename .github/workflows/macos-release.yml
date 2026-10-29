@@ -55,6 +55,7 @@ jobs:
           python3 -m unittest discover -s runtime/tests -p 'test_runtime.py'
           python3 -m unittest discover -s runtime/tests -p 'test_residency.py'
           python3 -m unittest discover -s runtime/tests -p 'test_portable_lock.py'
+          python3 -m unittest discover -s runtime/tests -p 'test_speech_manifest.py'
           python3 -m unittest discover -s tests -p 'test_h3_quantized.py'
       - name: Test with bounded render concurrency
         run: node --import tsx --test --test-concurrency=2 tests/*.test.ts
