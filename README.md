@@ -41,7 +41,7 @@ En **Producción**, elige documental, largometraje, corto, serie de Instagram, c
 
 - Interfaz revisada en los doce apartados: guardado visible, navegación con teclado, formularios más claros y adaptación móvil.
 - Configuración del modelo dividida en **Generación**, **Instalación y modelos** y **Pruebas de calidad**. Duración, proporción, fps y resolución nativa se distinguen del acabado final.
-- ElevenLabs por personaje: catálogo, muestras, interpretación y tiempos de habla conectados con guion y subtítulos. La cuenta se conecta después; las pruebas no consumen créditos.
+- ElevenLabs por personaje: catálogo, muestras, intención por intervención y tiempos de habla conectados con guion y subtítulos. La cuenta se conecta después; las pruebas no consumen créditos.
 - MiniMax H3 GGUF separado de los pesos BF16, con mediciones y límites documentados.
 - Paquetes y pruebas aislados de los proyectos abiertos; la clave de ElevenLabs se protege con DPAPI en Windows.
 

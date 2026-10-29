@@ -31,10 +31,18 @@ Sólo aparecen modelos devueltos por tu cuenta y compatibles con el idioma. Film
 
 Cambiar voz, modelo, ajustes, texto o continuidad del personaje deja las grabaciones anteriores disponibles y las marca para revisión. Abrir un proyecto antiguo no añade valores nuevos a sus perfiles ni invalida sus grabaciones.
 
+### Dirigir cada intervención
+
+En **Texto → Intención de la voz** puedes elegir cercanía, duda, curiosidad, tensión contenida, consuelo, urgencia, intimidad, cansancio o una interpretación reflexiva. **Natural** conserva la lectura sin una indicación añadida. La intención cambia por intervención; el identificador de voz permanece en el personaje.
+
+Estas indicaciones requieren **Eleven v4, v4 Turbo o v3**. Filmma envía una etiqueta breve de actuación junto al texto; las indicaciones no se guardan como palabras del guion ni aparecen en los subtítulos. No se envían instrucciones largas que el modelo pueda terminar leyendo. Las intenciones antiguas desconocidas se conservan para revisión y deben sustituirse antes de generar.
+
+Cambiar la intención deja la grabación anterior para revisión. Escucha cada resultado: el modelo puede omitir palabras, repetirlas o interpretar una etiqueta de manera inesperada. La dirección no garantiza por sí sola una actuación correcta. Si los tiempos del proveedor incluyen la etiqueta, Filmma no los presenta como tiempos de habla fiables; conserva el audio con alineación no disponible.
+
 ## Del guion al montaje
 
 1. Revisa **Texto que se pronuncia**, personaje, plano y entrada.
-2. Pulsa **Generar en ElevenLabs**. Sólo se envían ese texto y los parámetros de voz; no se suben las imágenes, videos, referencias biométricas ni fichas del personaje.
+2. Pulsa **Generar en ElevenLabs**. Sólo se envían ese texto, la intención elegida cuando corresponde y los parámetros de voz; no se suben las imágenes, videos, referencias biométricas ni fichas del personaje.
 3. Escucha la nueva grabación y pulsa **Usar voz en montaje** cuando la apruebes. Cada versión queda separada en la biblioteca.
 4. **Crear subtítulo con esta voz** utiliza los límites del habla cuando hay tiempos válidos; conserva el texto del guion. En Montaje puedes editar el texto y volver a usar los tiempos sin perder tus cambios.
 5. Para sincronizar labios, selecciona una toma con el personaje visible y usa esa misma grabación vigente. Se crea otra copia; el original permanece disponible. Cambiar la interpretación exige revisar la sincronización anterior.

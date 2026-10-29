@@ -12,6 +12,7 @@ import { runProcess, parseJsonOutput } from './process.js';
 import { enhancementSha256 } from './ai-enhance.js';
 import { inspectEnhancementMedia } from './enhance.js';
 import { dialogueScriptChanged, dialogueSnapshot, dialogueVoice, resolveLipSyncAsset, speechIsCurrent } from '../src/dialogue.js';
+import {directedSpeechText,spokenAlignment} from '../src/speech-direction.js';
 
 type Work=(signal:AbortSignal,update:(message:string,progress?:number,result?:Job['result'])=>void)=>Promise<Job['result']>;
 type Context={app:Express;store:Store;root:string;dataDirectory:string;python:string;speechPath:string;lipSyncPath:string;qwenPath:string;credentialsDirectory?:string;providerFetch?:typeof fetch;ffmpeg:string;ffprobe:string;mediaPath:(asset:Asset)=>Promise<string>;enqueue:(type:Job['type'],message:string,work:Work,result?:Job['result'])=>Promise<Job>;currentTarget:(snapshot:Project)=>Promise<Project>;saveTarget:(target:Project)=>Promise<void>};
@@ -108,6 +109,7 @@ export function registerDialogueRoutes(c:Context){
   c.app.post('/api/speech/generate',route(async(req,res)=>{
     const input=base.parse(req.body),{project,line,scene}=snapshotFor(input.projectId,input.lineId);
     const snapshot=dialogueSnapshot(project,line),sourceFingerprint=fingerprint(snapshot),voice=dialogueVoice(project,line);
+    const spokenText=directedSpeechText(line,voice);
     const job=await dedupe(`speech:${project.id}:${line.id}:${sourceFingerprint}`,async()=>{
       const connection=await requireReady('speech',voice,project);
       return c.enqueue('speech',`Preparando la voz de «${scene.title}»…`,async(signal,update)=>{
@@ -119,7 +121,8 @@ export function registerDialogueRoutes(c:Context){
           update(voice.engine==='elevenlabs'?'Generando el diálogo en tu cuenta de ElevenLabs…':voice.engine==='qwen'?'Interpretando el diálogo con Qwen y la voz de referencia…':'Interpretando el diálogo con la voz del personaje…',12);
           let result:any;
           if(voice.engine==='elevenlabs'){
-            result=await eleven.synthesize({text:line.text,voiceId:voice.voiceId,modelId:voice.modelId,language:voice.language,speed:voice.speed,settings:voice.settings,withTimestamps:true,outputPath,signal,expectedConnectionId:connection.connectionId});
+            result=await eleven.synthesize({text:spokenText,voiceId:voice.voiceId,modelId:voice.modelId,language:voice.language,speed:voice.speed,settings:voice.settings,withTimestamps:true,outputPath,signal,expectedConnectionId:connection.connectionId});
+            if(line.direction){result.alignment=spokenAlignment(result.alignment,line);result.timingStatus=result.alignment?'aligned':'unavailable';}
           }else{
             const request=join(work,'request.json'),reference=voice.engine==='qwen'?await resolveVoiceReference(c,latest,voice):undefined;
             await writeFile(request,JSON.stringify({text:line.text,voiceId:voice.voiceId,language:voice.language,speed:voice.speed,outputPath,maxDurationSeconds:15,...(voice.engine==='qwen'?{expectedReferenceSha256:voice.referenceSha256??state.referenceSha256,...(reference?{referencePath:reference.path}:{})}:{})}),{flag:'wx',mode:0o600});
