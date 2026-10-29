@@ -43,6 +43,8 @@
         const aspect=groupFor(/relacion de aspecto predeterminada de generacion de video|default.*video.*aspect/);if(aspect.length!==1)throw Error('UNSUPPORTED');
         const ratio=[...aspect[0].querySelectorAll('[role="radio"]')].filter(e=>norm(e.textContent).endsWith(run.format));if(ratio.length!==1)throw Error('UNSUPPORTED');ratio[0].click();
         if(single[0].getAttribute('aria-checked')!=='true'||ratio[0].getAttribute('aria-checked')!=='true')throw Error('UNSUPPORTED');
+        const modelButtons=buttons().filter(e=>/^(modelo predeterminado de generacion de video|default video generation model)$/.test(norm(e.getAttribute('aria-label'))));
+        if(modelButtons.length===1){const modelLabel=(modelButtons[0].textContent||'').replace(/\b(?:arrow_drop_down|expand_more|keyboard_arrow_down)\b/g,'').replace(/\s+/g,' ').trim().slice(0,120);if(modelLabel){const ack=await chrome.runtime.sendMessage({type:'model',modelLabel});if(!ack?.ok)throw Error('DISCONNECTED');}}
         oneButton(/^(guardar|save)$/).click();await waitFor(editor);
     }
     async function upload(refs, provider) { if (!refs.length)
@@ -86,6 +88,8 @@
         }
         if ([...document.querySelectorAll('video')].some(e => visible(e) && e.currentSrc))
             throw Error('DOM_CHANGED');
+        const modelControls=buttons().filter(e=>e.hasAttribute('aria-haspopup')&&/veo|gemini omni/.test(label(e)));
+        if(modelControls.length===1){const modelLabel=(modelControls[0].getAttribute('aria-label')||modelControls[0].textContent||'').trim().replace(/\s+/g,' ').slice(0,120);if(modelLabel){const ack=await chrome.runtime.sendMessage({type:'model',modelLabel});if(!ack?.ok)throw Error('DISCONNECTED');}}
         await upload(run.references, run.provider);
         setPrompt(await waitFor(editor), run.prompt);
         const submit = await waitFor(() => { try {

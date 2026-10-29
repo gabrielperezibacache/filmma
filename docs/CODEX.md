@@ -86,3 +86,7 @@ node --import tsx --test scripts/filmma-mcp.test.mjs
 ```
 
 Esto verifica el conector y la API local; no acredita que tu chat activo ya haya cargado MCP ni que se haya generado una imagen o un video nuevo con la cuenta.
+
+## Adaptación, referencias e imágenes
+
+Producción → Adaptar con Codex consulta el catálogo real mediante App Server y comprueba una sesión ChatGPT. Usa Codex CLI con el modelo elegido para devolver propuestas estructuradas, investigar con búsqueda web y crear imágenes con su herramienta integrada. Los documentos se extraen localmente; sólo se envía su texto al solicitar la adaptación. No se activa una API de pago como alternativa. Cada imagen se copia a Filmma y se verifica antes de vincularla. Consulta [el recorrido completo](ADAPTATION.md) para límites, revisión, referencias reutilizables y producción por episodios.

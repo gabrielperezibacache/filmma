@@ -193,4 +193,5 @@ export function registerDialogueRoutes(c:Context){
       },{projectId:project.id,sceneId:scene.id,lineId:line.id});
     });res.status(202).json({job});
   }));
+  return {status:async()=>{const [qwen,account]=await Promise.all([qwenDoctor(),eleven.status()]);return{qwen,eleven:account};}};
 }

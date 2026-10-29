@@ -234,3 +234,27 @@ test('native Flow recovery imports exact original without fabricating a generati
  assert.deepEqual(await readFile(source),f.bytes);assert.equal(narrative(),before);assert(f.store.project.scenes[0]!.takeAssetIds?.includes(result.asset.id));assert.deepEqual(await readFile(join(f.dataDirectory,'media',basename(result.asset.url))),f.bytes);
  const status=await f.json(await f.req('/google-browser/status'));assert.equal(status.runs[0].phase,'completed');assert.equal(status.runs[0].submittedAt,undefined);
 }finally{await f.close()}});
+
+test('multiple Google profiles route only their own shots and keep the original profile after default changes',async()=>{
+ const f=await fixture();try{
+  const pair=async(alias:string,clientId:string)=>{const code=(await f.json(await f.req('/google-browser/pairing',{alias}))).code;return f.json(await f.req('/google-browser/bridge/pair',{code,extensionId:ext,version:'0.3.0',clientId},{'X-Filmma-Extension':ext}));};
+  const first=await pair('Personal','11111111-1111-4111-8111-111111111111'),second=await pair('Estudio','22222222-2222-4222-8222-222222222222');
+  assert.notEqual(first.profileId,second.profileId);
+  const request=await f.prepare();await f.json(await f.req('/google-browser/runs',{requestId:request.id,profileId:first.profileId,confirmSubscriptionUse:true}),202);
+  await f.json(await f.req(`/google-browser/profiles/${second.profileId}/select`,{}));
+  assert.equal((await f.json(await f.bridge('/claim',{},second.token))).run,null);
+  const {run}=await f.json(await f.bridge('/claim',{},first.token));assert.equal(run.profileId,first.profileId);
+  assert.equal((await f.bridge('/heartbeat/'+run.id,{},second.token)).status,403);
+  assert.equal((await f.bridge('/event/'+run.id,{phase:'preparing'},second.token,run.lease)).status,403);
+  assert.equal((await f.req(`/google-browser/profiles/${first.profileId}/revoke`,{})).status,409);
+  await f.json(await f.bridge('/event/'+run.id,{phase:'preparing',pageUrl:'https://gemini.google.com/app/test',modelLabel:'Veo · fixture'},first.token,run.lease));
+  const report=await f.json(await f.req('/workflow/engines'));assert(report.engines.some((e:any)=>e.modelLabel==='Veo · fixture'&&e.location==='remote'));
+  await f.json(await f.req('/google-browser/runs/'+run.id+'/stop',{}));await f.json(await f.req(`/google-browser/profiles/${first.profileId}/revoke`,{}));
+  assert.equal((await f.bridge('/ping',{},first.token)).status,401);assert.equal((await f.bridge('/ping',{},second.token)).status,200);
+  const status=await f.json(await f.req('/google-browser/status'));assert.equal(status.profiles.length,1);assert.equal(status.profiles[0].alias,'Estudio');assert(!JSON.stringify(status).includes(second.token));
+ }finally{await f.close();}
+});
+
+test('opening Flow is delivered once to the selected Chrome profile and never creates a generation',async()=>{
+ const f=await fixture();try{const first=await f.pair(),second=await f.pair();await f.json(await f.bridge('/ping',{},first.token));await f.json(await f.req(`/google-browser/profiles/${first.profileId}/open`,{provider:'flow'}));assert.equal((await f.json(await f.bridge('/session',{},second.token))).provider,null);assert.equal((await f.json(await f.bridge('/session',{},first.token))).provider,'flow');assert.equal((await f.json(await f.bridge('/session',{},first.token))).provider,null);assert.equal((await f.json(await f.req('/google-browser/status'))).runs.length,0);}finally{await f.close();}
+});

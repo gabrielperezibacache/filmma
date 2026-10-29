@@ -1,3 +1,5 @@
+import {adaptationSchema,referenceSourceSchema} from './adaptation-schema.js';
+import {productionSchema} from './production.js';
 import {googleVideoProvenanceSchema} from './google-video.js';
 import { z } from 'zod';
 import { CINEMA_VALUES, HISTORICAL_CONTEXT_LIMITS, HISTORICAL_MODES } from '../src/cinematography.js';
@@ -58,6 +60,7 @@ export const speechProvenanceSchema=dialogueSnapshotSchema.extend({projectId:id,
 export const faceROISchema=z.object({x:z.number().min(0).max(1),y:z.number().min(0).max(1),width:z.number().positive().max(1),height:z.number().positive().max(1)}).strict().refine(r=>r.x+r.width<=1.000001&&r.y+r.height<=1.000001,'La región del rostro debe quedar dentro del cuadro.');
 export const lipSyncProvenanceSchema=z.object({projectId:id,sceneId:id,lineId:id,sourceAssetId:id,audioAssetId:id,sourceSha256:sha,audioSha256:sha,outputSha256:sha,sourceFingerprint:sha,dialogue:dialogueSnapshotSchema,lineOffset:z.number().min(0).max(15),trimStart:z.number().nonnegative().max(86400),speed:z.number().min(.25).max(4),sceneDuration:z.number().positive().max(15),duration:z.number().positive().max(15.01),width:z.number().int().positive().max(16384),height:z.number().int().positive().max(16384),fps:z.number().positive().max(240),frames:z.number().int().positive().max(3600),model:text(150),modelRevision:text(100).optional(),codeRevision:text(100).optional(),createdAt:text(100),faceROI:faceROISchema.optional(),metrics:z.object({elapsedSeconds:z.number().nonnegative().optional(),peakMemoryBytes:z.number().nonnegative().optional(),mlxPeakMemoryBytes:z.number().nonnegative().optional(),mlxMemoryLimitBytes:z.number().nonnegative().optional(),memoryMeasurement:text(500).optional()}).optional()});
 export const assetSchema = z.object({
+  referenceSource:referenceSourceSchema.optional(),
   id, name: text(250), type: z.enum(['image', 'video', 'audio']), url: localUrl,
   mime: text(100), size: z.number().int().nonnegative(),
   googleVideo:googleVideoProvenanceSchema.optional(), voiceReference:voiceReferenceSchema.optional(), generation: generationProvenanceSchema.optional(), speech:speechProvenanceSchema.optional(), lipSync:lipSyncProvenanceSchema.optional(),
@@ -99,6 +102,8 @@ export const clipGroupSchema=z.object({id,name:text(120).min(1),clipIds:z.array(
 export const markerSchema=z.object({id,sceneId:id,offset:seconds,title:text(120).min(1),kind:z.enum(['edit','continuity','dialogue','note']),note:text(2000),characterId:id.optional()}).strict();
 export const libraryEntrySchema=z.object({tags:z.array(text(40).min(1)).max(24),favorite:z.boolean(),sha256:sha.optional(),fileSize:z.number().int().nonnegative().optional(),observedAt:text(100).optional(),imported:z.object({name:text(250),at:text(100)}).strict().optional(),reconnections:z.array(z.object({name:text(250),at:text(100),sha256:sha}).strict()).max(20).optional()}).strict();
 export const projectSchema = z.object({
+  adaptation:adaptationSchema.optional(),
+  production:productionSchema.optional(),
   library:z.record(id,libraryEntrySchema).refine(r=>Object.keys(r).length<=2000).optional(),
   audioMix:z.object({normalize:z.boolean(),targetLufs:z.number().min(-24).max(-9),truePeakDb:z.number().min(-3).max(-1),ducking:z.boolean(),reductionDb:z.number().min(3).max(30),attack:z.number().min(.05).max(2),release:z.number().min(.1).max(3),musicTrackIds:z.array(id).max(8)}).strict().optional(),
   subtitleStyle:z.object({preset:z.enum(['classic','paper','amber']),size:z.number().min(1.5).max(5),position:z.enum(['bottom','top']),safeMargin:z.number().min(5).max(20)}).strict().optional(),
@@ -174,5 +179,5 @@ export type Job = {
   id: string; type: 'generate' | 'export' | 'codex' | 'runtime' | 'enhance' | 'continuity' | 'speech' | 'lipsync' | 'proxy' | 'audio' | 'library' | 'google-video' | 'google-browser';
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
   progress: number; message: string; createdAt: string; updatedAt: string;
-  result?: { qualityReportId?:string;clientRequestId?:string;lineId?:string;stale?:boolean; sceneId?:string;seed?:number;variantIndex?:number;variantCount?:number;continuityReportId?:string;continuityFingerprint?:string; text?: string; assetId?: string; originalAssetId?:string; projectId?:string; finishing?:FinishingSummary; url?: string; filename?: string; proposal?: { projectId: string; scenes: Project['scenes'] } };
+  result?: {sourceDocumentId?:string; adaptation?:{projectId:string;fingerprint:string;proposal:import('../src/adaptation').AdaptationProposal}; references?:{summary:string;sources:{title:string;creator:string;pageUrl:string;description:string}[]}; qualityReportId?:string;clientRequestId?:string;lineId?:string;stale?:boolean; sceneId?:string;seed?:number;variantIndex?:number;variantCount?:number;continuityReportId?:string;continuityFingerprint?:string; text?: string; assetId?: string; originalAssetId?:string; projectId?:string; finishing?:FinishingSummary; url?: string; filename?: string; proposal?: { projectId: string; scenes: Project['scenes'] } };
 };

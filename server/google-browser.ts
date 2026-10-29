@@ -1,3 +1,5 @@
+import {recordGoogleModel} from './engine-registry.js';
+import {GoogleProfiles} from './google-profiles.js';
 import express, { type Express, type Router, type Request, type Response, type NextFunction } from 'express';
 import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { constants } from 'node:fs';
@@ -16,6 +18,8 @@ type Service = Awaited<ReturnType<typeof registerGoogleVideo>>;
 export type BrowserPhase = 'queued' | 'opening' | 'preparing' | 'submitting' | 'generating' | 'downloading' | 'validating' | 'completed' | 'attention' | 'cancelled';
 type BrowserRun = {
     id: string;
+    profileId?: string;
+    modelLabel?: string;
     requestId: string;
     projectId: string;
     sceneId: string;
@@ -63,45 +67,20 @@ export async function registerGoogleBrowser(o: {
     const { app, bridge, store, video } = o, dir = join(o.dataDirectory, 'google-browser'), downloads = join(dir, 'downloads'), privateDir = join(o.dataDirectory, '.application-private');
     await Promise.all([mkdir(downloads, { recursive: true, mode: 0o700 }), mkdir(privateDir, { recursive: true, mode: 0o700 })]);
     const connectionPath = join(privateDir, 'google-browser.json');
-    let connection: {
-        extensionId: string;
-        tokenSha256: string;
-        connectedAt: string;
-        lastSeen?: string;
-        version?: string;
-    } | undefined, pair: {
-        code: string;
-        expires: number;
-        attempts: number;
-    } | undefined;
+    const accounts=new GoogleProfiles(connectionPath);await accounts.init();
+    let pair:{code:string;expires:number;attempts:number;alias?:string}|undefined;
+    const sessionCommands=new Map<string,{provider:'flow'|'gemini';expires:number}>();
     const nativeReceipts=new Map<string,NativeDownloadReceipt>();
     const runs = new Map<string, BrowserRun>(), busy = new Set<string>();
     let discoveryUntil = 0;
-    const devices = new Map<string,{id:string;extensionId:string;proofSha256:string;version:string;expires:number;lastSeen:number;token?:string;approved?:boolean}>();
+    const devices = new Map<string,{id:string;extensionId:string;proofSha256:string;version:string;clientId?:string;profileId?:string;expires:number;lastSeen:number;token?:string;approved?:boolean}>();
     const pruneDevices=()=>{for(const[key,d]of devices)if(d.expires<Date.now())devices.delete(key)};
     async function atomic(path: string, value: unknown) { const tmp = path + '.' + randomUUID() + '.tmp'; await writeFile(tmp, JSON.stringify(value), { mode: 0o600, flag: 'wx' }); await rename(tmp, path); }
-    try {
-        const h = await open(connectionPath, constants.O_RDONLY | constants.O_NOFOLLOW);
-        try {
-            const s = await h.stat();
-            if (!s.isFile() || s.size > 4096 || (process.platform !== 'win32' && s.mode & 0o077))
-                throw Error('Conexión privada inválida');
-            const raw = JSON.parse(await h.readFile('utf8'));
-            if (raw !== null)
-                connection = z.object({ extensionId, tokenSha256: z.string().regex(/^[a-f0-9]{64}$/), connectedAt: z.string(), lastSeen: z.string().optional(), version: z.string().optional() }).parse(raw);
-        }
-        finally {
-            await h.close();
-        }
-    }
-    catch (e: any) {
-        if (e.code !== 'ENOENT')
-            throw fail('No se pudo leer el enlace privado con Chrome.', 500);
-    }
     for (const file of (await readdir(dir)).filter(n => /^[a-f0-9-]{36}\.json$/.test(n))) {
         const r = JSON.parse(await readFile(join(dir, file), 'utf8')) as BrowserRun;
         if (!uuid.safeParse(r.id).success || !uuid.safeParse(r.requestId).success)
             continue;
+        if(!r.profileId)r.profileId=accounts.selectedId;
         if (!terminal(r)) {
             r.phase = 'attention';
             r.message = 'Filmma se reinició. Revisa la pestaña de Google; la generación no se reenvía.';
@@ -120,12 +99,9 @@ export async function registerGoogleBrowser(o: {
     } }
     function get(value: unknown) { const r = runs.get(uuid.parse(value)); if (!r)
         throw fail('No se encuentra esta automatización.', 404); return r; }
-    const auth = (req: Request) => { const ext = extensionId.parse(req.get('X-Filmma-Extension')); if (!connection || connection.extensionId !== ext)
-        throw fail('Chrome no está enlazado con este Filmma.', 401); const token = req.get('Authorization')?.replace(/^Bearer /, '') ?? ''; const seen = digest(token); if (!token || !timingSafeEqual(Buffer.from(seen), Buffer.from(connection.tokenSha256)))
-        throw fail('El enlace con Chrome ya no es válido.', 401); connection.lastSeen = new Date().toISOString(); return ext; };
-    const leased = (req: Request) => { auth(req); const r = get(req.params.id); if (!r.lease || r.lease !== req.get('X-Filmma-Lease'))
-        throw fail('La pestaña no posee esta toma.', 403); if (terminal(r))
-        throw fail('La automatización ya terminó. No se repite una generación.'); return r; };
+    const auth = (req:Request)=>accounts.authenticate(extensionId.parse(req.get('X-Filmma-Extension')),req.get('Authorization')?.replace(/^Bearer /,'')??'');
+    const owned=(req:Request)=>{const profile=auth(req),r=get(req.params.id);if(r.profileId!==profile.id)throw fail('Esta toma pertenece a otro perfil de Chrome.',403);return r;};
+    const leased=(req:Request)=>{const r=owned(req);if(!r.lease||r.lease!==req.get('X-Filmma-Lease'))throw fail('La pestaña no posee esta toma.',403);if(terminal(r))throw fail('La automatización ya terminó. No se repite una generación.');return r;};
     // Only this router can accept a Chrome extension origin. Normal Filmma routes
     // keep their existing origin and X-Filmma-Client protections unchanged.
     bridge.use((req, res, next) => { if (!localHosts.has((req.headers.host ?? '').replace(/:\d+$/, '')))
@@ -141,22 +117,21 @@ export async function registerGoogleBrowser(o: {
         return res.status(403).json({ error: 'El origen de la extensión no coincide.' }); next(); });
     bridge.use(express.json({ limit: '64kb' }));
     bridge.post('/discover',route(async(req,res)=>{
-        const input=z.object({proof:z.string().regex(/^[a-f0-9]{64}$/),version:z.string().min(1).max(30)}).strict().parse(req.body);
+        const input=z.object({proof:z.string().regex(/^[a-f0-9]{64}$/),version:z.string().min(1).max(30),clientId:uuid.optional()}).strict().parse(req.body);
         const ext=extensionId.parse(req.get('X-Filmma-Extension'));pruneDevices();
         const key=digest(ext+':'+input.proof);let device=devices.get(key);
         if(!device&&Date.now()>discoveryUntil)return res.json({enabled:false});
-        if(!device){if(devices.size>=6)throw fail('Demasiados dispositivos pendientes. Reinicia la detección.',429);device={id:randomUUID(),extensionId:ext,proofSha256:digest(input.proof),version:input.version,expires:discoveryUntil,lastSeen:Date.now()};devices.set(key,device)}
+        if(!device){if(devices.size>=6)throw fail('Demasiados dispositivos pendientes. Reinicia la detección.',429);device={id:randomUUID(),extensionId:ext,proofSha256:digest(input.proof),version:input.version,clientId:input.clientId,expires:discoveryUntil,lastSeen:Date.now()};devices.set(key,device)}
         device.lastSeen=Date.now();
         // A token is released only after approval through the normal Filmma UI.
         // Retries with the same proof recover a lost response; no tokens in status.
-        res.json({enabled:true,pending:!device.approved,...(device.approved&&device.token?{token:device.token}:{})});
+        res.json({enabled:true,pending:!device.approved,...(device.approved&&device.token?{token:device.token,profileId:device.profileId}:{})});
     }));
-    bridge.post('/pair', route(async (req, res) => { const input = z.object({ code: z.string().regex(/^\d{9}$/), extensionId, version: z.string().max(30) }).strict().parse(req.body); if (input.extensionId !== req.get('X-Filmma-Extension'))
-        throw fail('Identificador de extensión distinto.', 403); if (!pair || pair.expires < Date.now() || ++pair.attempts > 5 || input.code !== pair.code)
-        throw fail('Código caducado o incorrecto. Crea otro código en Filmma.', 401); const token = randomBytes(32).toString('base64url'); pair = undefined; connection = { extensionId: input.extensionId, tokenSha256: digest(token), connectedAt: new Date().toISOString(), lastSeen: new Date().toISOString(), version: input.version }; await atomic(connectionPath, connection); res.json({ token, connection: 'paired' }); }));
+    bridge.post('/pair',route(async(req,res)=>{const input=z.object({code:z.string().regex(/^\d{9}$/),extensionId,version:z.string().max(30),clientId:uuid.optional()}).strict().parse(req.body);if(input.extensionId!==req.get('X-Filmma-Extension'))throw fail('Identificador de extensión distinto.',403);if(!pair||pair.expires<Date.now()||++pair.attempts>5||input.code!==pair.code)throw fail('Código caducado o incorrecto. Crea otro código en Filmma.',401);const alias=pair.alias,token=randomBytes(32).toString('base64url');pair=undefined;const profile=await accounts.add({extensionId:input.extensionId,tokenSha256:digest(token),connectedAt:new Date().toISOString(),lastSeen:new Date().toISOString(),version:input.version,clientId:input.clientId,alias});res.json({token,profileId:profile.id,connection:'paired'});}));
+    bridge.post('/session',route(async(req,res)=>{const profile=auth(req),command=sessionCommands.get(profile.id);sessionCommands.delete(profile.id);res.json({provider:command&&command.expires>Date.now()?command.provider:null});}));
     bridge.post('/ping', route(async(req,res)=>{auth(req);res.json({ok:true,connected:true})}));
-    bridge.post('/heartbeat/:id', route(async (req, res) => { auth(req); const r = get(req.params.id); res.json({ active: !terminal(r) }); }));
-    bridge.post('/claim', route(async (req, res) => { auth(req); const r = [...runs.values()].find(r => r.phase === 'queued'); if (!r)
+    bridge.post('/heartbeat/:id', route(async (req, res) => { const r = owned(req); res.json({ active: !terminal(r) }); }));
+    bridge.post('/claim', route(async (req, res) => { const profile=auth(req); const r = [...runs.values()].find(r => r.phase === 'queued'&&r.profileId===profile.id); if (!r)
         return res.json({ run: null }); r.phase = 'opening'; r.message = phaseMessages.opening; r.lease = randomUUID(); try {
         const request = await video.load(r.requestId);
         if (!r.submittedAt && !r.recoverOnly && video.status(request).stale) {
@@ -188,8 +163,8 @@ export async function registerGoogleBrowser(o: {
         await save(r);
         throw e;
     } }));
-    bridge.post('/event/:id', route(async (req, res) => { const r = leased(req), input = z.object({ phase: z.enum(['preparing', 'submitting', 'generating', 'attention']), step:z.literal('references').optional(), pageUrl: z.string().max(2000).optional(), error: z.enum(['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'DISCONNECTED', 'UNSUPPORTED','MANUAL_DOWNLOAD']).optional() }).strict().parse(req.body); if (input.pageUrl)
-        r.pageUrl = safePage(input.pageUrl, r.provider); if (input.phase === 'submitting') {
+    bridge.post('/event/:id', route(async (req, res) => { const r = leased(req), input = z.object({ phase: z.enum(['preparing', 'submitting', 'generating', 'attention']), step:z.literal('references').optional(), modelLabel:z.string().trim().min(1).max(120).optional(), pageUrl: z.string().max(2000).optional(), error: z.enum(['AUTH', 'QUOTA', 'HUMAN', 'DOM_CHANGED', 'DOWNLOAD', 'TIMED_OUT', 'DISCONNECTED', 'UNSUPPORTED','MANUAL_DOWNLOAD']).optional() }).strict().parse(req.body); if (input.pageUrl)
+        r.pageUrl = safePage(input.pageUrl, r.provider); if(input.modelLabel&&!r.submittedAt){r.modelLabel=input.modelLabel;await recordGoogleModel(o.dataDirectory,r.provider,input.modelLabel);} if (input.phase === 'submitting') {
         if (r.recoverOnly || r.submittedAt || r.phase !== 'preparing' || busy.has(r.id))
             throw fail('Esta solicitud ya se envió o no está preparada.');
         busy.add(r.id);
@@ -244,7 +219,7 @@ export async function registerGoogleBrowser(o: {
         await save(r);
         const source = join(downloads, r.originalFile), temporary = join(o.dataDirectory, 'work', randomUUID()), info = await lstat(source);
         await copyFile(source, temporary, constants.COPYFILE_EXCL);
-        const result = await video.importFile({ requestId: r.requestId, projectId: r.projectId, uploadProjectId: r.projectId, apply: false, file: { path: temporary, size: info.size, originalname: `${r.sceneTitle} · ${r.provider}.mp4` }, browser: { automationId: r.id, pageUrl: r.pageUrl! } });
+        const result = await video.importFile({ requestId: r.requestId, projectId: r.projectId, uploadProjectId: r.projectId, apply: false, file: { path: temporary, size: info.size, originalname: `${r.sceneTitle} · ${r.provider}.mp4` }, browser: { automationId: r.id, pageUrl: r.pageUrl!,profileId:r.profileId,...(r.modelLabel?{modelLabel:r.modelLabel}:{}) } });
         r.assetId = result.asset.id;
         const current = store.project, scene = current.scenes.find(s => s.id === r.sceneId), request = await video.load(r.requestId);
         if (r.apply && !r.cancelledAt && scene && scene.videoAssetId === r.baseVideoAssetId && !result.asset.googleVideo?.contextChanged && !video.status(request).stale)
@@ -266,35 +241,38 @@ export async function registerGoogleBrowser(o: {
     bridge.post('/native-begin/:id',route(async(req,res)=>{const r=leased(req);if(r.provider!=='flow'||(!r.submittedAt&&!r.recoverOnly)||!r.pageUrl||r.bytes||nativeReceipts.has(r.id))throw fail('Esta toma no espera una descarga nativa.');const{prefix}=z.object({prefix:z.string().min(4).max(111)}).strict().parse(req.body);nativeReceipts.set(r.id,await new NativeDownloadReceipt(o.nativeDownloadsDirectory??join(homedir(),'Downloads'),prefix).begin());r.phase='downloading';r.message='Esperando Tamaño original en Descargas; no se modifica el archivo de Chrome.';await save(r);res.json({ok:true})}));
     bridge.post('/native-poll/:id',route(async(req,res)=>{const r=leased(req),receipt=nativeReceipts.get(r.id);if(!receipt)throw fail('No hay una descarga nativa preparada.');if(busy.has(r.id))return res.json({pending:true});busy.add(r.id);let result;try{result=await receipt.capture(join(downloads,r.id+'.part'));if(result){r.bytes=result.bytes;await save(r);nativeReceipts.delete(r.id)}}finally{busy.delete(r.id)}if(!result)return res.json({pending:true});res.json({pending:false,...await finish(r)})}));
     bridge.post('/finish/:id', route(async (req, res) => { const r = leased(req); res.json(await finish(r)); }));
-    app.get('/api/google-browser/status', route(async (_req, res) => {pruneDevices();res.json({ configured: !!connection, connected: !!connection?.lastSeen && Date.now() - Date.parse(connection.lastSeen) < 65000, extensionVersion: connection?.version, extensionUrl: '/api/google-browser/extension',discovery:{active:Date.now()<discoveryUntil,expiresAt:discoveryUntil?new Date(discoveryUntil).toISOString():null,devices:[...devices.values()].filter(d=>!d.approved).map(d=>({id:d.id,extensionId:d.extensionId,version:d.version,lastSeen:new Date(d.lastSeen).toISOString()}))}, runs: [...runs.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100).map(publicRun) }); }));
+    app.get('/api/google-browser/status',route(async(_req,res)=>{pruneDevices();const connection=accounts.selected;res.json({configured:!!connection,connected:!!connection?.lastSeen&&Date.now()-Date.parse(connection.lastSeen)<65000,selectedProfileId:accounts.selectedId,profiles:accounts.public(),extensionVersion:connection?.version,extensionUrl:'/api/google-browser/extension',discovery:{active:Date.now()<discoveryUntil,expiresAt:discoveryUntil?new Date(discoveryUntil).toISOString():null,devices:[...devices.values()].filter(d=>!d.approved).map(d=>({id:d.id,extensionId:d.extensionId,version:d.version,lastSeen:new Date(d.lastSeen).toISOString()}))},runs:[...runs.values()].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,100).map(publicRun)});}));
+    app.post('/api/google-browser/profiles/:id/select',route(async(req,res)=>{await accounts.select(uuid.parse(req.params.id));res.json({ok:true});}));
+    app.post('/api/google-browser/profiles/:id/rename',route(async(req,res)=>{const {alias}=z.object({alias:z.string().trim().min(1).max(80)}).strict().parse(req.body);await accounts.rename(uuid.parse(req.params.id),alias);res.json({ok:true});}));
+    app.post('/api/google-browser/profiles/:id/open',route(async(req,res)=>{const id=uuid.parse(req.params.id),{provider}=z.object({provider:z.enum(['flow','gemini'])}).strict().parse(req.body),profile=accounts.profiles.get(id);if(!profile?.lastSeen||Date.now()-Date.parse(profile.lastSeen)>65000)throw fail('Abre este perfil de Chrome y espera a que aparezca conectado.');sessionCommands.set(id,{provider,expires:Date.now()+65000});res.json({ok:true,message:'La pestaña se abrirá en el perfil elegido, sin generar.'});}));
+    app.post('/api/google-browser/profiles/:id/revoke',route(async(req,res)=>{const id=uuid.parse(req.params.id);if([...runs.values()].some(r=>r.profileId===id&&!terminal(r)))throw fail('Detén la toma de este perfil antes de revocarlo.');await accounts.revoke(id);sessionCommands.delete(id);res.json({ok:true});}));
     app.post('/api/google-browser/discovery',route(async(_req,res)=>{devices.clear();discoveryUntil=Date.now()+5*60000;res.json({ok:true,expiresAt:new Date(discoveryUntil).toISOString()})}));
     app.post('/api/google-browser/approve-device',route(async(req,res)=>{
-        const{id}=z.object({id:uuid}).strict().parse(req.body);pruneDevices();const d=[...devices.values()].find(v=>v.id===id);
+        const{id,alias}=z.object({id:uuid,alias:z.string().trim().min(1).max(80).optional()}).strict().parse(req.body);pruneDevices();const d=[...devices.values()].find(v=>v.id===id);
         if(!d||d.approved||Date.now()>discoveryUntil||Date.now()-d.lastSeen>65000)throw fail('Chrome ya no está disponible. Vuelve a detectarlo.');
         if([...runs.values()].some(r=>!terminal(r)))throw fail('Termina la toma activa antes de cambiar el enlace.');
         const token=randomBytes(32).toString('base64url');
-        connection={extensionId:d.extensionId,tokenSha256:digest(token),version:d.version,connectedAt:new Date().toISOString()};
-        await atomic(connectionPath,connection);d.token=token;d.approved=true;d.expires=Date.now()+120000;discoveryUntil=0;
-        for(const[key,v]of devices)if(v!==d)devices.delete(key);
+        const profile=await accounts.add({extensionId:d.extensionId,tokenSha256:digest(token),version:d.version,connectedAt:new Date().toISOString(),clientId:d.clientId,alias});
+        d.profileId=profile.id;d.token=token;d.approved=true;d.expires=Date.now()+120000;
         res.json({ok:true,message:'Enlace autorizado. Esperando la confirmación de Chrome.'});
     }));
-    app.post('/api/google-browser/pairing', route(async (_req, res) => { if ([...runs.values()].some(r => !terminal(r)))
-        throw fail('Detén la automatización antes de cambiar el enlace de Chrome.'); pair = { code: String(randomInt(100000000, 1000000000)), expires: Date.now() + 120000, attempts: 0 }; res.json({ code: pair.code, expiresAt: new Date(pair.expires).toISOString() }); }));
-    app.post('/api/google-browser/disconnect', route(async (_req, res) => { connection = undefined; pair = undefined; devices.clear(); discoveryUntil=0; await atomic(connectionPath, null); for (const r of runs.values())
+    app.post('/api/google-browser/pairing', route(async (req, res) => { const {alias}=z.object({alias:z.string().trim().min(1).max(80).optional()}).strict().parse(req.body); if ([...runs.values()].some(r => !terminal(r)))
+        throw fail('Detén la automatización antes de cambiar el enlace de Chrome.'); pair = { code: String(randomInt(100000000, 1000000000)), expires: Date.now() + 120000, attempts: 0, alias }; res.json({ code: pair.code, expiresAt: new Date(pair.expires).toISOString() }); }));
+    app.post('/api/google-browser/disconnect', route(async (_req, res) => { await accounts.revoke(); pair = undefined; devices.clear();sessionCommands.clear(); discoveryUntil=0; for (const r of runs.values())
         if (!terminal(r)) {
             r.phase = 'attention';
             r.message = errors.DISCONNECTED;
             await save(r);
         } res.json({ configured: false }); }));
     app.get('/api/google-browser/extension', route(async (_req, res) => { const files = ['manifest.json', 'worker.js', 'content.js', 'options.html', 'options.js']; const path = join(o.dataDirectory, 'exports', 'Filmma-Google-Bridge.zip'); await writeZip(path, await Promise.all(files.map(async (name) => ({ name: `Filmma-Google-Bridge/${name}`, data: await readFile(join(o.publicDirectory, 'google-browser', name)) })))); res.download(path, 'Filmma-Google-Bridge.zip'); }));
-    app.post('/api/google-browser/runs', route(async (req, res) => { const input = z.object({ requestId: uuid, confirmSubscriptionUse: z.literal(true), apply: z.boolean().default(true) }).strict().parse(req.body); if (!connection)
+    app.post('/api/google-browser/runs', route(async (req, res) => { const input = z.object({ requestId: uuid, confirmSubscriptionUse: z.literal(true), profileId:uuid.optional(), apply: z.boolean().default(true) }).strict().parse(req.body); const profile=accounts.profiles.get(input.profileId??accounts.selectedId??''); if (!profile)
         throw fail('Enlaza la extensión de Chrome antes de automatizar.'); if ([...runs.values()].some(r => !terminal(r)))
         throw fail('Hay una toma de Google activa. Espera antes de enviar otra.'); const request = await video.load(input.requestId); if (video.status(request).stale)
         throw fail('El paquete está desactualizado. Prepara otro con el guion actual.'); if ([...runs.values()].some(r => r.requestId === request.id && r.submittedAt))
         throw fail('Este paquete ya se envió. Recupera su pestaña sin volver a generar.'); if (store.project.assets.some(a => a.googleVideo?.requestId === request.id))
-        throw fail('Este paquete ya tiene una toma. Prepara otro para generar una alternativa.'); const stamp = new Date().toISOString(), r: BrowserRun = { id: randomUUID(), requestId: request.id, provider: request.provider, projectId: request.projectId, sceneId: request.sceneId, sceneTitle: request.sceneTitle, createdAt: stamp, updatedAt: stamp, phase: 'queued', message: phaseMessages.queued, bytes: 0, apply: input.apply, baseVideoAssetId: store.project.scenes.find(s => s.id === request.sceneId)?.videoAssetId }; if ([...runs.values()].some(x => !terminal(x)))
+        throw fail('Este paquete ya tiene una toma. Prepara otro para generar una alternativa.'); const stamp = new Date().toISOString(), r: BrowserRun = { id: randomUUID(),profileId:profile.id, requestId: request.id, provider: request.provider, projectId: request.projectId, sceneId: request.sceneId, sceneTitle: request.sceneTitle, createdAt: stamp, updatedAt: stamp, phase: 'queued', message: phaseMessages.queued, bytes: 0, apply: input.apply, baseVideoAssetId: store.project.scenes.find(s => s.id === request.sceneId)?.videoAssetId }; if ([...runs.values()].some(x => !terminal(x)))
         throw fail('Hay una toma de Google activa.'); runs.set(r.id, r); const j: Job = { id: r.id, type: 'google-browser', status: 'queued', progress: 0, createdAt: stamp, updatedAt: stamp, message: r.message, context: { projectId: r.projectId, projectName: store.project.name, sceneId: r.sceneId, sceneTitle: r.sceneTitle }, result: { projectId: r.projectId, sceneId: r.sceneId } }; store.jobs.push(j); await save(r); res.status(202).json({ run: publicRun(r), job: j }); }));
-    app.post('/api/google-browser/recover-page',route(async(req,res)=>{const input=z.object({requestId:uuid,pageUrl:z.string().max(2000),apply:z.boolean().default(false)}).strict().parse(req.body);if(!connection)throw fail('Enlaza Chrome primero.');if([...runs.values()].some(r=>!terminal(r)))throw fail('Hay una toma activa.');const request=await video.load(input.requestId);if(store.project.id!==request.projectId)throw fail('Abre el proyecto del paquete.');const stamp=new Date().toISOString(),r:BrowserRun={id:randomUUID(),requestId:request.id,provider:request.provider,projectId:request.projectId,sceneId:request.sceneId,sceneTitle:request.sceneTitle,createdAt:stamp,updatedAt:stamp,phase:'queued',message:'Recuperando un resultado existente sin generar.',bytes:0,apply:input.apply,recoverOnly:true,pageUrl:safePage(input.pageUrl,request.provider),baseVideoAssetId:store.project.scenes.find(s=>s.id===request.sceneId)?.videoAssetId};runs.set(r.id,r);store.jobs.push({id:r.id,type:'google-browser',status:'queued',progress:0,createdAt:stamp,updatedAt:stamp,message:r.message,context:{projectId:r.projectId,sceneId:r.sceneId,sceneTitle:r.sceneTitle}});await save(r);res.status(202).json({run:publicRun(r)})}));
+    app.post('/api/google-browser/recover-page',route(async(req,res)=>{const input=z.object({requestId:uuid,pageUrl:z.string().max(2000),profileId:uuid.optional(),apply:z.boolean().default(false)}).strict().parse(req.body);const profile=accounts.profiles.get(input.profileId??accounts.selectedId??'');if(!profile)throw fail('Enlaza Chrome primero.');if([...runs.values()].some(r=>!terminal(r)))throw fail('Hay una toma activa.');const request=await video.load(input.requestId);if(store.project.id!==request.projectId)throw fail('Abre el proyecto del paquete.');const stamp=new Date().toISOString(),r:BrowserRun={id:randomUUID(),profileId:profile.id,requestId:request.id,provider:request.provider,projectId:request.projectId,sceneId:request.sceneId,sceneTitle:request.sceneTitle,createdAt:stamp,updatedAt:stamp,phase:'queued',message:'Recuperando un resultado existente sin generar.',bytes:0,apply:input.apply,recoverOnly:true,pageUrl:safePage(input.pageUrl,request.provider),baseVideoAssetId:store.project.scenes.find(s=>s.id===request.sceneId)?.videoAssetId};runs.set(r.id,r);store.jobs.push({id:r.id,type:'google-browser',status:'queued',progress:0,createdAt:stamp,updatedAt:stamp,message:r.message,context:{projectId:r.projectId,sceneId:r.sceneId,sceneTitle:r.sceneTitle}});await save(r);res.status(202).json({run:publicRun(r)})}));
     async function stop(id: string) {
         const r = get(id);nativeReceipts.delete(r.id);
         if (r.phase === 'completed') throw fail('La toma ya se conservó.');
@@ -307,7 +285,7 @@ export async function registerGoogleBrowser(o: {
     app.post('/api/google-browser/runs/:id/stop', route(async (req, res) => {
         res.json({run:publicRun(await stop(String(req.params.id)))});
     }));
-    app.post('/api/google-browser/runs/:id/continue', route(async (req, res) => { const r = get(req.params.id); if (!['attention', 'cancelled'].includes(r.phase) || !r.submittedAt || !r.pageUrl || r.originalFile)
+    app.post('/api/google-browser/runs/:id/continue', route(async (req, res) => { const r = get(req.params.id); if(!r.profileId||!accounts.profiles.has(r.profileId))throw fail('Vuelve a enlazar el perfil original de esta toma antes de recuperarla.'); if (!['attention', 'cancelled'].includes(r.phase) || !r.submittedAt || !r.pageUrl || r.originalFile)
         throw fail('Esta toma no tiene una pestaña pendiente que recuperar.'); if ([...runs.values()].some(other => other.id !== r.id && !terminal(other)))
         throw fail('Espera a que termine la otra toma de Google.'); if (busy.has(r.id))
         throw fail('La descarga aún se está cerrando.'); r.phase = 'opening'; busy.add(r.id); try {

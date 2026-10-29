@@ -16,7 +16,7 @@ import type { Store } from './store.js';
 
 const MAX_ARCHIVE_BYTES = 0xffffffff;
 export const MAX_MANIFEST_BYTES = 64 * 1024 * 1024;
-const MAX_ENTRIES = 2002;
+const MAX_ENTRIES = 2014;
 const archiveAsset = /^assets\/[a-zA-Z0-9][a-zA-Z0-9_.-]{0,180}$/;
 const fail = (message: string, status = 400) => Object.assign(new Error(message), { status });
 const route = (fn: (req: Request, res: Response) => Promise<unknown>) => (req: Request, res: Response, next: NextFunction) => { void Promise.resolve(fn(req, res)).catch(next); };
@@ -61,7 +61,7 @@ async function extractArchive(archivePath: string, destination: string) {
       if (next > central.length || nameLength > 200) throw fail('El directorio ZIP está dañado.');
       const name = central.toString('utf8', offset + 46, offset + 46 + nameLength);
       const unixMode = central.readUInt32LE(offset + 38) >>> 16, fileType = unixMode & 0xf000;
-      if ((name !== 'project.json' && name !== 'README.txt' && !archiveAsset.test(name)) || name.includes('..') || names.has(name.toLowerCase())) throw fail(`Ruta ZIP no permitida o repetida: ${name.slice(0, 150)}.`);
+      if ((name !== 'project.json' && name !== 'README.txt' && !archiveAsset.test(name) && !/^sources\/[a-f0-9-]+\.[a-z0-9]+$/.test(name)) || name.includes('..') || names.has(name.toLowerCase())) throw fail(`Ruta ZIP no permitida o repetida: ${name.slice(0, 150)}.`);
       if ((fileType !== 0 && fileType !== 0x8000) || (central.readUInt32LE(offset + 38) & 0x10) || central.readUInt16LE(offset + 34) !== 0) throw fail('El proyecto no puede contener enlaces, carpetas ni archivos especiales.');
       if ((flags & ~0x0808) !== 0 || ![0, 8].includes(method)) throw fail('ZIP cifrado o con compresión no compatible. Exporta el proyecto desde Filmma.');
       if ([compressedSize, size, localOffset].includes(0xffffffff)) throw fail('ZIP64 no compatible; el proyecto debe ocupar menos de 4 GB.');
@@ -161,7 +161,11 @@ export async function importProjectArchive(archivePath: string, context: Omit<Ex
     if (entries.some((entry) => entry.name.startsWith('assets/') && !consumed.has(entry.name))) throw fail('El paquete contiene originales que no están declarados en project.json.');
     const rawProject = projectSchema.safeParse({ ...raw, assets: raw.assets.map((value: any) => ({ ...value, url: replacements.get(value.id)?.url })) });
     if (!rawProject.success) throw fail(`El esquema del proyecto no es válido: ${rawProject.error.issues.slice(0, 3).map((issue) => issue.path.join('.')).join(', ')}.`);
+    const sourceCopies:{source:string;destination:string}[]=[];
+    for(const doc of rawProject.success?rawProject.data.adaptation?.documents??[]:[]){const name=`sources/${basename(doc.url)}`,entry=byName.get(name);if(!entry||entry.size!==doc.size||await enhancementSha256(entry.path)!==doc.sha256)throw fail('Un documento fuente está ausente o no coincide con su original.');consumed.add(name);sourceCopies.push({source:entry.path,destination:join(dataDirectory,'sources',basename(doc.url))});}
+    if(entries.some(e=>e.name.startsWith('sources/')&&!consumed.has(e.name)))throw fail('Hay documentos no declarados en el paquete.');
     validateReferences(rawProject.data);
+    for(const asset of rawProject.data.assets)if(asset.referenceSource&&await enhancementSha256(replacements.get(asset.id)!.path)!==asset.referenceSource.sha256)throw fail('Una referencia visual no coincide con su huella de procedencia.');
     for(const asset of rawProject.data.assets)if(asset.voiceReference){
       const meta=asset.voiceReference,source=replacements.get(meta.sourceAssetId),copy=replacements.get(asset.id);
       if(asset.type!=='audio'||source?.type!=='audio'||meta.projectId!==rawProject.data.id||source.id===copy?.id)throw fail('El perfil de voz no conserva una referencia original válida.');
@@ -219,6 +223,7 @@ export async function importProjectArchive(archivePath: string, context: Omit<Ex
         asset.lipSync={...meta,sourceAssetId,audioAssetId,...(meta.projectId===rawProject.data.id?{projectId:project.id,sceneId:sceneIds.get(meta.sceneId)??meta.sceneId,lineId:dialogueIds.get(meta.lineId)??meta.lineId,dialogue:remapDialogueSnapshot(meta.dialogue)}:{})};
       }
     }
+    if(project.adaptation){const a=project.adaptation;a.batchSceneIds=a.batchSceneIds?.map(id=>sceneIds.get(id)??id);a.materials=a.materials.map(m=>({...m,characterId:m.characterId?characterIds.get(m.characterId):undefined,episodeIds:m.episodeIds.map(id=>sequenceIds.get(id)??id),assetId:remap(m.assetId)}));a.episodes=a.episodes.map(e=>({...e,id:sequenceIds.get(e.id)??e.id,sequenceId:sequenceIds.get(e.sequenceId)??e.sequenceId}));}
     projectSchema.parse(project); validateReferences(project);
     const assertUnchanged = () => { if (JSON.stringify(store.project) !== originalState) throw fail('El proyecto abierto cambió durante la importación. Se ha conservado; vuelve a importar el paquete.', 409); };
     assertUnchanged(); await backupProject(original); assertUnchanged();
@@ -227,6 +232,8 @@ export async function importProjectArchive(archivePath: string, context: Omit<Ex
       const destination = join(dataDirectory, 'media', basename(replacement.url));
       await link(replacement.path, destination); installed.push(destination);
     }
+    await mkdir(join(dataDirectory,'sources'),{recursive:true});
+    for(const copy of sourceCopies){try{const existing=await lstat(copy.destination);if(!existing.isFile()||existing.isSymbolicLink()||await enhancementSha256(copy.destination)!==await enhancementSha256(copy.source))throw fail('Ya existe un documento distinto con ese identificador.');}catch(e:any){if(e.code!=='ENOENT')throw e;await link(copy.source,copy.destination);installed.push(copy.destination);}}
     assertUnchanged(); store.project = project;
     try { await store.save(); committed = true; }
     catch (error) {

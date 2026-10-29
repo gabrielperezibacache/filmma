@@ -11,6 +11,10 @@ export function sameProjectContent(a:Project,b:Project){
 /** Three-way merge: server completions may update unchanged clips, never a newer local choice. */
 export function mergeProjectMedia(local:Project, remote:Project, base:Project, allowClips=true):Project {
  if(local.id!==remote.id||local.id!==base.id)return local;
+ // An untouched editor can adopt a whole server-side screenplay adaptation.
+ // Merging only new media here would autosave its older character bible back
+ // over the newer source after a background job finishes.
+ if(allowClips&&sameProjectContent(local,base))return sameProjectContent(local,remote)?local:structuredClone(remote);
  const extra=remote.assets.filter(asset=>!local.assets.some(item=>item.id===asset.id));
  const libraryChanged=JSON.stringify(local.library)!==JSON.stringify(remote.library);
  let changed=extra.length>0||libraryChanged;
@@ -45,7 +49,9 @@ export function mergeProjectMedia(local:Project, remote:Project, base:Project, a
   });
   return changedTrack?{...track,clips}:track;
  });
- return changed?{...local,assets:[...local.assets,...extra],library:remote.library,scenes,characters,tracks}:local;
+ let adaptation=local.adaptation;
+ if(adaptation&&remote.adaptation&&base.adaptation){const materials=adaptation.materials.map(m=>{const previous=base.adaptation!.materials.find(x=>x.id===m.id),next=remote.adaptation!.materials.find(x=>x.id===m.id);if(previous&&next&&m.assetId===previous.assetId&&m.assetId!==next.assetId){changed=true;return {...m,assetId:next.assetId};}return m;});const documents=adaptation.documents.map(doc=>{const previous=base.adaptation!.documents.find(d=>d.id===doc.id),next=remote.adaptation!.documents.find(d=>d.id===doc.id&&d.sha256===doc.sha256);if(previous&&next&&JSON.stringify(doc.reading)===JSON.stringify(previous.reading)&&JSON.stringify(doc.reading)!==JSON.stringify(next.reading)){changed=true;return {...doc,reading:next.reading};}return doc;});if(changed)adaptation={...adaptation,materials,documents};}
+ return changed?{...local,assets:[...local.assets,...extra],library:remote.library,scenes,characters,tracks,adaptation}:local;
 }
 
 /** Tell the server which selections this edit did not intentionally replace. */

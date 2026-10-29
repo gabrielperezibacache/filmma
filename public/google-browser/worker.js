@@ -3,19 +3,21 @@
 const ownOrigins = new Set(['http://127.0.0.1:4318', 'http://127.0.0.1:4320']);
 let claiming = false;
 
+async function localClientId(){const saved=await chrome.storage.local.get('clientId');if(saved.clientId)return saved.clientId;const id=crypto.randomUUID();await chrome.storage.local.set({clientId:id});return id;}
+
 async function discover() {
     const {active}=await state();if(active)return;
     const saved=await chrome.storage.local.get('discoveryProofs'),proofs=saved.discoveryProofs??{};
     for(const endpoint of ownOrigins){
         try{
             if(!proofs[endpoint]){proofs[endpoint]=Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('');await chrome.storage.local.set({discoveryProofs:proofs})}
-            const response=await fetch(endpoint+'/api/google-browser/bridge/discover',{method:'POST',headers:{'Content-Type':'application/json','X-Filmma-Extension':chrome.runtime.id},body:JSON.stringify({proof:proofs[endpoint],version:chrome.runtime.getManifest().version}),redirect:'error',signal:AbortSignal.timeout(3000)});
+            const response=await fetch(endpoint+'/api/google-browser/bridge/discover',{method:'POST',headers:{'Content-Type':'application/json','X-Filmma-Extension':chrome.runtime.id},body:JSON.stringify({proof:proofs[endpoint],version:chrome.runtime.getManifest().version,clientId:await localClientId()}),redirect:'error',signal:AbortSignal.timeout(3000)});
             if(!response.ok)continue;const result=await response.json();
-            if(result.token){const current=(await state()).connection;if(current?.endpoint===endpoint&&current?.token===result.token)continue;await chrome.storage.local.set({connection:{endpoint,token:result.token}});await api('/ping',{});}
+            if(result.token){const current=(await state()).connection;if(current?.endpoint===endpoint&&current?.token===result.token)continue;await chrome.storage.local.set({connection:{endpoint,token:result.token,profileId:result.profileId}});await api('/ping',{});}
         }catch{} // One offline Filmma instance must not disconnect the other.
     }
 }
-async function tick(){await discover();const {connection}=await state();if(connection){try{await api('/ping',{})}catch{}await claim()}}
+async function tick(){await discover();const {connection}=await state();if(connection){try{await api('/ping',{});const session=await api('/session',{});if(session.provider==='flow'||session.provider==='gemini')await chrome.tabs.create({url:session.provider==='flow'?'https://flow.google.com/':'https://gemini.google.com/app',active:true});}catch{}await claim()}}
 
 async function state() { return chrome.storage.local.get(['connection', 'active']); }
 async function api(path, body, run) { const { connection } = await state(); if (!connection || !ownOrigins.has(connection.endpoint))
@@ -103,11 +105,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 throw Error('Enlaza desde las opciones de Filmma.');
             if (!ownOrigins.has(message.endpoint) || !/^\d{9}$/.test(message.code))
                 throw Error('Código o destino inválido.');
-            const response = await fetch(message.endpoint + '/api/google-browser/bridge/pair', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Filmma-Extension': chrome.runtime.id }, body: JSON.stringify({ code: message.code, extensionId: chrome.runtime.id, version: chrome.runtime.getManifest().version }), redirect: 'error' });
+            const response = await fetch(message.endpoint + '/api/google-browser/bridge/pair', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Filmma-Extension': chrome.runtime.id }, body: JSON.stringify({ code: message.code, extensionId: chrome.runtime.id, version: chrome.runtime.getManifest().version,clientId:await localClientId() }), redirect: 'error' });
             const result = await response.json();
             if (!response.ok)
                 throw Error(result.error || 'Código rechazado.');
-            await chrome.storage.local.set({ connection: { endpoint: message.endpoint, token: result.token } });
+            await chrome.storage.local.set({ connection: { endpoint: message.endpoint, token: result.token,profileId:result.profileId } });
             await chrome.alarms.create('filmma', { periodInMinutes: .5 });
             await api('/ping',{});
             await claim();
@@ -130,6 +132,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             await event(active, 'preparing', undefined, sender.url);
             return { ok: true, run: active.run };
         }
+        if(message.type==='model'){await api('/event/'+active.run.id,{phase:'preparing',modelLabel:message.modelLabel,pageUrl:sender.url},active.run);return{ok:true};}
         if(message.type==='references'){await api('/event/'+active.run.id,{phase:'preparing',step:'references',pageUrl:sender.url},active.run);return{ok:true}}
         if (message.type === 'submit') {
             if (active.submitted)

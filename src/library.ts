@@ -20,11 +20,12 @@ export function assetOrigin(a:Asset,entry?:LibraryEntry){
  if(a.speech)return{kind:'speech',label:'Voz del guion',model:a.speech.model,at:a.speech.createdAt,sources:a.speech.voice.engine==='qwen'&&a.speech.voice.referenceAssetId?[a.speech.voice.referenceAssetId]:[]};
  if(a.googleVideo)return{kind:'google-video',label:a.googleVideo.verification==='browser-observed'?'Google · capturada en navegador':'Google · importación declarada',model:a.googleVideo.provider==='gemini'?'Gemini':'Flow',at:a.googleVideo.importedAt,sources:a.googleVideo.referenceAssetIds};
  if(a.generation)return{kind:'generation',label:'Toma generada',model:a.generation.model+(a.generation.modelVariant?.startsWith('gguf-')?' · '+a.generation.modelVariant.toUpperCase():''),at:a.generation.createdAt,sources:a.generation.referenceAssetIds};
+ if(a.referenceSource)return{kind:a.referenceSource.kind,label:a.referenceSource.kind==='web'?'Referencia web con atribución':'Referencia creada con IA',model:a.referenceSource.model,at:a.referenceSource.retrievedAt,sources:[]};
  if(entry?.imported)return{kind:'import',label:'Original importado',at:entry.imported.at,sources:[]};
  if(a.url.startsWith('/demo/'))return{kind:'demo',label:'Material de ejemplo',sources:[]};
  return{kind:'unknown',label:'Procedencia no registrada',sources:[]};
 }
-export function recordedAssetSha(a:Asset,entry?:LibraryEntry){return entry?.sha256??a.googleVideo?.outputSha256??a.enhancement?.outputSha256??a.lipSync?.outputSha256??a.speech?.outputSha256??a.voiceReference?.outputSha256}
+export function recordedAssetSha(a:Asset,entry?:LibraryEntry){return entry?.sha256??a.referenceSource?.sha256??a.googleVideo?.outputSha256??a.enhancement?.outputSha256??a.lipSync?.outputSha256??a.speech?.outputSha256??a.voiceReference?.outputSha256}
 export const normalizeTags=(value:string[])=>[...new Map(value.map(t=>t.trim().replace(/\s+/g,' ')).filter(Boolean).map(t=>[t.toLocaleLowerCase(),t])).values()];
 export function jobProjectId(j:Job){return j.context?.projectId??j.result?.projectId}
 export function jobSceneId(j:Job){return j.context?.sceneId??(typeof j.result?.sceneId==='string'?j.result.sceneId:undefined)}

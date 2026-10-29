@@ -105,7 +105,7 @@ export function dialogueLinesFromScene(project:Project,sceneId:string):DialogueL
     for(const word of text.split(' ')){if(chunk&&chunk.length+word.length+1>600){chunks.push(chunk);chunk='';}
       let remainder=word;while(remainder.length>600){let cut=600;if(/[\uD800-\uDBFF]/.test(remainder[cut-1]!))cut--;chunks.push(remainder.slice(0,cut));remainder=remainder.slice(cut);}
       chunk+=(chunk?' ':'')+remainder;}if(chunk)chunks.push(chunk);
-    for(const spoken of chunks)result.push({id:crypto.randomUUID(),sceneId,characterId:speaker,text:spoken,offset:0,delivery,sourceDialogue:dialogueSourceSignature(scene.dialogue)});
+    for(const spoken of chunks)result.push({...(!speaker&&project.production?{voice:defaultDialogueVoice(project.production.voiceEngine)}:{}),id:crypto.randomUUID(),sceneId,characterId:speaker,text:spoken,offset:0,delivery,sourceDialogue:dialogueSourceSignature(scene.dialogue)});
   }
   return result;
 }

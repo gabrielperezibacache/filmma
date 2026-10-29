@@ -4,6 +4,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:net';
+import {checkFrontend} from './check-frontend.mjs';
 const work=await mkdtemp(join(tmpdir(),'filmma-windows-smoke-'));
 const installer=(await readdir('release')).find(n=>n.endsWith('-win-x64-Setup.exe'));
 assert(installer,'NSIS installer missing');
@@ -32,11 +33,12 @@ try{
  assert.equal(state.platform,'win32');assert.equal(state.architecture,'x64');assert.equal(state.desktop,true);
  assert.equal(state.version,expected.version);assert.equal(state.commit,expected.commit);
  assert.equal(resolve(state.dataDirectory),join(userData,'data'));
+ const frontendResources=await checkFrontend(endpoint);
  const system=await fetch(endpoint+'/api/system').then(r=>r.json());
  assert.equal(system.runtime.hardware.platform,'Windows');assert(system.runtime.hardware.memoryGB>0);assert.equal(system.runtime.hardware.appleSilicon,false);
  const manager=await fetch(endpoint+'/api/models/manager').then(r=>r.json());
  assert(manager.installation.options.some(o=>o.id==='cuda-int8-offload'&&!o.integrated));
  assert(manager.models.every(m=>!m.available),'Apple engines must not be reported ready on Windows');
- await writeFile('release/windows-smoke.json',JSON.stringify({version:state.version,commit:state.commit,platform:state.platform,architecture:state.architecture,nsisInstalled:true,installedAppStarted:true,isolatedDataDirectory:true,ffmpegDecode:true,frames:24,pythonDoctor:true,memoryGB:system.runtime.hardware.memoryGB,modelAvailability:'Apple engines correctly unavailable; external CUDA recipes documented',gpuInferenceTested:false,testedAt:new Date().toISOString()},null,2));
+ await writeFile('release/windows-smoke.json',JSON.stringify({version:state.version,commit:state.commit,platform:state.platform,architecture:state.architecture,nsisInstalled:true,installedAppStarted:true,isolatedDataDirectory:true,frontendResources,ffmpegDecode:true,frames:24,pythonDoctor:true,memoryGB:system.runtime.hardware.memoryGB,modelAvailability:'Apple engines correctly unavailable; external CUDA recipes documented',gpuInferenceTested:false,testedAt:new Date().toISOString()},null,2));
  console.log('NSIS install + installed app + media roundtrip + Python model diagnosis verified');
 }finally{if(child?.pid){try{execFileSync('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{stdio:'ignore'})}catch(error){let alive=false;try{process.kill(child.pid,0);alive=true}catch(probe){if(probe.code!=='ESRCH')throw probe}if(alive)throw error;console.log('Installed process already exited during teardown.')}}}

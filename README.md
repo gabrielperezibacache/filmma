@@ -4,11 +4,17 @@
 
 Filmma es un estudio de cine para Mac y Windows: escribe una historia, dirige sus planos, conserva las referencias de personajes y objetos, monta imagen y sonido y prepara la entrega. Combina generación local en Apple Silicon con un flujo opcional para tu sesión de Google AI Pro.
 
-[Descargar para Mac y Windows](https://github.com/gabrielperezibacache/filmma/releases/latest) · [Guía de uso](docs/GUIA.md) · [Modelos locales](docs/LOCAL_MODELS.md) · [Google AI Pro](docs/GOOGLE-AI-PRO.md) · [Instalación, RAM y CUDA](docs/LOCAL_INSTALLATION.md)
+[Descargar para Mac y Windows](https://github.com/gabrielperezibacache/filmma/releases/latest) · [Guía de uso](docs/GUIA.md) · [Configurar producción y cuentas](docs/PRODUCTION-WORKFLOW.md) · [Modelos locales](docs/LOCAL_MODELS.md) · [Google AI Pro](docs/GOOGLE-AI-PRO.md) · [Instalación, RAM y CUDA](docs/LOCAL_INSTALLATION.md)
 
 ![Filmma: visor, secuencia y siguiente paso de producción](docs/images/filmma-home.webp)
 
 *Capturas reales de la aplicación con «La última función», un proyecto de demostración. Sus personajes e imágenes son ficticios; los clips de demostración no acreditan una generación de Google.*
+
+## Configura tu producción
+
+En **Producción**, elige documental, largometraje, corto, serie de Instagram, comercial, promocional, historia, videoclip, educativo o proyecto libre. Define el objetivo y el público; después selecciona por separado el motor de video, las voces y el acabado. La ficha acompaña al guion y a los prompts y se conserva al exportar el proyecto.
+
+**Varias cuentas de Google:** enlaza un perfil local de Chrome por cuenta y elige el perfil de cada toma. Las cookies permanecen en Chrome; Filmma no las extrae ni las sube. [Recorrido, directorios y límites](docs/PRODUCTION-WORKFLOW.md). La ampliación multiperfil se prueba con cuentas ficticias; no acredita una generación nueva con varias cuentas reales.
 
 ## Un estudio conectado a la historia
 
@@ -66,7 +72,7 @@ En Mac, el selector de residencia mantiene SSD streaming en 36 GB y permite un t
 Filmma ofrece dos recorridos que conservan el mismo guion, referencias y procedencia:
 
 - **Asistido:** prepara un ZIP con el prompt y las imágenes elegidas; genera en Gemini o Flow y vuelve con el video descargado.
-- **Puente de Chrome —experimental—:** detecta y autoriza la extensión 0.2.0 desde Filmma, conservando el enlace entre reinicios. Se comprobaron la conexión real y la recuperación de originales de Gemini y Flow. Gemini descarga directamente; con la configuración actual de Chrome, Flow exige confirmar «Guardar». Sus referencias y su aprobación por toma mantienen la intervención en Google. Consulta [el estado y alcance de las pruebas](docs/GOOGLE-AI-PRO.md).
+- **Puente de Chrome —experimental—:** detecta y autoriza la extensión 0.3.0 desde Filmma, conservando el enlace entre reinicios. Se comprobaron la conexión real y la recuperación de originales de Gemini y Flow. Gemini descarga directamente; con la configuración actual de Chrome, Flow exige confirmar «Guardar». Sus referencias y su aprobación por toma mantienen la intervención en Google. Consulta [el estado y alcance de las pruebas](docs/GOOGLE-AI-PRO.md).
 
 El puente **no usa la API de pago, no copia cookies ni contraseñas y no compra créditos**. Emplea el acceso y los límites de tu suscripción. No garantiza disponibilidad ni generaciones ilimitadas. Si aparece login, CAPTCHA, un acuerdo, falta de cuota o un control ambiguo, se detiene. Una solicitud ya enviada no se repite automáticamente.
 
@@ -150,3 +156,9 @@ menos de datos del transformador. Ambos ensayos fueron breves, de 512 × 320 y
 
 [Mediciones, comparación de calidad y límites](docs/H3_QUANTIZATION.md).
 La ruta reduce lecturas del disco; no anuncia residencia completa de H3 en RAM.
+
+### Adaptar documentos con Codex
+
+En **Producción → Adaptar con Codex** puedes elegir un modelo real de tu sesión, incorporar PDF/Word/texto, investigar referencias y revisar una propuesta con personajes, lugares, objetos, episodios y planos. Prepara un inventario común de imágenes, busca material reutilizable con atribución o crea referencias con la generación integrada de Codex, y produce sólo los episodios seleccionados. Las voces se fijan por personaje y los originales se conservan en el respaldo portable. [Recorrido y límites](docs/ADAPTATION.md).
+
+![Adaptación de documentos y referencias creativas en Filmma](docs/images/filmma-adaptation-workflow.jpg)
