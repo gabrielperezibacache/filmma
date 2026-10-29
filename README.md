@@ -162,3 +162,5 @@ La ruta reduce lecturas del disco; no anuncia residencia completa de H3 en RAM.
 En **Producción → Adaptar con Codex** puedes elegir un modelo real de tu sesión, incorporar PDF/Word/texto, investigar referencias y revisar una propuesta con personajes, lugares, objetos, episodios y planos. Prepara un inventario común de imágenes, busca material reutilizable con atribución o crea referencias con la generación integrada de Codex, y produce sólo los episodios seleccionados. Las voces se fijan por personaje y los originales se conservan en el respaldo portable. [Recorrido y límites](docs/ADAPTATION.md).
 
 ![Adaptación de documentos y referencias creativas en Filmma](docs/images/filmma-adaptation-workflow.jpg)
+
+![Exportación por episodio con formato vertical y voces vinculadas](docs/images/filmma-episode-export.webp)

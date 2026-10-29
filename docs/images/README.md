@@ -7,3 +7,5 @@ Las capturas `filmma-refined-editor.jpg` y `filmma-refined-screenplay.jpg` muest
 `filmma-production-workflow.jpg` muestra la nueva ficha de producción con una serie ficticia para Instagram. Las capturas y comprobaciones completas se conservan en `output/qa/production-workflow/`.
 
 - `filmma-adaptation-workflow.jpg`: recorrido de adaptación con un relato ficticio de Elena, documento fuente, referencias creativas y alcance de la propuesta. Captura de un proyecto de prueba aislado; no contiene claves, cuentas de Google ni documentos privados.
+
+`filmma-episode-export.webp`: exportación por episodio en una instancia aislada con historia y personajes ficticios; sin material personal.
