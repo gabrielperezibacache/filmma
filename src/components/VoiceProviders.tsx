@@ -1,10 +1,13 @@
 import {useEffect,useState} from 'react';
 import {ExternalLink,Link2,RefreshCw,Unplug} from 'lucide-react';
 import {api} from '../api';
+import {tr} from '../i18n';
+import {elevenCapabilities} from '../elevenlabs';
+import {ElevenPerformance,ElevenVoiceLibrary,type ElevenVoiceOption} from './ElevenVoiceControls';
 import {DIALOGUE_ENGINES,DIALOGUE_VOICES,defaultDialogueVoice} from '../dialogue';
 import type {CharacterVoice,DialogueEngine,LocalDialogueStatus,Project} from '../types';
 
-type AccountStatus={configured:boolean;ready:boolean;message?:string;voices:{id:string;name:string;language?:string}[];models:{id:string;name:string;languages:string[];supportsSpeed?:boolean}[]};
+type AccountStatus={configured:boolean;ready:boolean;message?:string;voices:ElevenVoiceOption[];checkedAt?:string;account?:{tier:string;used?:number;limit?:number;resetsAt?:number};models:{id:string;name:string;languages:string[];supportsSpeed?:boolean}[]};
 type QwenStatus=LocalDialogueStatus&{referenceSha256?:string;modelReady?:boolean};
 export function useVoiceProviders(refresh:string|number,enabled=true){
  const [eleven,setEleven]=useState<AccountStatus>(),[qwen,setQwen]=useState<QwenStatus>();
@@ -32,7 +35,9 @@ export function VoiceConnections({providers}:{providers:VoiceProviders}){
     <label>Clave API de ElevenLabs<input aria-label="Clave API de ElevenLabs" type="password" autoComplete="off" spellCheck={false} value={key} maxLength={512} placeholder={eleven?.configured?'Nueva clave para cambiar de cuenta':'Pega aquí tu clave API'} onChange={e=>setKey(e.target.value)}/></label>
     <div className="dw-actions"><button className="quiet-button" type="submit" disabled={!!busy||!key.trim()}><Link2 size={15}/>{busy==='connect'?'Conectando…':eleven?.configured?'Cambiar conexión':'Conectar cuenta'}</button><a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noreferrer">Obtener clave<ExternalLink size={13}/></a></div>
    </form>
-   <small>La clave se guarda sólo en este Mac, fuera de las películas y de sus exportaciones. Conectar o actualizar las voces no genera audio.</small>
+   <small>La clave se guarda sólo en este equipo, fuera de las películas y de sus exportaciones. Conectar o actualizar las voces no genera audio.</small>
+   <p className="el-account-permissions">{tr('Permisos de la clave: Text to Speech, lectura de voces y modelos. Lectura de usuario es opcional para consultar el consumo.','Key permissions: Text to Speech, voice and model read access. User read access is optional for usage information.')} <a href="https://elevenlabs.io/docs/overview/administration/workspaces/api-keys" target="_blank" rel="noreferrer">{tr('Ver permisos','View permissions')}<ExternalLink size={12}/></a></p>
+   {eleven?.configured&&<div className="el-account-usage"><strong>{tr('Consumo de la cuenta','Account usage')}{eleven.account?` · ${eleven.account.tier}`:''}</strong>{eleven.account?.used!==undefined&&eleven.account.limit!==undefined?<><p>{eleven.account.used.toLocaleString()} / {eleven.account.limit.toLocaleString()} {tr('créditos informados por ElevenLabs','credits reported by ElevenLabs')}</p>{eleven.account.limit>0&&<progress aria-label={tr('Consumo de ElevenLabs','ElevenLabs usage')} max={eleven.account.limit} value={Math.min(eleven.account.used,eleven.account.limit)}/ >}{eleven.account.resetsAt!==undefined&&<p>{tr('Renovación','Resets')}: {new Date(eleven.account.resetsAt*1000).toLocaleDateString()}</p>}</>:<p>{tr('El consumo no está disponible con esta clave. Puedes generar si tiene permiso de Text to Speech.','Usage is unavailable with this key. You can generate if it has Text to Speech permission.')}</p>}<small>{tr('Dato de la última consulta; el coste cambia según modelo y voz. Actualiza para comprobar el saldo.','From the last refresh; costs vary by model and voice. Refresh to check your balance.')}{eleven.checkedAt&&` · ${new Date(eleven.checkedAt).toLocaleString()}`}</small></div>}
    {eleven?.configured&&<div className="dw-actions"><button className="dw-text-button" disabled={!!busy} onClick={()=>void accountAction('refresh')}><RefreshCw size={14}/>{busy==='refresh'?'Actualizando…':'Actualizar mis voces'}</button><button className="dw-text-button" disabled={!!busy} onClick={()=>void accountAction('disconnect')}><Unplug size={14}/>Desconectar</button></div>}
    {error&&<p className="dw-warning-text" role="alert">{error}</p>}
   </article>
@@ -43,6 +48,7 @@ export function providerReady(voice:CharacterVoice|undefined,providers:VoiceProv
  if(!voice)return false;
  if(voice.engine==='kokoro')return kokoroReady;
  if(voice.engine==='qwen'){if(voice.referenceAssetId){const asset=project?.assets.find(a=>a.id===voice.referenceAssetId&&a.type==='audio');return !!(providers.qwen?.modelReady??providers.qwen?.ready)&&!!asset?.voiceReference&&asset.voiceReference.projectId===project?.id&&asset.voiceReference.characterId===characterId&&voice.voiceId===`profile-${asset.id}`&&voice.referenceSha256===asset.voiceReference.outputSha256;}return !!providers.qwen?.ready&&!!providers.qwen.voices?.some(v=>v.id===voice.voiceId)&&!!voice.referenceSha256&&voice.referenceSha256===providers.qwen.referenceSha256;}
+ const caps=elevenCapabilities(voice.modelId);if(!caps.supportsSpeed&&voice.speed!==1||caps.discreteStability&&voice.settings?.stability!==undefined&&![0,.5,1].includes(voice.settings.stability))return false;
  return !!providers.eleven?.ready&&providers.eleven.voices.some(v=>v.id===voice.voiceId)&&providers.eleven.models.some(m=>m.id===voice.modelId&&m.languages.includes(voice.language));
 }
 
@@ -63,15 +69,15 @@ export function VoiceSelection({voice,providers,project,characterId,onChange}:{v
  const selected=list.some(v=>v.id===voice.voiceId);
  return <>
   <div className="dw-fields dw-provider-fields"><label>Motor de voz<select aria-label="Motor de voz" value={voice.engine} onChange={e=>changeEngine(e.target.value as DialogueEngine)}><option value="kokoro">Kokoro · local</option><option value="qwen">Qwen · voz propia local</option><option value="elevenlabs">ElevenLabs · mi cuenta</option></select></label>
-   <label>Voz estable<select aria-label="Voz estable" value={selected?voice.voiceId:''} onChange={e=>{
+   {voice.engine!=='elevenlabs'&&<label>Voz estable<select aria-label="Voz estable" value={selected?voice.voiceId:''} onChange={e=>{
     if(voice.engine==='kokoro'){const chosen=DIALOGUE_VOICES.find(v=>v.id===e.target.value);if(chosen)onChange({...voice,voiceId:chosen.id,language:chosen.language})}
     else if(voice.engine==='qwen'){const profile=profiles.find(a=>`profile-${a.id}`===e.target.value);onChange({...voice,voiceId:e.target.value,referenceAssetId:profile?.id,referenceSha256:profile?.voiceReference?.outputSha256??qwen?.referenceSha256});}
-    else onChange({...voice,voiceId:e.target.value});
-   }}><option value="" disabled>{list.length?'Selecciona una voz':voice.engine==='elevenlabs'?'Conecta tu cuenta en Voces y conexiones':'Voz no disponible'}</option>{list.map(v=><option key={v.id} value={v.id}>{v.name}{voice.engine==='kokoro'?` · ${v.language==='es'?'español':'inglés'}`:''}</option>)}</select></label>
+   }}><option value="" disabled>{list.length?'Selecciona una voz':'Voz no disponible'}</option>{list.map(v=><option key={v.id} value={v.id}>{v.name}{voice.engine==='kokoro'?` · ${v.language==='es'?'español':'inglés'}`:''}</option>)}</select></label>}
    {voice.engine!=='kokoro'&&<label>Idioma<select aria-label="Idioma de la voz" value={voice.language} onChange={e=>onChange({...voice,language:e.target.value as 'es'|'en'})}><option value="es">Español</option><option value="en">Inglés</option></select></label>}
-   {voice.engine==='elevenlabs'&&<label>Modelo de ElevenLabs<select aria-label="Modelo de ElevenLabs" value={models.some(m=>m.id===voice.modelId)?voice.modelId:''} onChange={e=>onChange({...voice,modelId:e.target.value})}><option value="" disabled>Selecciona un modelo compatible</option>{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}
-   <label>Ritmo<input aria-label="Ritmo de la voz" type="number" min={range.minSpeed} max={range.maxSpeed} step={.05} value={voice.speed} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>=range.minSpeed&&n<=range.maxSpeed)onChange({...voice,speed:n})}}/></label>
+   {voice.engine==='elevenlabs'&&<label>Modelo de ElevenLabs<select aria-label="Modelo de ElevenLabs" value={models.some(m=>m.id===voice.modelId)?voice.modelId:''} onChange={e=>{const caps=elevenCapabilities(e.target.value);onChange({...voice,modelId:e.target.value,...(!caps.supportsSpeed?{speed:1}:{}),...(caps.discreteStability&&voice.settings?.stability!==undefined&&![0,.5,1].includes(voice.settings.stability)?{settings:{...voice.settings,stability:.5}}:{})})}}><option value="" disabled>Selecciona un modelo compatible</option>{models.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}
+   {(voice.engine!=='elevenlabs'||elevenCapabilities(voice.modelId).supportsSpeed)&&<label>Ritmo<input aria-label="Ritmo de la voz" type="number" min={range.minSpeed} max={range.maxSpeed} step={.05} value={voice.speed} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>=range.minSpeed&&n<=range.maxSpeed)onChange({...voice,speed:n})}}/></label>}
   </div>
+  {voice.engine==='elevenlabs'&&<><ElevenVoiceLibrary voices={eleven?.voices??[]} voiceId={voice.voiceId} onChange={voiceId=>onChange({...voice,voiceId})}/><ElevenPerformance voice={voice} onChange={onChange}/></>}
   {voice.engine==='qwen'&&!voice.referenceAssetId&&qwen?.referenceSha256&&voice.referenceSha256!==qwen.referenceSha256&&<div className="dw-warning"><p>{voice.referenceSha256?'La referencia de Hermes cambió. Las grabaciones anteriores se conservan. Revisa la nueva voz antes de adoptarla para este personaje.':'Vincula la referencia de Hermes para conservar esta misma voz entre planos.'}</p><button className="quiet-button" onClick={()=>onChange({...voice,referenceSha256:qwen.referenceSha256})}>Usar la referencia actual de Hermes</button></div>}
   <p className="dw-hint">{voice.engine==='elevenlabs'?'Generar en ElevenLabs usa los créditos de tu cuenta. Si el audio supera 15 segundos se rechazará sin recortarlo; la solicitud remota puede haber consumido créditos.':voice.engine==='qwen'?'Qwen utiliza una misma referencia para conservar el timbre. La interpretación puede variar; escucha el resultado antes de llevarlo al montaje.':'Las acotaciones ayudan a dirigir, pero Kokoro no controla emociones ni clona voces. Escucha la pronunciación antes de usarla.'}</p>
  </>;

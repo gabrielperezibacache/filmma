@@ -29,6 +29,7 @@ import urllib.request
 import uuid
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import portable_lock
+import h3_quantized
 from weight_residency import residency_plan
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -234,7 +235,10 @@ def read_validation(path, model):
     try:
         value = json.loads(path.read_text())
         entry = CATALOG['models'][model]
-        if not isinstance(value, dict) or value.get('modelRevision') != entry['revision'] or value.get('runtimeRevision') != entry['runtime']['revision']:
+        variant = h3_quantized.active() if model == 'minimax-h3' else None
+        model_revision = h3_quantized.catalog(variant)['revision'] if variant else entry['revision']
+        runtime_revision = h3_quantized.REVISION if variant else entry['runtime']['revision']
+        if not isinstance(value, dict) or value.get('modelRevision') != model_revision or value.get('runtimeRevision') != runtime_revision or value.get('modelVariant', 'bf16') != (variant or 'bf16'):
             return None
         if value.get('model') != model or value.get('status') != 'media-verified':
             return None
@@ -279,6 +283,7 @@ def save_validation(request, metadata, hw):
     destination = RUNTIME / 'validation' / ('last-' + request['model'] + '.json')
     destination.parent.mkdir(parents=True, exist_ok=True)
     value = {'status': 'media-verified', 'model': request['model'],
+             'modelVariant': request.get('modelVariant', 'bf16'),
              'modelRevision': metadata['modelRevision'], 'runtimeRevision': metadata['runtimeRevision'],
              'outputPath': request['outputPath'], 'recordedAt': time.time(),
              'hardware': {'chip': hw['chip'], 'memoryGB': hw['memoryGB']},
@@ -309,19 +314,24 @@ def doctor():
     hw = hardware()
     models = []
     for model in MODEL_NAMES:
+        variant = h3_quantized.active() if model == 'minimax-h3' else None
         evidence = last_validation(model)
-        core_files = inspect_files(model)
-        reference_files = inspect_files(model, references=True) if model == 'minimax-h3' else None
+        core_files = h3_quantized.files(variant) if variant else inspect_files(model)
+        reference_files = (h3_quantized.files(variant, True) if variant else inspect_files(model, references=True)) if model == 'minimax-h3' else None
         ref_ready = bool(reference_files and reference_files['complete'])
         reference_profile = model == 'minimax-h3' and (ref_ready or bool(config().get('models', {}).get(model, {}).get('withReferences')))
         files = reference_files if reference_profile else core_files
         files = {**files, 'withReferences': reference_profile}
-        engine = executable(model)
+        engine = h3_quantized.BINARY if variant else executable(model)
         engine_ready = engine.is_file() and os.access(engine, os.X_OK)
         engine_error = None
         if model == 'minimax-h3' and engine_ready:
             try:
-                engine_working_directory(model)
+                if variant:
+                    if not (h3_quantized.ENGINE / 'h3_shaders.metal').is_file():
+                        raise RuntimeFailure('RUNTIME_ASSET_MISSING', 'Falta el shader del motor GGUF.')
+                else:
+                    engine_working_directory(model)
             except RuntimeFailure as error:
                 engine_ready, engine_error = False, error
         if model == 'ltx-2b' and engine_ready:
@@ -342,7 +352,7 @@ def doctor():
             if reference_profile and not ref_ready:
                 message += ' La base está preparada; faltan los pesos de referencias.'
         available = bool(hw['appleSilicon'] and engine_ready and core_files['complete'] and hw['ffmpeg'] and hw['ffprobe'])
-        models.append({'id': model, 'name': MODEL_NAMES[model], 'installed': core_files['complete'] and engine_ready,
+        models.append({'id': model, 'name': MODEL_NAMES[model] + (' · ' + variant.upper() if variant else ''), 'modelVariant': variant or 'bf16', 'modelRevision': h3_quantized.catalog(variant)['revision'] if variant else CATALOG['models'][model]['revision'], 'modelRepository': h3_quantized.catalog(variant)['repository'] if variant else CATALOG['models'][model]['repository'], 'installed': core_files['complete'] and engine_ready,
                        'available': available, 'status': status, 'message': message,
                        'engineInstalled': engine_ready, 'enginePath': str(engine), 'weights': files,
                        'capabilities': {'textToVideo': True, 'imageToVideo': True,
@@ -354,7 +364,7 @@ def doctor():
                        'recommended': {'width': 512, 'height': 320, 'numFrames': 22 if model == 'minimax-h3' else 25,
                                        'fps': 24, 'steps': 20 if model == 'minimax-h3' else 4,
                                        'ssdStreaming': model == 'minimax-h3'},
-                       'downloadPlan': download_plan(model, references=reference_profile),
+                       'downloadPlan': h3_quantized.download_plan(variant) if variant else download_plan(model, references=reference_profile),
                        'lastValidation': evidence, 'validationHistory': validation_history(model, evidence),
                        'validation': 'model-inference-and-media-verified' if evidence else 'host-and-metal-primitives-tested; model-inference-unverified' if model == 'minimax-h3' else 'adapter-tested; model-inference-unverified'})
     return {'schemaVersion': 1, 'hardware': hw, 'models': models,
@@ -436,6 +446,13 @@ def normalize_request(request):
         raise RuntimeFailure('INCOMPATIBLE_REFERENCES', 'H3 usa fotogramas ancla o referencias de identidad; son modos separados.')
     if model == 'ltx-2b' and (refs or request.get('lastFrame')):
         raise RuntimeFailure('UNSUPPORTED_CAPABILITY', 'LTX 2B acepta texto o una imagen inicial; usa H3 para referencias o último fotograma.')
+    links = request.get('continuityLinks', {})
+    if not isinstance(links, dict) or set(links) - {'projectId', 'sceneId', 'characterIds', 'referenceAssetIds', 'referenceCharacterIds'}:
+        raise RuntimeFailure('INVALID_CONTINUITY', 'Los vínculos de continuidad no son válidos.')
+    for key, value in links.items():
+        values = [value] if key in ('projectId', 'sceneId') else value
+        if not isinstance(values, list) or len(values) > 100 or any(not isinstance(v, str) or len(v) > 1000 for v in values):
+            raise RuntimeFailure('INVALID_CONTINUITY', 'Los identificadores de continuidad no son válidos.')
     normalized_refs = []
     counts = {'image': 0, 'video': 0, 'silent-video': 0, 'audio': 0}
     for ref in refs:
@@ -469,7 +486,8 @@ def normalize_request(request):
             'inputImage': media_path(request['inputImage'], 'imagen inicial') if request.get('inputImage') else None,
             'lastFrame': media_path(request['lastFrame'], 'imagen final') if request.get('lastFrame') else None,
             'references': normalized_refs, 'ssdStreaming': True,
-            'modelDirectory': str(model_dir(model)), 'warnings': warnings}
+            'modelDirectory': str(model_dir(model)), 'warnings': warnings,
+            **({'continuityLinks': links} if links else {})}
 
 
 def prepare_h3_view(directory):
@@ -494,7 +512,7 @@ def prepare_h3_view(directory):
 
 
 def h3_command(request, output):
-    args = [str(executable('minimax-h3').expanduser().resolve()), '-d', request.get('engineModelDirectory', request['modelDirectory']), '-p', request['prompt'],
+    args = [str(Path(request.get('engineExecutable', executable('minimax-h3'))).expanduser().resolve()), '-d', request.get('engineModelDirectory', request['modelDirectory']), '-p', request['prompt'],
             '--width', str(request['width']), '--height', str(request['height']),
             '--frames', str(request['numFrames']), '--steps', str(request['steps']),
             '--seed', str(request['seed']), '--layers', '50', '--reuse', '1', '--profile', '-o', str(output)]
@@ -523,6 +541,7 @@ def prepare_anchor(source, destination, width, height):
 
 
 def report_engine_line(line):
+    line = re.sub(r'^\[filmma-h3-gguf\]\s+[\d.]+s\s+', '', line)
     lower = line.lower()
     phase_match = re.match(r'^(.+?)\s+(\d+)\s*/\s*(\d+)\s*$', line)
     if phase_match:
@@ -531,10 +550,12 @@ def report_engine_line(line):
                     'video VAE load': 'Preparando los fotogramas', 'audio VAE': 'Construyendo el sonido',
                     'audio VAE encoder': 'Leyendo el sonido de referencia', 'video VAE encoder': 'Leyendo la referencia visual',
                     'Qwen vision': 'Interpretando las referencias', 'FFmpeg': 'Codificando la toma',
-                    'T5 shard prepared': 'Preparando el texto en memoria'}
+                    'T5 shard prepared': 'Preparando el texto en memoria', 'denoise': 'Generando movimiento', 'encode': 'Codificando la toma'}
         label = messages.get(phase, 'Procesando la toma')
+        fraction = min(1.0, int(completed) / int(total)) if int(total) > 0 else 0.0
+        progress = {'progress': round(15 + 70 * fraction, 1)} if phase == 'denoise' else {'progress': round(95 + 4 * fraction, 1)} if phase == 'encode' else {}
         emit('progress', stage='inference', message=f'{label} · {completed}/{total}',
-             enginePhase=phase, completed=int(completed), total=int(total))
+             enginePhase=phase, completed=int(completed), total=int(total), **progress)
     elif 'loading t5' in lower or 't5 encode:' in lower:
         emit('progress', stage='text', message='Interpretando el texto y la continuidad del plano.')
     elif 'loading transformer' in lower:
@@ -596,7 +617,7 @@ def process_memory(pid):
         usage = ProcessMemoryUsage()
         if library.proc_pid_rusage(pid, 2, ctypes.byref(usage)) != 0:
             return None
-        return {key: getattr(usage, key) for key in ('residentBytes', 'footprintBytes', 'startTime')}
+        return {key: getattr(usage, key) for key in ('residentBytes', 'footprintBytes', 'startTime', 'diskReadBytes', 'diskWrittenBytes')}
     except (OSError, AttributeError):
         return None
 
@@ -669,6 +690,7 @@ class LongGenerationMonitor:
         self.stats = {'profile': request['memoryProfile'], 'limits': dict(SUPERVISED_LIMITS[request['memoryProfile']]), 'baseline': baseline,
                       'samples': 0, 'elapsedSeconds': 0, 'peakProcessFootprintBytes': 0, 'peakProcessRssBytes': 0,
                       'maxSwapGrowthBytes': 0, 'maxPressureLevel': baseline['pressureLevel'],
+                      'processDiskReadBytes': 0, 'processDiskWrittenBytes': 0,
                       'measurementScope': 'macOS proc_pid_rusage del motor: physical footprint y RSS muestreados; presión e intercambio del sistema. No equivale a una medición completa de memoria GPU/unificada, puede omitir picos y no impone un límite de asignación Metal.'}
         self.thread = threading.Thread(target=self._run, name='filmma-supervised-memory-monitor', daemon=True)
 
@@ -715,6 +737,8 @@ class LongGenerationMonitor:
                 self.stats['peakProcessRssBytes'] = max(self.stats['peakProcessRssBytes'], sample['residentBytes'])
                 self.stats['maxSwapGrowthBytes'] = max(self.stats['maxSwapGrowthBytes'], sample['swapUsedBytes'] - self.baseline['swapUsedBytes'])
                 self.stats['maxPressureLevel'] = max(self.stats['maxPressureLevel'], sample['pressureLevel'])
+                self.stats['processDiskReadBytes'] = max(self.stats['processDiskReadBytes'], sample.get('diskReadBytes', 0))
+                self.stats['processDiskWrittenBytes'] = max(self.stats['processDiskWrittenBytes'], sample.get('diskWrittenBytes', 0))
                 self.stats['elapsedSeconds'] = round(time.monotonic() - self.started, 3)
                 deadline = self.stats['limits'].get('maxInferenceSeconds')
                 if deadline is not None and self.stats['elapsedSeconds'] >= deadline:
@@ -737,7 +761,22 @@ def _generate(request):
     hw = hardware()
     if not hw['appleSilicon']:
         raise RuntimeFailure('UNSUPPORTED_HARDWARE', 'La generación local requiere Apple Silicon.')
-    if request['model'] == 'minimax-h3':
+    variant = h3_quantized.active() if request['model'] == 'minimax-h3' else None
+    if variant:
+        if not h3_quantized.validation(variant):
+            raise RuntimeFailure('QUANTIZED_UNVALIDATED', 'La variante cuantizada necesita una prueba visual revisada antes de generar.')
+        request.update(modelVariant=variant, modelDirectory=str(h3_quantized.directory(variant)),
+            engineExecutable=str(h3_quantized.BINARY), ssdStreaming=True,
+            quantization={'transformer': 'Q4_K' if variant == 'gguf-q4' else 'Q8_0', 'textEncoder': 'Q4_K_M',
+                'videoVae': 'FP16', 'repository': h3_quantized.catalog(variant)['repository'],
+                'revision': h3_quantized.catalog(variant)['revision'], 'engineRevision': h3_quantized.REVISION},
+            weightResidency={'effective': 'quantized-ssd', 'ssdStreaming': True,
+                'note': 'Pesos GGUF por bloques; descompresión BF16 en GPU. No es residencia completa en RAM.'})
+        request['conditioningManifest'] = [{'type': ref['type'], 'path': ref['path'], 'sha256': sha256_file(Path(ref['path']))} for ref in request['references']]
+        for field in ('inputImage', 'lastFrame'):
+            if request[field]:
+                request['conditioningManifest'].append({'type': field, 'path': request[field], 'sha256': sha256_file(Path(request[field]))})
+    elif request['model'] == 'minimax-h3':
         try:
             plan = residency_plan(hw, config().get('models', {}).get('minimax-h3', {}).get('weightResidency', 'auto'), request['memoryProfile'])
         except ValueError as error:
@@ -751,10 +790,11 @@ def _generate(request):
             if baseline['pressureLevel'] >= 2 or hw['memoryGB'] * baseline['freePercent'] / 100 < 48:
                 raise RuntimeFailure('MEMORY_BUDGET', 'Cierra aplicaciones o selecciona SSD: la prueba residente necesita una estimación conservadora de 48 GiB libres y presión normal.')
         emit('log', stage='memory', message='Residencia de pesos: ' + plan['effective'], residency=plan)
-    if not executable(request['model']).is_file():
+    engine = h3_quantized.BINARY if variant else executable(request['model'])
+    if not engine.is_file():
         raise RuntimeFailure('RUNTIME_MISSING', 'Instala primero el motor local.', model=request['model'])
-    engine_cwd = engine_working_directory(request['model'])
-    files = inspect_files(request['model'], references=bool(request['references']))
+    engine_cwd = h3_quantized.ENGINE if variant else engine_working_directory(request['model'])
+    files = h3_quantized.files(variant, bool(request['references'])) if variant else inspect_files(request['model'], references=bool(request['references']))
     if not files['complete']:
         raise RuntimeFailure('MODEL_NOT_INSTALLED', 'Faltan pesos del modelo; abre Modelos locales para preparar la descarga.', model=request['model'], missingCount=files['missingCount'])
     if not hw['ffmpeg'] or not hw['ffprobe']:
@@ -762,6 +802,9 @@ def _generate(request):
     # The ordinary profile stays short. Long native H3 takes are an explicit,
     # narrow profile with live supervision, not a removal of the memory guard.
     memory_baseline = generation_memory_preflight(request, hw)
+    monitor_request = {**request, 'memoryProfile': 'h3-long-ssd'} if variant and request['memoryProfile'] == 'conservative' else request
+    if variant and memory_baseline is None:
+        memory_baseline = generation_memory_preflight(monitor_request, hw)
     output = Path(request['outputPath'])
     output.parent.mkdir(parents=True, exist_ok=True)
     partial = output.with_name(output.stem + '.partial-' + uuid.uuid4().hex[:8] + '.mp4')
@@ -800,11 +843,13 @@ def _generate(request):
             temp_request.write_text(json.dumps({**request, 'outputPath': str(partial)}))
             command = [str(executable('ltx-2b')), str(RUNTIME / 'ltx_worker.py'), str(temp_request)]
         child_env = {**os.environ, 'PYTHONUNBUFFERED': '1'}
+        if variant:
+            child_env['H3_PROFILE'] = '1'
         if request['model'] == 'minimax-h3' and not request['ssdStreaming']:
             child_env['H3_ZERO_COPY_WEIGHTS'] = '0'
         child = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=str(engine_cwd), start_new_session=True, env=child_env)
         if memory_baseline is not None:
-            memory_monitor = LongGenerationMonitor(child, request, memory_baseline)
+            memory_monitor = LongGenerationMonitor(child, monitor_request, memory_baseline)
             memory_monitor.start()
         tail = []
         for line in child.stdout:
@@ -843,8 +888,9 @@ def _generate(request):
             raise RuntimeFailure('RENDER_MISMATCH', 'Duración o número de fotogramas inesperados.', actual=metadata)
         os.replace(partial, output)
         metadata.update({'model': request['model'], 'memoryProfile': request['memoryProfile'], 'seed': request['seed'], 'elapsedSeconds': round(time.time() - started, 2),
-                         'local': True, 'modelRevision': CATALOG['models'][request['model']]['revision'],
-                         'runtimeRevision': CATALOG['models'][request['model']]['runtime']['revision'],
+                         'local': True, 'modelVariant': variant or 'bf16',
+                         'modelRevision': h3_quantized.catalog(variant)['revision'] if variant else CATALOG['models'][request['model']]['revision'],
+                         'runtimeRevision': h3_quantized.REVISION if variant else CATALOG['models'][request['model']]['runtime']['revision'],
                          'warnings': request['warnings'], 'engineMetrics': engine_metrics, 'weightResidency': request.get('weightResidency')})
         output.with_suffix('.filmma.json').write_text(json.dumps({'request': request, 'metadata': metadata}, ensure_ascii=False, indent=2))
         try:
@@ -1121,6 +1167,11 @@ def main():
     p = sub.add_parser('doctor'); p.add_argument('--json', action='store_true')
     p = sub.add_parser('generate'); p.add_argument('--request', required=True, help='JSON file, inline JSON, or - for stdin')
     p = sub.add_parser('configure-memory'); p.add_argument('--mode', choices=['auto', 'ssd', 'ram'], required=True); p.add_argument('--json', action='store_true')
+    p = sub.add_parser('quantized-status'); p.add_argument('--json', action='store_true')
+    p = sub.add_parser('configure-quantized'); p.add_argument('--variant', choices=['bf16', 'gguf-q4', 'gguf-q8'], required=True)
+    p = sub.add_parser('prepare-quantized'); p.add_argument('--variant', choices=['gguf-q4', 'gguf-q8'], required=True); p.add_argument('--model-dir', required=True); p.add_argument('--accept-license', action='store_true')
+    p = sub.add_parser('record-quantized-trial'); p.add_argument('--variant', choices=['gguf-q4', 'gguf-q8'], required=True); p.add_argument('--result', required=True)
+    p = sub.add_parser('review-quantized-trial'); p.add_argument('--variant', choices=['gguf-q4', 'gguf-q8'], required=True); p.add_argument('--trial-id', required=True); p.add_argument('--accept', action='store_true')
     for command in ('download-plan', 'download', 'install-runtime', 'configure', 'verify'):
         p = sub.add_parser(command)
         p.add_argument('--model', choices=list(MODEL_NAMES), default='minimax-h3')
@@ -1133,6 +1184,16 @@ def main():
     try:
         if args.command == 'doctor':
             print(json.dumps(doctor(), ensure_ascii=False, indent=None if args.json else 2))
+        elif args.command == 'quantized-status':
+            print(json.dumps(h3_quantized.status(), ensure_ascii=False))
+        elif args.command == 'configure-quantized':
+            emit('result', **h3_quantized.activate(args.variant))
+        elif args.command == 'prepare-quantized':
+            emit('result', **h3_quantized.prepare(args.variant, args.model_dir, args.accept_license, emit))
+        elif args.command == 'record-quantized-trial':
+            emit('result', **h3_quantized.record_trial(args.variant, args.result))
+        elif args.command == 'review-quantized-trial':
+            emit('result', **h3_quantized.review_trial(args.variant, args.trial_id, args.accept))
         elif args.command == 'configure-memory':
             print(json.dumps(configure_memory(args.mode), ensure_ascii=False))
         elif args.command == 'generate':
@@ -1157,7 +1218,11 @@ def main():
     except (OSError, ValueError, KeyError) as exc:
         emit('error', code='INVALID_REQUEST' if args.command == 'generate' else 'RUNTIME_ERROR', message=str(exc))
         return 2
+    except subprocess.CalledProcessError as exc:
+        emit('error', code='RUNTIME_BUILD_FAILED', message='No se pudo compilar el adaptador local.', detail=str(exc.stderr)[-2000:])
+        return 2
 
 
 if __name__ == '__main__':
+    sys.modules.setdefault('filmma_runtime', sys.modules[__name__])
     sys.exit(main())

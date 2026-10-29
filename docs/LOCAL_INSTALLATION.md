@@ -86,3 +86,48 @@ Las variantes pruned/GGUF, INT8 de Diffusers y el BF16 de h3.c son formatos dife
 [ComfyUI documenta sus combinaciones de sistema, GPU y PyTorch](https://docs.comfy.org/installation/system_requirements). Su soporte de una GPU no garantiza que un workflow concreto de H3 funcione en ella. Para AMD/Intel/CPU, selecciona un modelo y un workflow que indiquen soporte explícito; CPU es una posibilidad de experimentación lenta, no una recomendación para rodaje H3.
 
 Para cualquier motor externo: abre el plano correcto en Filmma, conserva el paquete del prompt y las referencias, genera una salida nueva de hasta 15 s y usa **importar toma** en ese plano. Comprueba duración, proporción y fps reales; después revisa continuidad y prepara el acabado 4K. La importación conserva los bytes nativos y no sustituye las referencias de personajes. La procedencia se registra como importación, no como una generación verificada del motor interno. El 4K de postproducción sigue siendo un derivado; nunca se etiqueta como generación nativa 4K.
+
+### MiniMax H3 GGUF en el M4 Max de 36 GiB
+
+Filmma incorpora un adaptador Metal separado del BF16 original, basado en
+[H3cApp](https://github.com/JunzoKamahara/H3cApp) y los pesos
+[MiniMax-H3-GGUF de Unsloth](https://huggingface.co/unsloth/MiniMax-H3-GGUF).
+Las revisiones y hashes están fijados en `runtime/h3-gguf-catalog.json`.
+La descarga no cambia la variante activa ni elimina el modelo anterior.
+
+En **Motores → MiniMax H3 · GGUF** se pueden descargar, verificar y activar las
+variantes. Q4 necesita unos 46,9 GB con FL2VA, Ref2VA, codificador visual y ambos
+VAE. Q8 completo necesita unos 66,9 GB; los componentes idénticos pueden
+compartirse mediante enlaces físicos en el mismo volumen. Se conservan 20 GiB
+libres. La descarga reanuda sus rangos y comprueba SHA256 antes de instalar.
+El adaptador necesita macOS 15 o posterior, Apple Silicon y las herramientas de
+compilación de Xcode. No es un motor CUDA para Windows.
+
+El flujo se completa desde ese apartado:
+
+1. Elige una carpeta local o del SSD y descarga/verifica los pesos.
+2. Selecciona un personaje con imagen original y pulsa **Probar con este personaje**.
+3. Reproduce el video independiente y **aprueba o rechaza** su calidad. La prueba
+   no añade ni sustituye planos del proyecto y una prueba pendiente no borra
+   la validación anterior.
+4. Pulsa **Usar esta variante**. Cambiar el catálogo o el adaptador exige revisar
+   una nueva prueba. La cancelación detiene el proceso hijo antes de liberar
+   el bloqueo de generación.
+
+La activación exige una toma revisada, los hashes de todos los pesos y la misma
+versión del motor probado. Los controles BF16 conservan su carpeta y su modo de
+memoria. Se puede volver a BF16 desde el mismo apartado, incluso si su SSD no
+está conectado; para generar con BF16 habrá que conectarlo.
+
+Los bloques GGUF se descomprimen a BF16 cuando se usan. Esta implementación
+**reduce lecturas del SSD; no mantiene todo H3 residente en 36 GiB**. macOS puede
+conservar parte de los pesos comprimidos en la caché de archivos. La memoria de
+esa caché no queda descrita por el RSS o el footprint del proceso. El puerto MLX
+con carga por etapas es otra línea experimental, pero su ejecutable por etapas
+es de texto a video y no ofrece las referencias de identidad de este flujo:
+[fuente del puerto MLX](https://github.com/yshenaw/ComfyUI-MiniMax-H3-MLX-SolAttn).
+
+La prueba local y sus límites se documentan en
+[H3_QUANTIZATION.md](H3_QUANTIZATION.md). Cada toma registra variante, revisiones,
+semilla y referencias originales. Se mantienen las alertas de continuidad,
+los límites de 15 segundos y la supervisión de presión, footprint y swap.

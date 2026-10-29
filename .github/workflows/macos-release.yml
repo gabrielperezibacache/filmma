@@ -55,6 +55,7 @@ jobs:
           python3 -m unittest discover -s runtime/tests -p 'test_runtime.py'
           python3 -m unittest discover -s runtime/tests -p 'test_residency.py'
           python3 -m unittest discover -s runtime/tests -p 'test_portable_lock.py'
+          python3 -m unittest discover -s tests -p 'test_h3_quantized.py'
       - name: Test with bounded render concurrency
         run: node --import tsx --test --test-concurrency=2 tests/*.test.ts
       - name: Build Mac installer
@@ -126,6 +127,8 @@ jobs:
           key: windows-codecs-${{ hashFiles('scripts/packaging/build-media-windows.sh', 'desktop/media-runtime.json') }}
       - name: Install portable Python
         run: uv python install 3.12
+      - name: Test Windows account protection and desktop isolation
+        run: node --import tsx --test tests/provider-credential-codec.test.ts tests/google-desktop.test.ts
       - name: Build Windows installer
         run: npm run desktop:build:win
       - name: Smoke test packaged Windows app, media and model diagnosis
@@ -157,4 +160,4 @@ jobs:
           VERSION="$(node -p 'require("./package.json").version.split(".").slice(0, 2).join(".")').$GITHUB_RUN_NUMBER"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; fi
           node scripts/packaging/checksums.mjs
-          gh release create "v$VERSION" release/*.dmg release/*.zip release/*.exe release/SHA256SUMS.txt release/windows-smoke.json release/mac-runtime-smoke.json --target "$GITHUB_SHA" --title "Filmma $VERSION" --notes "macOS Apple Silicon + Windows x64. Instaladores sin firma de editor ni notarización. Incluyen multimedia y conservan proyectos y modelos externos. Windows: motores CUDA externos documentados; Metal y MLX requieren Mac."
+          gh release create "v$VERSION" release/*.dmg release/*.zip release/*.exe release/SHA256SUMS.txt release/windows-smoke.json release/mac-runtime-smoke.json --target "$GITHUB_SHA" --title "Filmma $VERSION" --notes-file docs/RELEASE-0.16.md

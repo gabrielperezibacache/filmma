@@ -18,6 +18,11 @@ class RuntimeContractTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
+        # These contracts describe BF16. An installed GGUF selection on the
+        # developer's machine must not switch their fixtures or read weights.
+        backend = patch.object(runtime.h3_quantized, 'active', return_value=None)
+        backend.start()
+        self.addCleanup(backend.stop)
         self.request = {'model': 'minimax-h3', 'prompt': 'An actor crosses the station.',
                         'outputPath': str(self.root / 'take.mp4'), 'width': 512, 'height': 320}
 

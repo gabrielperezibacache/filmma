@@ -18,21 +18,35 @@ Filmma es un estudio de cine para Mac y Windows: escribe una historia, dirige su
 | **Personajes y objetos** | Conservar referencias visuales, rasgos, vestuario, accesorios y cambios intencionales entre escenas. |
 | **Dirección y Storyboard** | Elegir cámara, lentes, encuadres, movimientos, película, época y referencias de dirección. Preparar el inicio y final de cada plano. |
 | **Montaje** | Editar varias pistas, mover y recortar clips, agrupar selecciones, colocar marcadores y ajustar transiciones, velocidad y fotogramas clave. |
-| **Voces y sonido** | Trabajar con Qwen TTS local, perfiles de voz a partir de referencias y ElevenLabs opcional. Mezclar audio y editar subtítulos vinculados al diálogo. |
+| **Voces y sonido** | Trabajar con Qwen TTS local o [tu cuenta de ElevenLabs](docs/ELEVENLABS.md): buscar voces, escuchar muestras y dirigir la interpretación por personaje. Mezclar audio y ajustar subtítulos con tiempos de habla vinculados al diálogo. |
 | **Color y continuidad** | Comparar planos con scopes SDR y revisar varios fotogramas para detectar diferencias de rostro, vestuario y objetos. La revisión requiere criterio humano. |
 | **Biblioteca** | Etiquetar, marcar favoritos, seguir la procedencia y reconectar copias idénticas de originales ausentes. |
 | **Entrega** | Preparar copias de acabado con IA local, exportar hasta 4K y conservar el proyecto portable con sus originales. |
 
 ![Dirección: intención del plano, visor y herramientas de cámara](docs/images/filmma-direction.webp)
 
-![Montaje: secuencia, visor y edición conectada con el guion](docs/images/filmma-editor.webp)
+![Montaje: visor ampliado y edición conectada con el guion](docs/images/filmma-refined-editor.jpg)
+
+![Guion: escenas y diálogos conectados con los personajes](docs/images/filmma-refined-screenplay.jpg)
+
+[Revisión de interfaz y accesibilidad](docs/UI-REVIEW.md): los doce apartados, guardado visible, formularios legibles y navegación en escritorio y móvil.
+
+## Novedades de esta entrega
+
+- Interfaz revisada en los doce apartados: guardado visible, navegación con teclado, formularios más claros y adaptación móvil.
+- Configuración del modelo dividida en **Generación**, **Instalar y administrar** y **Calidad**. Duración, proporción, fps y resolución nativa se distinguen del acabado final.
+- ElevenLabs por personaje: catálogo, muestras, interpretación y tiempos de habla conectados con guion y subtítulos. La cuenta se conecta después; las pruebas no consumen créditos.
+- MiniMax H3 GGUF separado de los pesos BF16, con mediciones y límites documentados.
+- Paquetes y pruebas aislados de los proyectos abiertos; la clave de ElevenLabs se protege con DPAPI en Windows.
+
+[Notas de la entrega](docs/RELEASE-0.16.md) · [Voces y ElevenLabs](docs/ELEVENLABS.md)
 
 ## Empezar en Mac
 
-1. Descarga el **DMG arm64** de la [última versión](https://github.com/gabrielperezibacache/filmma/releases/latest). El repositorio y sus releases son privados: inicia sesión con una cuenta que tenga acceso.
+1. Descarga el **DMG arm64** de la [última versión](https://github.com/gabrielperezibacache/filmma/releases/latest). El repositorio y las descargas son públicos.
 2. Arrastra **Filmma** a Aplicaciones y ábrela. El paquete requiere **Apple Silicon y macOS 27 o posterior**. Tiene firma ad hoc; todavía no está notarizado con Developer ID.
 3. Crea una película y escribe el primer plano. Añade personajes, imágenes y diálogos antes de generar.
-4. En **Motores**, elige el almacenamiento, consulta la recomendación para tu equipo y prepara un modelo local; o utiliza **Dirección → Generar → Google AI Pro**.
+4. En **Modelos → Instalar y administrar**, elige el almacenamiento, consulta la recomendación para tu equipo y prepara un modelo local; o utiliza **Dirección → Generar → Google AI Pro**.
 5. Lleva la toma a **Montaje**, revisa la continuidad y exporta.
 
 En **Configuración** puedes cambiar el idioma —español o inglés—, la apariencia, la escala, la navegación y las animaciones. La aplicación consulta las releases de GitHub y comprueba SHA256 al descargar una actualización. Los proyectos y los modelos se guardan fuera del paquete de la aplicación.
@@ -118,10 +132,21 @@ node --import tsx --test --test-concurrency=2 tests/*.test.ts
 
 Las pruebas verifican edición, exportación, integridad, contexto narrativo, recuperación, conexiones y protocolos del puente con archivos técnicos y proveedores simulados. **No equivalen a haber generado un video real en Google o a haber ejecutado el instalador.** La compatibilidad de los servicios se registra con evidencias independientes. Las releases multiplataforma incluyen además `windows-smoke.json` (instalación NSIS y arranque real en CI) y `mac-runtime-smoke.json` (servidor empaquetado, Python y multimedia). Ninguna acredita inferencia CUDA en una GPU física de Windows.
 
-El workflow [Filmma for Mac](https://github.com/gabrielperezibacache/filmma/actions/workflows/macos-release.yml) compila el runtime multimedia portable, ejecuta la suite y publica DMG, ZIP y sumas SHA256. Los pesos, las credenciales y los proyectos privados no se suben al repositorio.
+El workflow [Filmma desktop](https://github.com/gabrielperezibacache/filmma/actions/workflows/macos-release.yml) compila el runtime multimedia portable, ejecuta la suite y publica DMG arm64, instalador Windows x64, ZIP y sumas SHA256. Los pesos, las credenciales y los proyectos privados no se suben al repositorio.
 
 ## Guías y alcance
 
 [Uso](docs/GUIA.md) · [Modelos](docs/LOCAL_MODELS.md) · [Voces](docs/VOICES-RUNTIME.md) · [Google](docs/GOOGLE-AI-PRO.md) · [Ajustes y actualizaciones](docs/APPLICATION_SETTINGS.md) · [Plan y pendientes](docs/DEVELOPMENT-PLAN.md)
 
 Filmma no incorpora el código propietario de Higgsfield ni presenta todos sus modelos comerciales como funciones locales. El análisis con REA y la distinción entre observaciones e inferencias se documentan en [ingeniería inversa](docs/REVERSE_ENGINEERING.md). El software de terceros conserva sus licencias; consulta [las atribuciones del paquete Mac](docs/THIRD_PARTY_MAC.md).
+
+### MiniMax H3 cuantizado en Apple Silicon
+
+Filmma puede gestionar un motor GGUF separado del BF16, con descarga reanudable,
+verificación de hashes y selección de variante en **Modelos**. En la prueba local
+de M4 Max con 36 GiB, Q4 tardó 171–180 s frente a 223 s de Q8 y solicitó un 47 %
+menos de datos del transformador. Ambos ensayos fueron breves, de 512 × 320 y
+22 fotogramas; conservan las alertas de continuidad y no certifican 720p ni 15 s.
+
+[Mediciones, comparación de calidad y límites](docs/H3_QUANTIZATION.md).
+La ruta reduce lecturas del disco; no anuncia residencia completa de H3 en RAM.

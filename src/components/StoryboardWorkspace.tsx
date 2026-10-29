@@ -1,3 +1,4 @@
+import {tr} from '../i18n';
 import StoryboardFrames from './StoryboardFrames';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, BookOpen, Download, FileSpreadsheet, RefreshCw, X } from 'lucide-react';
@@ -7,7 +8,7 @@ import { buildStoryboard, captureStoryboardThumbnail, collectStoryboardFrames,st
 import type { StoryboardThumbnails } from '../storyboard';
 import './storyboard.css';
 
-type Props = { project: Project; onScene: (id: string) => void; onDirection?:(id:string)=>void; onNotify?: (message: string) => void };
+type Props = { onScript?:()=>void;project: Project; onScene: (id: string) => void; onDirection?:(id:string)=>void; onNotify?: (message: string) => void };
 function download(content: string, mime: string, name: string) {
   const href = URL.createObjectURL(new Blob([content], { type: mime }));
   const anchor = document.createElement('a'); anchor.href = href; anchor.download = name; anchor.click();
@@ -15,7 +16,7 @@ function download(content: string, mime: string, name: string) {
 }
 
 /** An extension of the existing viewing table: selected frames lead, screenplay follows. */
-export default function StoryboardWorkspace({ project, onScene, onNotify,onDirection }: Props) {
+export default function StoryboardWorkspace({ onScript,project, onScene, onNotify,onDirection }: Props) {
   const [frameView,setFrameView]=useState<'middle'|'bookends'>('bookends');
   const shots = useMemo(() => buildStoryboard(project), [project]);
   const tasks=useMemo(()=>storyboardFrameTasks(shots,frameView),[shots,frameView]);
@@ -53,7 +54,7 @@ export default function StoryboardWorkspace({ project, onScene, onNotify,onDirec
     } catch { setDownloadError('No se pudo preparar la descarga. Inténtalo otra vez; el proyecto sigue intacto.'); }
   };
   return <section className={`storyboard-workspace ${frameView==='bookends'?'is-bookends':''}`} aria-labelledby="storyboard-title">
-    <header className="storyboard-heading"><div><h1 id="storyboard-title">La película, <span>plano a plano.</span></h1><p>Una mesa de lectura para relacionar la imagen elegida, el guion y lo que permanece entre escenas.</p></div><div className="storyboard-actions">
+    <header className="storyboard-heading"><div><h1 id="storyboard-title">Storyboard</h1><p>Una mesa de lectura para relacionar la imagen elegida, el guion y lo que permanece entre escenas.</p></div><div className="storyboard-actions">
       <button className="primary" onClick={() => exportSheet('html')} disabled={preparing || !shots.length}><Download size={16} />Descargar hoja imprimible</button>
       <button className="quiet-button" onClick={() => exportSheet('csv')} disabled={!shots.length}><FileSpreadsheet size={16} />Lista de planos · CSV</button>
     </div></header>
@@ -64,7 +65,7 @@ export default function StoryboardWorkspace({ project, onScene, onNotify,onDirec
       {preparing && <progress aria-label="Preparación de miniaturas" value={completed} max={tasks.length || 1} />}
     </div>
     {downloadError && <p className="storyboard-error" role="alert">{downloadError}</p>}
-    {!shots.length ? <div className="storyboard-empty"><BookOpen size={30} /><h2>El guion abre la primera imagen.</h2><p>Añade un plano en Guion o Montaje. Su acción, personajes y fuente aparecerán aquí.</p></div> : <>
+    {!shots.length ? <div className="storyboard-empty"><BookOpen size={30} /><h2>El guion abre la primera imagen.</h2><p>Añade un plano en Guion o Montaje. Su acción, personajes y fuente aparecerán aquí.</p>{onScript&&<button className="primary" onClick={onScript}><BookOpen size={16}/>{tr('Crear el primer plano en Guion','Create the first shot in Screenplay')}</button>}</div> : <>
       <nav className="storyboard-sample-mode" aria-label="Muestras del storyboard"><button aria-pressed={frameView==='bookends'} onClick={()=>setFrameView('bookends')}>Inicio y final</button><button aria-pressed={frameView==='middle'} onClick={()=>setFrameView('middle')}>Punto medio</button></nav><p className="storyboard-note">Muestras temporales de la fuente seleccionada con recorte, velocidad, look y color de previsualización. Una imagen fija se muestra una sola vez: no acredita un inicio o final generado. Las intenciones escritas son planificación; las capas, transiciones y subtítulos se revisan en el montaje.</p>
       <ol className="storyboard-grid">{shots.map(shot => {
         const cinema = storyboardDirection(shot.scene);

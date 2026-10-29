@@ -1,5 +1,9 @@
 import {build} from 'esbuild';import{mkdir,cp,readFile,writeFile,rm}from'node:fs/promises';import{execFileSync}from'node:child_process';import{join,resolve}from'node:path';
+import {runtimeFiles,verifyResources} from './verify-resources.mjs';
 const root=resolve(import.meta.dirname,'../..'),target=join(root,'build/desktop-resources');
+// Only regenerate the application-owned staging folder; user data lives elsewhere.
+if(target!==join(root,'build/desktop-resources'))throw new Error('Unexpected package staging directory');
+await rm(target,{recursive:true,force:true});
 await mkdir(target,{recursive:true});
 for(const name of ['dist','public'])await cp(join(root,name),join(target,name),{recursive:true});
 await mkdir(join(target,'server'),{recursive:true});
@@ -7,7 +11,7 @@ await build({entryPoints:[join(root,'server/index.ts')],outfile:join(target,'ser
 const pkg=JSON.parse(await readFile(join(root,'package.json')));await writeFile(join(target,'package.json'),JSON.stringify({name:'filmma-engine',private:true,type:'module',dependencies:pkg.dependencies}));
 execFileSync(process.execPath,[process.env.npm_execpath,'install','--omit=dev','--ignore-scripts','--no-audit','--no-fund'],{cwd:target,stdio:'inherit'});
 const runtime=join(target,'engine/runtime');await mkdir(runtime,{recursive:true});
-const{readdir}=await import('node:fs/promises');for(const name of await readdir(join(root,'runtime'))){if(/\.(py|json|txt)$/.test(name)&&name!=='local-config.json')await cp(join(root,'runtime',name),join(runtime,name));}
+for(const name of runtimeFiles)await cp(join(root,'runtime',name),join(runtime,name));
 await cp(join(root,'runtime/patches'),join(runtime,'patches'),{recursive:true});
 await mkdir(join(target,'engine/desktop'),{recursive:true});
 let commit='';try{commit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim()}catch{}
@@ -26,4 +30,5 @@ await cp(join(root,'build/sources/x264-COPYING.txt'),join(target,'sources/x264-C
 await cp(join(root,'build/media-runtime/ffmpeg-8.1.2.tar.xz'),join(target,'sources/ffmpeg-8.1.2.tar.xz'));
 await cp(join(root,'scripts/packaging/build-media-runtime.py'),join(target,'sources/build-media-runtime.py'));
 if(process.platform==='win32'){await cp(join(root,'docs/THIRD_PARTY_WINDOWS.md'),join(target,'THIRD_PARTY_WINDOWS.md'));await cp(join(root,'scripts/packaging/build-media-windows.sh'),join(target,'sources/build-media-windows.sh'));}
+await verifyResources(target);
 console.log('Desktop resources prepared without models or user data:',target);

@@ -119,7 +119,7 @@ export function registerDialogueRoutes(c:Context){
           update(voice.engine==='elevenlabs'?'Generando el diálogo en tu cuenta de ElevenLabs…':voice.engine==='qwen'?'Interpretando el diálogo con Qwen y la voz de referencia…':'Interpretando el diálogo con la voz del personaje…',12);
           let result:any;
           if(voice.engine==='elevenlabs'){
-            result=await eleven.synthesize({text:line.text,voiceId:voice.voiceId,modelId:voice.modelId,language:voice.language,speed:voice.speed,outputPath,signal,expectedConnectionId:connection.connectionId});
+            result=await eleven.synthesize({text:line.text,voiceId:voice.voiceId,modelId:voice.modelId,language:voice.language,speed:voice.speed,settings:voice.settings,withTimestamps:true,outputPath,signal,expectedConnectionId:connection.connectionId});
           }else{
             const request=join(work,'request.json'),reference=voice.engine==='qwen'?await resolveVoiceReference(c,latest,voice):undefined;
             await writeFile(request,JSON.stringify({text:line.text,voiceId:voice.voiceId,language:voice.language,speed:voice.speed,outputPath,maxDurationSeconds:15,...(voice.engine==='qwen'?{expectedReferenceSha256:voice.referenceSha256??state.referenceSha256,...(reference?{referencePath:reference.path}:{})}:{})}),{flag:'wx',mode:0o600});
@@ -131,7 +131,7 @@ export function registerDialogueRoutes(c:Context){
           const media=await audioInfo(outputPath,c.ffprobe,signal);if(media.duration>15.001)throw new Error('La voz supera 15 segundos. Divide la intervención o ajusta su velocidad; no se ha recortado.');
           const decode=await runProcess(c.ffmpeg,['-v','error','-xerror','-i',outputPath,'-f','null','-'],{signal,timeoutMs:30000});if(decode.code)throw new Error('La voz creada no supera la validación de audio.');
           const asset:Asset={id:assetId,name:`${project.characters.find(p=>p.id===line.characterId)?.name??'Narración'} · ${scene.title}`,type:'audio',url:`/api/media/${assetId}.wav`,mime:'audio/wav',size:(await stat(outputPath)).size,
-            speech:{...snapshot,projectId:project.id,sceneId:scene.id,lineId:line.id,...media,sourceFingerprint,outputSha256:await enhancementSha256(outputPath),createdAt:new Date().toISOString(),model:String(result.model??(voice.engine==='elevenlabs'?voice.modelId:voice.engine==='qwen'?'qwen3-tts':'kokoro-82m-v1.0'))}};
+            speech:{...snapshot,...(voice.engine==='elevenlabs'?{timingStatus:result.timingStatus,...(result.alignment?{alignment:result.alignment}:{}),...(result.providerRequestId?{providerRequestId:result.providerRequestId}:{})}:{}),projectId:project.id,sceneId:scene.id,lineId:line.id,...media,sourceFingerprint,outputSha256:await enhancementSha256(outputPath),createdAt:new Date().toISOString(),model:String(result.model??(voice.engine==='elevenlabs'?voice.modelId:voice.engine==='qwen'?'qwen3-tts':'kokoro-82m-v1.0'))}};
           const target=await c.currentTarget(project);if(target.assets.length>=2000)throw new Error('La biblioteca alcanzó 2000 recursos.');
           const currentLine=target.dialogueLines?.find(l=>l.id===line.id),stale=!currentLine||!speechIsCurrent(target,currentLine,asset);
           if(signal.aborted)throw new Error('Trabajo cancelado.');target.assets.push(asset);await c.saveTarget(target);saved=true;

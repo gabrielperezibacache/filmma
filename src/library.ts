@@ -19,7 +19,7 @@ export function assetOrigin(a:Asset,entry?:LibraryEntry){
  if(a.voiceReference)return{kind:'voice-reference',label:'Referencia de voz preparada',model:'Qwen',at:a.voiceReference.createdAt,sources:[a.voiceReference.sourceAssetId]};
  if(a.speech)return{kind:'speech',label:'Voz del guion',model:a.speech.model,at:a.speech.createdAt,sources:a.speech.voice.engine==='qwen'&&a.speech.voice.referenceAssetId?[a.speech.voice.referenceAssetId]:[]};
  if(a.googleVideo)return{kind:'google-video',label:a.googleVideo.verification==='browser-observed'?'Google · capturada en navegador':'Google · importación declarada',model:a.googleVideo.provider==='gemini'?'Gemini':'Flow',at:a.googleVideo.importedAt,sources:a.googleVideo.referenceAssetIds};
- if(a.generation)return{kind:'generation',label:'Toma generada',model:a.generation.model,at:a.generation.createdAt,sources:a.generation.referenceAssetIds};
+ if(a.generation)return{kind:'generation',label:'Toma generada',model:a.generation.model+(a.generation.modelVariant?.startsWith('gguf-')?' · '+a.generation.modelVariant.toUpperCase():''),at:a.generation.createdAt,sources:a.generation.referenceAssetIds};
  if(entry?.imported)return{kind:'import',label:'Original importado',at:entry.imported.at,sources:[]};
  if(a.url.startsWith('/demo/'))return{kind:'demo',label:'Material de ejemplo',sources:[]};
  return{kind:'unknown',label:'Procedencia no registrada',sources:[]};

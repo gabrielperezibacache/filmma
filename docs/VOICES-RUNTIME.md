@@ -1,5 +1,7 @@
 # Voces locales de Filmma
 
+Esta página documenta el motor local Kokoro. Para el servicio opcional de voces de tu cuenta, consulta [ElevenLabs: conexión, personajes y tiempos de habla](ELEVENLABS.md).
+
 Filmma usa **Kokoro-82M v1.0** mediante `kokoro-onnx 0.6.1`. La voz se identifica por un preset estable que el proyecto puede asignar a cada personaje. No se clonan grabaciones ni se envían diálogos a un servicio remoto durante la síntesis.
 
 La configuración comprobada utiliza **CPU, cuatro hilos, ONNX Runtime 1.23.2**. Deja disponible la GPU para el motor de video. El entorno `runtime/speech/.venv` es independiente de `runtime/.venv`; instalar voces no cambia las dependencias de MiniMax, LTX ni reescalado.

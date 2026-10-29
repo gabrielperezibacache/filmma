@@ -262,7 +262,7 @@ export async function createApp(options: AppOptions = {}) {
 
   const application = await registerApplicationRoutes({app,root,dataDirectory,getJobs:()=>store.jobs});
   registerRecoveryRoutes({app,store,getJobs:()=>store.jobs,mediaPath,onRestore:()=>{clipSelectionVersions.clear()}});
-  registerModelManager({app,root,dataDirectory,runtimePath,python,system,ffmpeg,ffprobe,getJobs:()=>store.jobs,enqueue,invalidate:()=>{diagnostics=undefined},savePreferences:patch=>application.preferences.update(patch)});
+  registerModelManager({app,root,dataDirectory,runtimePath,python,system,ffmpeg,ffprobe,getJobs:()=>store.jobs,enqueue,invalidate:()=>{diagnostics=undefined},savePreferences:patch=>application.preferences.update(patch),characterReference:async id=>{const character=store.project.characters.find(c=>c.id===id),asset=store.project.assets.find(a=>a.id===character?.assetId);if(!character||!asset||asset.type!=='image')throw new Error('Vincula una imagen original al personaje antes de probar.');return{path:await mediaPath(asset),projectId:store.project.id,characterId:character.id}}});
   app.get('/api/bootstrap', asyncRoute(async (_req, res) => {
     // Bind the hash to the returned snapshot even if diagnostics yield while
     // another request edits or switches the current project.
@@ -495,7 +495,7 @@ export async function createApp(options: AppOptions = {}) {
         const constraints = input.negativePrompt ?? scene.negativePrompt;
         const finalPrompt = effectiveGenerationPrompt(input, snapshot, scene, referenceCharacterIds);
         const endAsset = mode === 'image' && input.model === 'minimax-h3' ? snapshot.assets.find((item) => item.id === scene.endAssetId) : undefined;
-        const request = { model: input.model, ...(input.clientRequestId ? { clientRequestId: input.clientRequestId } : {}), ...(input.memoryProfile ? {memoryProfile: input.memoryProfile} : {}), prompt: finalPrompt, negativePrompt: constraints, inputImage: mode === 'image' && asset ? await mediaPath(asset) : undefined, lastFrame: endAsset ? await mediaPath(endAsset) : undefined, references: mode === 'references' ? references : [], outputPath, width: input.width ?? dimensions.width, height: input.height ?? dimensions.height, numFrames: generationFrames(duration, input.model), fps: 24, seed: input.seed ?? scene.seed, steps: input.steps ?? (input.model === 'ltx-2b' ? 4 : 20) };
+        const request = { model: input.model, continuityLinks: {projectId:snapshot.id,sceneId:scene.id,characterIds:[...scene.characterIds],referenceAssetIds,referenceCharacterIds}, ...(input.clientRequestId ? { clientRequestId: input.clientRequestId } : {}), ...(input.memoryProfile ? {memoryProfile: input.memoryProfile} : {}), prompt: finalPrompt, negativePrompt: constraints, inputImage: mode === 'image' && asset ? await mediaPath(asset) : undefined, lastFrame: endAsset ? await mediaPath(endAsset) : undefined, references: mode === 'references' ? references : [], outputPath, width: input.width ?? dimensions.width, height: input.height ?? dimensions.height, numFrames: generationFrames(duration, input.model), fps: 24, seed: input.seed ?? scene.seed, steps: input.steps ?? (input.model === 'ltx-2b' ? 4 : 20) };
         if (mode === 'image' && asset) referenceAssetIds.push(asset.id);
         if (endAsset) referenceAssetIds.push(endAsset.id);
         const requestPath = join(workDirectory, 'request.json'); await writeFile(requestPath, JSON.stringify(request, null, 2), { mode: 0o600 });
@@ -512,6 +512,7 @@ export async function createApp(options: AppOptions = {}) {
         } });
         if (isSupervisedGenerationProfile(input.memoryProfile)) await writeFile(join(workDirectory, 'process-result.json'), JSON.stringify({ exitCode: result.code, endedAt: now(), stderr: result.stderr, ...(logError ? { logError: logError.message } : {}) }, null, 2), { mode: 0o600 });
         if (result.code !== 0) throw new Error(runtimeError ?? (result.stderr.slice(-1800) || 'La generación local no pudo completarse.'));
+        let runtimeMetadata: any; try { runtimeMetadata = parseJsonOutput(result.stdout)?.metadata; } catch { /* Older adapters rely on the media verification below. */ }
         const file = await stat(outputPath).catch(() => undefined);
         if (!file?.isFile() || file.size < 100) throw new Error('El motor terminó sin producir un video válido. No se ha añadido un clip.');
         const probe = await runProcess(ffprobe, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=codec_type,width,height,duration,avg_frame_rate,nb_frames:format=duration', '-of', 'json', outputPath], { signal, timeoutMs: 15000 });
@@ -526,7 +527,7 @@ export async function createApp(options: AppOptions = {}) {
         }
         if (signal.aborted) throw new Error('Trabajo cancelado.');
         const generated: Asset = { id, name: `${scene.title} · ${input.model}${takeOptions.variantIndex ? ` · toma ${takeOptions.variantIndex}` : ''}`, type: 'video', url: `/api/media/${filename}`, mime: 'video/mp4', size: file.size,
-          generation: { projectId: snapshot.id, sceneId: scene.id, model: request.model, seed: request.seed, prompt: request.prompt, negativePrompt: request.negativePrompt, createdAt: now(), width: request.width, height: request.height, numFrames: request.numFrames, fps: request.fps, steps: request.steps, ...(input.memoryProfile ? {memoryProfile: input.memoryProfile} : {}), conditioningMode: mode, referenceAssetIds,
+          generation: { projectId: snapshot.id, sceneId: scene.id, model: request.model, ...(runtimeMetadata?.modelVariant ? {modelVariant:runtimeMetadata.modelVariant,modelRevision:runtimeMetadata.modelRevision,runtimeRevision:runtimeMetadata.runtimeRevision}:{}), seed: request.seed, prompt: request.prompt, negativePrompt: request.negativePrompt, createdAt: now(), width: request.width, height: request.height, numFrames: request.numFrames, fps: request.fps, steps: request.steps, ...(input.memoryProfile ? {memoryProfile: input.memoryProfile} : {}), conditioningMode: mode, referenceAssetIds,
             ...(scene.cinematography ? { cinematography: structuredClone(scene.cinematography) } : {}), camera: scene.camera, characterIds: [...scene.characterIds],
             continuity: Object.fromEntries(resolveSceneContinuity(snapshot, scene.id).map(({ character, state }) => [character.id, { ...state.values, intentionalChange: state.intentionalChange, changeReason: state.changeReason }])) } };
         const targetProject = await currentTarget(snapshot);

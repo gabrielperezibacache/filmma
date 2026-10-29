@@ -1,0 +1,216 @@
+{
+  "schema": 1,
+  "variant": "h3-gguf-q4",
+  "engineRepository": "https://github.com/JunzoKamahara/H3cApp",
+  "engineRevision": "754858b4f28acd537d16a6ad97c5ee0f0635e950",
+  "repository": "unsloth/MiniMax-H3-GGUF",
+  "revision": "babc040eff0084465460ead58fdb8ec44296f8dd",
+  "officialRevision": "42ed227ee7df40d41602854ae760620d6eb651fe",
+  "licenseUrl": "https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE",
+  "files": [
+    {
+      "path": "FL2VA/transformer/model.gguf",
+      "url": "https://huggingface.co/unsloth/MiniMax-H3-GGUF/resolve/babc040eff0084465460ead58fdb8ec44296f8dd/minimax_h3_fl2va_pruned-Q4_K.gguf",
+      "size": 11420663904,
+      "sha256": "dd948e08ad0ba3c71bd42f368e283dd82e790f5122a63b276e22a3e0283d0c10"
+    },
+    {
+      "path": "Ref2VA/transformer/model.gguf",
+      "url": "https://huggingface.co/unsloth/MiniMax-H3-GGUF/resolve/babc040eff0084465460ead58fdb8ec44296f8dd/minimax_h3_ref2va_pruned-Q4_K.gguf",
+      "size": 11381096544,
+      "sha256": "2fa5840021cf6967843eaeefde9aaa277e540de02986d5ee3d5b0e6a7a8c9dec"
+    },
+    {
+      "path": "FL2VA/text_encoder/model.gguf",
+      "url": "https://huggingface.co/unsloth/MiniMax-H3-GGUF/resolve/babc040eff0084465460ead58fdb8ec44296f8dd/qwen3vl_32b_minimax_h3-Q4_K_M.gguf",
+      "size": 18218065024,
+      "sha256": "11e6efe70a57ce7f4838c47bdbd1a1c4b8ce10e2b7747f1b065990b70f4b05fc"
+    },
+    {
+      "path": "FL2VA/audio_vae/model.safetensors",
+      "url": "https://huggingface.co/unsloth/MiniMax-H3-GGUF/resolve/babc040eff0084465460ead58fdb8ec44296f8dd/vae/minimax_h3_audio_vae_fp32.safetensors",
+      "size": 605254808,
+      "sha256": "8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48"
+    },
+    {
+      "path": "FL2VA/video_vae/source/model.safetensors",
+      "url": "https://huggingface.co/unsloth/MiniMax-H3-GGUF/resolve/babc040eff0084465460ead58fdb8ec44296f8dd/vae/minimax_h3_video_vae_fp16.safetensors",
+      "size": 5207808496,
+      "sha256": "7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522"
+    },
+    {
+      "path": "FL2VA/audio_vae/config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/audio_vae/config.json",
+      "size": 1973,
+      "gitSha1": "bc2a8dc3bfe9037e1f0e82e97f309019b6a398e6"
+    },
+    {
+      "path": "FL2VA/audio_vae/config.yaml",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/audio_vae/config.yaml",
+      "size": 91,
+      "gitSha1": "4ad8704ca5bf410fb2f471978fe9537c98ca4aa0"
+    },
+    {
+      "path": "FL2VA/audio_vae/metadata.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/audio_vae/metadata.json",
+      "size": 440,
+      "gitSha1": "db6aa0b9d2022da4b04f1f80fa2a5260231c5c83"
+    },
+    {
+      "path": "FL2VA/model_index.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/model_index.json",
+      "size": 719,
+      "gitSha1": "ed4dfb751d8417e5ab8cf58a6915214bda6ba676"
+    },
+    {
+      "path": "FL2VA/processor/chat_template.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/processor/chat_template.json",
+      "size": 5499,
+      "gitSha1": "1081bacf1af7c7c6de4a585ce02cd0fd34e382da"
+    },
+    {
+      "path": "FL2VA/processor/merges.txt",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/processor/merges.txt",
+      "size": 1671839,
+      "gitSha1": "20024bfe7c83998e9aeaf98a0cd6a2ce6306c2f0"
+    },
+    {
+      "path": "FL2VA/processor/preprocessor_config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/processor/preprocessor_config.json",
+      "size": 390,
+      "gitSha1": "2ea84a437d448ff71b08df68fdd949d5cc4ebb64"
+    },
+    {
+      "path": "FL2VA/processor/tokenizer.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/processor/tokenizer.json",
+      "size": 7032403,
+      "gitSha1": "c6cc1014128b19d1fc46b1d30a23e3b1d35db421"
+    },
+    {
+      "path": "FL2VA/processor/tokenizer_config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/processor/tokenizer_config.json",
+      "size": 11003,
+      "gitSha1": "204d76f78dac6dedc820418c30bf01145de78a21"
+    },
+    {
+      "path": "FL2VA/processor/video_preprocessor_config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/processor/video_preprocessor_config.json",
+      "size": 385,
+      "gitSha1": "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe"
+    },
+    {
+      "path": "FL2VA/processor/vocab.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/processor/vocab.json",
+      "size": 2776833,
+      "gitSha1": "4783fe10ac3adce15ac8f358ef5462739852c569"
+    },
+    {
+      "path": "FL2VA/text_encoder/chat_template.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/chat_template.json",
+      "size": 5499,
+      "gitSha1": "1081bacf1af7c7c6de4a585ce02cd0fd34e382da"
+    },
+    {
+      "path": "FL2VA/text_encoder/config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/config.json",
+      "size": 1474,
+      "gitSha1": "29e925092dee9f14278c53e7e7d876cea8a997bc"
+    },
+    {
+      "path": "FL2VA/text_encoder/merges.txt",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/merges.txt",
+      "size": 1671839,
+      "gitSha1": "20024bfe7c83998e9aeaf98a0cd6a2ce6306c2f0"
+    },
+    {
+      "path": "FL2VA/text_encoder/preprocessor_config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/preprocessor_config.json",
+      "size": 390,
+      "gitSha1": "2ea84a437d448ff71b08df68fdd949d5cc4ebb64"
+    },
+    {
+      "path": "FL2VA/text_encoder/tokenizer.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/tokenizer.json",
+      "size": 7032403,
+      "gitSha1": "c6cc1014128b19d1fc46b1d30a23e3b1d35db421"
+    },
+    {
+      "path": "FL2VA/text_encoder/tokenizer_config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/tokenizer_config.json",
+      "size": 11003,
+      "gitSha1": "204d76f78dac6dedc820418c30bf01145de78a21"
+    },
+    {
+      "path": "FL2VA/text_encoder/video_preprocessor_config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/video_preprocessor_config.json",
+      "size": 385,
+      "gitSha1": "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe"
+    },
+    {
+      "path": "FL2VA/text_encoder/vocab.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/text_encoder/vocab.json",
+      "size": 2776833,
+      "gitSha1": "4783fe10ac3adce15ac8f358ef5462739852c569"
+    },
+    {
+      "path": "FL2VA/tokenizer/merges.txt",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/tokenizer/merges.txt",
+      "size": 1671839,
+      "gitSha1": "20024bfe7c83998e9aeaf98a0cd6a2ce6306c2f0"
+    },
+    {
+      "path": "FL2VA/tokenizer/tokenizer.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/tokenizer/tokenizer.json",
+      "size": 7032403,
+      "gitSha1": "c6cc1014128b19d1fc46b1d30a23e3b1d35db421"
+    },
+    {
+      "path": "FL2VA/tokenizer/tokenizer_config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/tokenizer/tokenizer_config.json",
+      "size": 11003,
+      "gitSha1": "204d76f78dac6dedc820418c30bf01145de78a21"
+    },
+    {
+      "path": "FL2VA/tokenizer/vocab.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/tokenizer/vocab.json",
+      "size": 2776833,
+      "gitSha1": "4783fe10ac3adce15ac8f358ef5462739852c569"
+    },
+    {
+      "path": "FL2VA/transformer/config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/transformer/config.json",
+      "size": 604,
+      "gitSha1": "94cc6ca1254d9d04b3f7cc06a8c9fc05d0ded065"
+    },
+    {
+      "path": "FL2VA/video_vae/config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/video_vae/config.json",
+      "size": 1807,
+      "gitSha1": "20f91e40ea9bc24c21a0e757715f93acf49eb841"
+    },
+    {
+      "path": "FL2VA/video_vae/source/config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/FL2VA/video_vae/source/config.json",
+      "size": 1164,
+      "gitSha1": "fb5105116e094aface836f5182b126bb4fbdc699"
+    },
+    {
+      "path": "LICENSE",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/LICENSE",
+      "size": 17604,
+      "gitSha1": "c389b45855337ccec8ddeb389f4fe902abcd0b19"
+    },
+    {
+      "path": "Ref2VA/model_index.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/Ref2VA/model_index.json",
+      "size": 707,
+      "gitSha1": "b6dd080b974d63e301a049cd09ffe45cbec5b58e"
+    },
+    {
+      "path": "Ref2VA/transformer/config.json",
+      "url": "https://huggingface.co/MiniMaxAI/MiniMax-H3/resolve/42ed227ee7df40d41602854ae760620d6eb651fe/Ref2VA/transformer/config.json",
+      "size": 604,
+      "gitSha1": "94cc6ca1254d9d04b3f7cc06a8c9fc05d0ded065"
+    }
+  ]
+}

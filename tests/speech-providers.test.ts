@@ -146,3 +146,57 @@ test('private storage refuses permissive and symbolic credential files', async (
     await rm(join(f.credentialsDirectory, 'elevenlabs.json')); await writeFile(join(f.credentialsDirectory, 'elevenlabs.json'), '{}', { mode: 0o644 }); await assert.rejects(f.provider.status(), /conexión privada/);
   } finally { await f.close(); }
 });
+
+test('current account models expose accurate controls; v4 omits unsupported parameters and v3 validates stability before a paid request', async () => {
+  const modern = ['eleven_v3','eleven_v4','eleven_v4_turbo'].map(model_id=>({model_id,name:model_id,can_do_text_to_speech:true,languages:[{language_id:'es'}]}));
+  const f=await fixture(({url})=>url.pathname==='/v1/models'?json([...models,...modern]):undefined);
+  try {
+    const state=await f.provider.connect(KEY);assert.equal(state.models.find(m=>m.id==='eleven_v4')?.supportsSpeed,false);
+    assert.equal(state.models.find(m=>m.id==='eleven_v3')?.supportsSpeakerBoost,false);
+    await assert.rejects(f.provider.synthesize({...f.input,modelId:'eleven_v4',speed:1.1}),/ritmo 1/);
+    await assert.rejects(f.provider.synthesize({...f.input,modelId:'eleven_v3',settings:{stability:.6}}),/estabilidad/);
+    assert.equal(f.calls.filter(c=>c.options.method==='POST').length,0);
+    await f.provider.synthesize({...f.input,modelId:'eleven_v4',settings:{stability:.8,similarity:.9,style:.6,speakerBoost:false}});
+    assert.deepEqual(JSON.parse(String(f.calls.at(-1)!.options.body)).voice_settings,{stability:.8,similarity_boost:.9});
+    await f.provider.synthesize({...f.input,outputPath:join(f.dir,'custom.wav'),settings:{stability:.7,similarity:.8,style:.2,speakerBoost:false}});
+    assert.deepEqual(JSON.parse(String(f.calls.at(-1)!.options.body)).voice_settings,{stability:.7,similarity_boost:.8,style:.2,use_speaker_boost:false,speed:1});
+  } finally {await f.close();}
+});
+
+test('voice previews accept only public HTTPS media and account usage stays sanitized',async()=>{
+ const f=await fixture(({url})=>url.pathname==='/v2/voices'?json({voices:[
+  {voice_id:'public',name:'Pública',preview_url:'https://storage.googleapis.com/eleven-public-prod/premade/voices/test.mp3',description:`Voice ${KEY}`},
+  ...['http://localhost/audio','https://storage.googleapis.com/private/test','https://cdn.elevenlabs.io.evil.test/audio','https://cdn.elevenlabs.io/audio?secret=123','https://user:password@cdn.elevenlabs.io/audio','javascript:alert(1)'].map((preview_url,i)=>({voice_id:`blocked_${i}`,name:'Blocked',preview_url}))
+ ],has_more:false}):undefined);
+ try{const state=await f.provider.connect(KEY);assert.match(state.voices[0]!.previewUrl!,/^https:\/\/storage.googleapis.com\/eleven-public-prod\//);assert(state.voices.slice(1).every(v=>!v.previewUrl));assert.doesNotMatch(JSON.stringify(state),new RegExp(KEY));assert(f.calls.every(c=>c.options.method==='GET'));}finally{await f.close();}
+});
+
+function timedSpeech(text:string,extra:Record<string,unknown>={}) {
+ return {audio_base64:Buffer.alloc(48000,5).toString('base64'),alignment:{characters:Array.from(text),character_start_times_seconds:Array.from(text,(_c,i)=>.1+i*.6/text.length),character_end_times_seconds:Array.from(text,(_c,i)=>.1+(i+1)*.6/text.length)},...extra};
+}
+
+test('timestamp synthesis validates PCM and preserves genuine speech timing and request provenance',async()=>{
+ const f=await fixture(({url})=>url.pathname.endsWith('/with-timestamps')?new Response(JSON.stringify(timedSpeech('Una última función.')),{headers:{'content-type':'application/json','request-id':'voice-take-123'}}):undefined);
+ try{await f.provider.connect(KEY);const result=await f.provider.synthesize({...f.input,withTimestamps:true});assert.equal(result.duration,1);assert.equal(result.timingStatus,'aligned');assert.equal(result.alignment?.characters.join(''),f.input.text);assert.equal(result.alignment?.textKind,'original');assert.equal(result.providerRequestId,'voice-take-123');assert.equal((await readFile(f.input.outputPath)).length,48044);assert.equal(f.calls.filter(c=>c.options.method==='POST').length,1);}finally{await f.close();}
+});
+
+test('malformed timings keep the original audio with an explicit unavailable status; normalization is identified',async()=>{
+ for(const extra of [
+  {alignment:{characters:['x'],character_start_times_seconds:[0],character_end_times_seconds:[50]}},
+  {alignment:{characters:['a','b'],character_start_times_seconds:[.4,.1],character_end_times_seconds:[.5,.2]}},
+  {alignment:{characters:['wrong text'],character_start_times_seconds:[0],character_end_times_seconds:[.5]}},
+ ]){
+  const f=await fixture(({url})=>url.pathname.endsWith('/with-timestamps')?json(timedSpeech('Una última función.',extra)):undefined);
+  try{await f.provider.connect(KEY);const result=await f.provider.synthesize({...f.input,withTimestamps:true});assert.equal(result.timingStatus,'unavailable');assert.equal(result.alignment,undefined);assert.equal(result.duration,1);}finally{await f.close();}
+ }
+ const normalized={characters:['2','0'],character_start_times_seconds:[.1,.3],character_end_times_seconds:[.3,.5]};
+ const f=await fixture(({url})=>url.pathname.endsWith('/with-timestamps')?json(timedSpeech('Una última función.',{alignment:null,normalized_alignment:normalized})):undefined);
+ try{await f.provider.connect(KEY);const result=await f.provider.synthesize({...f.input,withTimestamps:true});assert.equal(result.alignment?.textKind,'normalized');assert.equal(result.alignment?.characters.join(''),'20');}finally{await f.close();}
+});
+
+test('bad timestamp audio never publishes partial files and never retries a charged request',async()=>{
+ for(const value of [{audio_base64:'broken$'}, {audio_base64:Buffer.alloc(720002).toString('base64')}, {audio_base64:Buffer.from('RIFFbad!').toString('base64')}, {audio_base64:'AAAA'}]){
+  const f=await fixture(({url})=>url.pathname.endsWith('/with-timestamps')?json(value):undefined);
+  try{await f.provider.connect(KEY);await assert.rejects(f.provider.synthesize({...f.input,withTimestamps:true}));assert.equal(f.calls.filter(c=>c.options.method==='POST').length,1);await assert.rejects(stat(f.input.outputPath),{code:'ENOENT'});}finally{await f.close();}
+ }
+});

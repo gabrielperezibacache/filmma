@@ -2,8 +2,11 @@ const {app,BrowserWindow,dialog,ipcMain,Menu,shell}=require('electron');
 const{spawn}=require('node:child_process');const fs=require('node:fs/promises');const path=require('node:path');const os=require('node:os');
 let window,worker,endpoint,owned=false,quitting=false;
 const isolated=process.env.FILMMA_DESKTOP_TEST_DATA;
+if(isolated)app.setPath('userData',path.join(path.resolve(isolated),'electron-profile'));
+const testPort=Number(process.env.FILMMA_DESKTOP_TEST_PORT??4320);
+if(isolated&&(!Number.isInteger(testPort)||testPort<1024||testPort>65535))throw new Error('Invalid isolated desktop test port');
 const resources=app.isPackaged?process.resourcesPath:path.resolve(__dirname,'../build/desktop-resources');
-const allowedExternal=url=>{try{const u=new URL(url);return u.protocol==='https:'&&['github.com','huggingface.co','docs.astral.sh','docs.comfy.org','developer.apple.com','support.apple.com','gemini.google.com','labs.google','flow.google.com','ai.google.dev','support.google.com'].includes(u.hostname)}catch{return false}};
+const allowedExternal=url=>{try{const u=new URL(url);return u.protocol==='https:'&&['github.com','huggingface.co','docs.astral.sh','docs.comfy.org','developer.apple.com','support.apple.com','gemini.google.com','labs.google','flow.google.com','ai.google.dev','support.google.com','elevenlabs.io','www.elevenlabs.io'].includes(u.hostname)}catch{return false}};
 async function request(url){return fetch(url,{signal:AbortSignal.timeout(5000)}).then(r=>r.ok?r.json():null).catch(()=>null)}
 async function engine(){
  const shared=isolated?null:await request('http://127.0.0.1:4318/api/application');
@@ -16,7 +19,7 @@ async function engine(){
  // Refresh only application-owned adapter code. Never replace weights, config,
  // models, vendor checkouts, generated media or user projects during updates.
  if(!useExisting)for(const name of ['runtime','desktop'])await fs.cp(path.join(resources,'engine',name),path.join(root,name),{recursive:true,force:true});
- const binaries=path.join(resources,'bin');const environment={...process.env,PATH:[binaries,'/opt/homebrew/bin','/usr/local/bin',path.join(os.homedir(),'.local/bin'),process.env.PATH].filter(Boolean).join(path.delimiter),ELECTRON_RUN_AS_NODE:'1',FILMMA_DESKTOP:'1',FILMMA_ROOT:root,FILMMA_DATA_DIR:path.join(home,'data'),FILMMA_DIST_DIR:path.join(resources,'dist'),FILMMA_PUBLIC_DIR:path.join(resources,'public'),FILMMA_PYTHON:path.join(resources,process.platform==='win32'?'python/python.exe':'python/bin/python3.12'),FILMMA_FFMPEG:path.join(binaries,process.platform==='win32'?'ffmpeg.exe':'ffmpeg'),FILMMA_FFPROBE:path.join(binaries,process.platform==='win32'?'ffprobe.exe':'ffprobe'),FILMMA_GH:path.join(binaries,process.platform==='win32'?'gh.exe':'gh'),FILMMA_PORT:isolated?'4320':'4318'};
+ const binaries=path.join(resources,'bin');const environment={...process.env,PATH:[binaries,'/opt/homebrew/bin','/usr/local/bin',path.join(os.homedir(),'.local/bin'),process.env.PATH].filter(Boolean).join(path.delimiter),ELECTRON_RUN_AS_NODE:'1',FILMMA_DESKTOP:'1',FILMMA_ROOT:root,FILMMA_DATA_DIR:path.join(home,'data'),FILMMA_DIST_DIR:path.join(resources,'dist'),FILMMA_PUBLIC_DIR:path.join(resources,'public'),FILMMA_PYTHON:path.join(resources,process.platform==='win32'?'python/python.exe':'python/bin/python3.12'),FILMMA_FFMPEG:path.join(binaries,process.platform==='win32'?'ffmpeg.exe':'ffmpeg'),FILMMA_FFPROBE:path.join(binaries,process.platform==='win32'?'ffprobe.exe':'ffprobe'),FILMMA_GH:path.join(binaries,process.platform==='win32'?'gh.exe':'gh'),FILMMA_PORT:isolated?String(testPort):'4318'};
  environment.FILMMA_DATA_DIR=data;
  endpoint=`http://127.0.0.1:${environment.FILMMA_PORT}`;
  await fs.mkdir(path.join(home,'logs'),{recursive:true});const log=await fs.open(path.join(home,'logs','application.log'),'a',0o600);

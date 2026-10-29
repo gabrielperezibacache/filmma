@@ -34,7 +34,7 @@ async function fixture(){
     if(url.pathname.startsWith('/v1/text-to-speech/')){
       assert.equal(url.searchParams.get('output_format'),'pcm_24000');
       if(blocked)await Promise.race([blocked,new Promise<never>((_resolve,reject)=>{if(init?.signal?.aborted)reject(new Error('aborted'));else init?.signal?.addEventListener('abort',()=>reject(new Error('aborted')),{once:true});})]);
-      return new Response(new Uint8Array(pcm),{headers:{'Content-Type':'audio/pcm'}});
+      return Response.json({audio_base64:pcm.toString('base64'),alignment:{characters:Array.from(JSON.parse(String(init?.body)).text),character_start_times_seconds:Array.from(JSON.parse(String(init?.body)).text,(_c,i)=>.05+i*.35/Array.from(JSON.parse(String(init?.body)).text).length),character_end_times_seconds:Array.from(JSON.parse(String(init?.body)).text,(_c,i)=>.05+(i+1)*.35/Array.from(JSON.parse(String(init?.body)).text).length)}},{headers:{'request-id':'fixture-request-id'}});
     }
     throw new Error(`Unexpected mocked provider route ${url.pathname}`);
   };
@@ -74,7 +74,7 @@ test('ElevenLabs route creates a separate linked voice and project export/import
     const exported=await f.post('/api/export',{format:'project'}),archive=await f.wait((await exported.json()).job.id);assert.equal(archive.status,'completed',archive.message);
     const downloaded=Buffer.from(await (await fetch(f.base+archive.result!.url)).arrayBuffer()),archivePath=join(f.directory,'movie.zip');await writeFile(archivePath,downloaded);
     const content=await runProcess('unzip',['-p',archivePath,'project.json']);assert.equal(content.code,0);assert(!content.stdout.includes(KEY));assert(!content.stdout.includes('apiKey'));assert(!content.stdout.includes(f.credentials));
-    const manifest=JSON.parse(content.stdout);assert.equal(manifest.project.assets.find((a:any)=>a.id===asset.id).speech.voice.engine,'elevenlabs');
+    const manifest=JSON.parse(content.stdout);assert.equal(manifest.project.assets.find((a:any)=>a.id===asset.id).speech.voice.engine,'elevenlabs');assert.equal(manifest.project.assets.find((a:any)=>a.id===asset.id).speech.alignment.source,'elevenlabs');assert.equal(edited.subtitleCues![0]!.start,.05);assert(Math.abs(edited.subtitleCues![0]!.end-.4)<1e-9);
     const form=new FormData();form.append('projectFile',new Blob([new Uint8Array(downloaded)]),'voices.filmma.zip');const imported=await fetch(f.base+'/api/projects/import',{method:'POST',headers:{'X-Filmma-Client':'filmma'},body:form});assert.equal(imported.status,201,await imported.clone().text());
     const project=(await imported.json()).project,importedLine=project.dialogueLines[0],importedAudio=project.assets.find((a:any)=>a.id===importedLine.audioAssetId);assert(speechIsCurrent(project,importedLine,importedAudio));assert.equal(project.tracks[0].clips[0].dialogueLineId,importedLine.id);assert.equal(project.subtitleCues[0].characterId,importedLine.characterId);
     assert.equal(digest(Buffer.from(await (await fetch(f.base+importedAudio.url)).arrayBuffer())),asset.speech!.outputSha256);assert.equal(digest(await readFile(f.originalPath)),original);
